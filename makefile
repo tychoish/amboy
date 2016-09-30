@@ -155,12 +155,17 @@ vendor-sync:$(vendorDeps)
 vendor-clean:
 	rm -rf vendor/gopkg.in/mgo.v2/harness/
 	rm -rf vendor/github.com/stretchr/testify/vendor/
+	rm -rf vendor/github.com/tychoish/gimlet/vendor/github.com/stretchr/
+	rm -rf vendor/github.com/tychoish/gimlet/vendor/github.com/davecgh/
+	rm -rf vendor/github.com/tychoish/gimlet/vendor/github.com/pmezard/
+	rm -rf vendor/github.com/tychoish/gimlet/vendor/github.com/tychoish/grip/
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*.dat" -o -name "*testdata" | xargs rm -f
 change-go-version:
 	rm -rf $(buildDir)/make-vendor $(buildDir)/render-gopath
 	@$(MAKE) $(makeArgs) vendor > /dev/null 2>&1
 vendor:$(buildDir)/vendor/src
 	$(MAKE) $(makeArgs) -C vendor/github.com/tychoish/grip $@
+	$(MAKE) $(makeArgs) -C vendor/github.com/tychoish/gimlet $@
 $(buildDir)/vendor/src:$(buildDir)/make-vendor $(buildDir)/render-gopath
 	@./$(buildDir)/make-vendor
 #   targets to build the small programs used to support vendoring.
