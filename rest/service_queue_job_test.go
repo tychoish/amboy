@@ -16,7 +16,7 @@ import (
 )
 
 type JobStatusSuite struct {
-	service *Service
+	service *QueueService
 	require *require.Assertions
 	jobName string
 	closer  context.CancelFunc
@@ -29,7 +29,7 @@ func TestJobStatusSuite(t *testing.T) {
 
 func (s *JobStatusSuite) SetupSuite() {
 	s.require = s.Require()
-	s.service = NewService()
+	s.service = NewQueueService()
 	ctx, cancel := context.WithCancel(context.Background())
 	s.closer = cancel
 

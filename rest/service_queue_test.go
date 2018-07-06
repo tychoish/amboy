@@ -26,7 +26,7 @@ func init() {
 }
 
 type RestServiceSuite struct {
-	service *Service
+	service *QueueService
 	require *require.Assertions
 	suite.Suite
 }
@@ -43,7 +43,7 @@ func (s *RestServiceSuite) SetupSuite() {
 }
 
 func (s *RestServiceSuite) SetupTest() {
-	s.service = NewService()
+	s.service = NewQueueService()
 }
 
 func (s *RestServiceSuite) TearDownTest() {
@@ -51,7 +51,7 @@ func (s *RestServiceSuite) TearDownTest() {
 }
 
 func (s *RestServiceSuite) TestInitialListOfRegisteredJobs() {
-	defaultJob := &Service{}
+	defaultJob := &QueueService{}
 	s.Len(defaultJob.registeredTypes, 0)
 
 	count := 0
