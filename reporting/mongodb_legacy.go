@@ -5,36 +5,31 @@ import (
 	"time"
 
 	"github.com/mongodb/amboy/queue"
-	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/recovery"
 	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	mgo "gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
-type dbQueueStat struct {
+type dbLegacyQueueStat struct {
 	opts       queue.MongoDBOptions
 	name       string
-	client     *mongo.Client
-	collection *mongo.Collection
+	session    *mgo.Session
+	collection *mgo.Collection
 }
 
 // NewDBQueueState produces a queue Reporter for (remote) queues that persist
 // jobs in MongoDB. This implementation does not interact with a queue
 // directly, and reports by interacting with the database directly.
-func NewDBQueueState(ctx context.Context, name string, opts queue.MongoDBOptions) (Reporter, error) {
-	client, err := mongo.NewClient(options.Client().ApplyURI(opts.URI).SetConnectTimeout(time.Second))
+//
+// This implementation creates a connection using the legacy MGO driver.
+func NewLegacyDBQueueState(name string, opts queue.MongoDBOptions) (Reporter, error) {
+	session, err := mgo.DialWithTimeout(opts.URI, time.Second)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem constructing mongodb client")
+		return nil, errors.Wrap(err, "problem connecting to mongodb")
 	}
 
-	connctx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-	if err := client.Connect(connctx); err != nil {
-		return nil, errors.Wrap(err, "problem connecting to database")
-	}
-
-	db, err := MakeDBQueueState(ctx, name, opts, client)
+	db, err := MakeLegacyDBQueueState(name, opts, session)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem building reporting interface")
 	}
@@ -46,101 +41,63 @@ func NewDBQueueState(ctx context.Context, name string, opts queue.MongoDBOptions
 // an existing database Connection. This operations runs the "ping"
 // command and will return an error if there is no session or no
 // active server.
-func MakeDBQueueState(ctx context.Context, name string, opts queue.MongoDBOptions, client *mongo.Client) (Reporter, error) {
-	if client == nil {
-		return nil, errors.New("cannot make a reporter without a client")
+//
+// This implementation uses a legacy MGO driver connection to the database.
+func MakeLegacyDBQueueState(name string, opts queue.MongoDBOptions, session *mgo.Session) (Reporter, error) {
+	if session == nil {
+		return nil, errors.New("cannot make a reporter without a session")
 	}
 
-	if err := client.Ping(ctx, nil); err != nil {
+	var err error
+
+	func() {
+		// ping can never error, so we have to do something
+		// crazy to catch the error and convert it to an err
+		defer func() {
+			if p := recover(); p != nil {
+				err = recovery.HandlePanicWithError(p, err, "problem with connection")
+			}
+		}()
+		err = session.Ping()
+	}()
+
+	if err != nil {
 		return nil, errors.Wrap(err, "could not establish a connection with the database")
 	}
 
-	db := &dbQueueStat{
+	session.SetSocketTimeout(0)
+
+	db := &dbLegacyQueueStat{
 		name:       name,
 		opts:       opts,
-		client:     client,
-		collection: client.Database(opts.DB).Collection(name + ".jobs"),
+		session:    session,
+		collection: session.DB(opts.DB).C(name + ".jobs"),
 	}
 
 	return db, nil
 }
 
-func (db *dbQueueStat) aggregateCounters(ctx context.Context, stages ...bson.M) ([]JobCounters, error) {
-	cursor, err := db.collection.Aggregate(ctx, stages, options.Aggregate().SetAllowDiskUse(true))
-	if err != nil {
-		return nil, errors.Wrap(err, "problem running aggregation")
-	}
-
-	catcher := grip.NewBasicCatcher()
+func (db *dbLegacyQueueStat) aggregateCounters(stages ...bson.M) ([]JobCounters, error) {
 	out := []JobCounters{}
-	for cursor.Next(ctx) {
-		val := JobCounters{}
-		err = cursor.Decode(&val)
-		if err != nil {
-			catcher.Add(err)
-			continue
-		}
-		out = append(out, val)
-	}
-	catcher.Add(cursor.Err())
-	if catcher.HasErrors() {
-		return nil, errors.Wrap(catcher.Resolve(), "problem running job counters aggregation")
+
+	if err := db.collection.Pipe(stages).AllowDiskUse().All(&out); err != nil {
+		return nil, errors.Wrap(err, "problem running aggregation")
 	}
 
 	return out, nil
 }
 
-func (db *dbQueueStat) aggregateRuntimes(ctx context.Context, stages ...bson.M) ([]JobRuntimes, error) {
-	cursor, err := db.collection.Aggregate(ctx, stages, options.Aggregate().SetAllowDiskUse(true))
-	if err != nil {
-		return nil, errors.Wrap(err, "problem running aggregation")
-	}
-
-	catcher := grip.NewBasicCatcher()
+func (db *dbLegacyQueueStat) aggregateRuntimes(stages ...bson.M) ([]JobRuntimes, error) {
 	out := []JobRuntimes{}
-	for cursor.Next(ctx) {
-		val := JobRuntimes{}
-		err = cursor.Decode(&val)
-		if err != nil {
-			catcher.Add(err)
-			continue
-		}
-		out = append(out, val)
-	}
-	catcher.Add(cursor.Err())
-	if catcher.HasErrors() {
-		return nil, errors.Wrap(catcher.Resolve(), "problem running job runtimes aggregation")
-	}
 
-	return out, nil
-}
-
-func (db *dbQueueStat) aggregateErrors(ctx context.Context, stages ...bson.M) ([]JobErrorsForType, error) {
-	cursor, err := db.collection.Aggregate(ctx, stages, options.Aggregate().SetAllowDiskUse(true))
-	if err != nil {
+	if err := db.collection.Pipe(stages).AllowDiskUse().All(&out); err != nil {
 		return nil, errors.Wrap(err, "problem running aggregation")
 	}
 
-	catcher := grip.NewBasicCatcher()
-	out := []JobErrorsForType{}
-	for cursor.Next(ctx) {
-		val := JobErrorsForType{}
-		err = cursor.Decode(&val)
-		if err != nil {
-			catcher.Add(err)
-			continue
-		}
-		out = append(out, val)
-	}
-	catcher.Add(cursor.Err())
-	if catcher.HasErrors() {
-		return nil, errors.Wrap(catcher.Resolve(), "problem running job counters aggregation")
-	}
-
 	return out, nil
 }
 
-func (db *dbQueueStat) findJobs(ctx context.Context, match bson.M) ([]string, error) {
+func (db *dbLegacyQueueStat) findJobs(match bson.M) ([]string, error) {
 	stages := []bson.M{
 		{"$match": match},
 		{"$group": bson.M{
@@ -153,15 +110,8 @@ func (db *dbQueueStat) findJobs(ctx context.Context, match bson.M) ([]string, er
 		Jobs []string `bson:"jobs"`
 	}{}
 
-	cursor, err := db.collection.Aggregate(ctx, stages, options.Aggregate().SetAllowDiskUse(true))
-	if err != nil {
-		return nil, errors.Wrap(err, "problem running query")
-	}
-
-	if cursor.Next(ctx) {
-		if err := cursor.Decode(&out); err != nil {
-			return nil, errors.Wrap(err, "problem decoding result")
-		}
+	if err := db.collection.Pipe(stages).AllowDiskUse().All(&out); err != nil {
+		return nil, errors.Wrap(err, "problem running aggregation")
 	}
 
 	switch len(out) {
@@ -174,7 +124,17 @@ func (db *dbQueueStat) findJobs(ctx context.Context, match bson.M) ([]string, er
 	}
 }
 
-func (db *dbQueueStat) JobStatus(ctx context.Context, f CounterFilter) (*JobStatusReport, error) {
+func (db *dbLegacyQueueStat) aggregateErrors(stages ...bson.M) ([]JobErrorsForType, error) {
+	out := []JobErrorsForType{}
+
+	if err := db.collection.Pipe(stages).AllowDiskUse().All(&out); err != nil {
+		return nil, errors.Wrap(err, "problem running aggregation")
+	}
+
+	return out, nil
+}
+
+func (db *dbLegacyQueueStat) JobStatus(ctx context.Context, f CounterFilter) (*JobStatusReport, error) {
 	var err error
 
 	if err = f.Validate(); err != nil {
@@ -185,7 +145,7 @@ func (db *dbQueueStat) JobStatus(ctx context.Context, f CounterFilter) (*JobStat
 
 	switch f {
 	case InProgress:
-		counters, err = db.aggregateCounters(ctx,
+		counters, err = db.aggregateCounters(
 			bson.M{"$match": bson.M{
 				"status.completed": false,
 				"status.in_prog":   true,
@@ -195,7 +155,7 @@ func (db *dbQueueStat) JobStatus(ctx context.Context, f CounterFilter) (*JobStat
 				"count": bson.M{"$sum": 1},
 			}})
 	case Pending:
-		counters, err = db.aggregateCounters(ctx,
+		counters, err = db.aggregateCounters(
 			bson.M{"$match": bson.M{
 				"status.completed": false,
 				"status.in_prog":   false,
@@ -205,7 +165,7 @@ func (db *dbQueueStat) JobStatus(ctx context.Context, f CounterFilter) (*JobStat
 				"count": bson.M{"$sum": 1},
 			}})
 	case Stale:
-		counters, err = db.aggregateCounters(ctx,
+		counters, err = db.aggregateCounters(
 			bson.M{"$match": bson.M{
 				"status.completed": false,
 				"status.in_prog":   true,
@@ -229,7 +189,7 @@ func (db *dbQueueStat) JobStatus(ctx context.Context, f CounterFilter) (*JobStat
 	}, nil
 }
 
-func (db *dbQueueStat) RecentTiming(ctx context.Context, window time.Duration, f RuntimeFilter) (*JobRuntimeReport, error) {
+func (db *dbLegacyQueueStat) RecentTiming(ctx context.Context, window time.Duration, f RuntimeFilter) (*JobRuntimeReport, error) {
 	var err error
 
 	if err = f.Validate(); err != nil {
@@ -244,7 +204,7 @@ func (db *dbQueueStat) RecentTiming(ctx context.Context, window time.Duration, f
 
 	switch f {
 	case Duration:
-		runtimes, err = db.aggregateRuntimes(ctx,
+		runtimes, err = db.aggregateRuntimes(
 			bson.M{"$match": bson.M{
 				"status.completed": true,
 				"time_info.end":    bson.M{"$gt": time.Now().Add(-window)},
@@ -260,7 +220,7 @@ func (db *dbQueueStat) RecentTiming(ctx context.Context, window time.Duration, f
 			}})
 	case Latency:
 		now := time.Now()
-		runtimes, err = db.aggregateRuntimes(ctx,
+		runtimes, err = db.aggregateRuntimes(
 			bson.M{"$match": bson.M{
 				"status.completed":  false,
 				"time_info.created": bson.M{"$gt": now.Add(-window)},
@@ -276,7 +236,7 @@ func (db *dbQueueStat) RecentTiming(ctx context.Context, window time.Duration, f
 			}})
 	case Running:
 		now := time.Now()
-		runtimes, err = db.aggregateRuntimes(ctx,
+		runtimes, err = db.aggregateRuntimes(
 			bson.M{"$match": bson.M{
 				"status.completed": false,
 				"status.in_prog":   true,
@@ -301,7 +261,7 @@ func (db *dbQueueStat) RecentTiming(ctx context.Context, window time.Duration, f
 	}, nil
 }
 
-func (db *dbQueueStat) JobIDsByState(ctx context.Context, jobType string, f CounterFilter) (*JobReportIDs, error) {
+func (db *dbLegacyQueueStat) JobIDsByState(ctx context.Context, jobType string, f CounterFilter) (*JobReportIDs, error) {
 	var err error
 	if err = f.Validate(); err != nil {
 		return nil, errors.WithStack(err)
@@ -311,19 +271,19 @@ func (db *dbQueueStat) JobIDsByState(ctx context.Context, jobType string, f Coun
 
 	switch f {
 	case InProgress:
-		ids, err = db.findJobs(ctx, bson.M{
+		ids, err = db.findJobs(bson.M{
 			"type":             jobType,
 			"status.completed": false,
 			"status.in_prog":   true,
 		})
 	case Pending:
-		ids, err = db.findJobs(ctx, bson.M{
+		ids, err = db.findJobs(bson.M{
 			"type":             jobType,
 			"status.completed": false,
 			"status.in_prog":   false,
 		})
 	case Stale:
-		ids, err = db.findJobs(ctx, bson.M{
+		ids, err = db.findJobs(bson.M{
 			"type":             jobType,
 			"status.completed": false,
 			"status.in_prog":   true,
@@ -345,7 +305,7 @@ func (db *dbQueueStat) JobIDsByState(ctx context.Context, jobType string, f Coun
 	}, nil
 }
 
-func (db *dbQueueStat) RecentErrors(ctx context.Context, window time.Duration, f ErrorFilter) (*JobErrorsReport, error) {
+func (db *dbLegacyQueueStat) RecentErrors(ctx context.Context, window time.Duration, f ErrorFilter) (*JobErrorsReport, error) {
 	var err error
 	if err = f.Validate(); err != nil {
 		return nil, errors.WithStack(err)
@@ -361,7 +321,7 @@ func (db *dbQueueStat) RecentErrors(ctx context.Context, window time.Duration, f
 
 	switch f {
 	case UniqueErrors:
-		reports, err = db.aggregateErrors(ctx,
+		reports, err = db.aggregateErrors(
 			bson.M{"$match": bson.M{
 				"status.completed": true,
 				"status.err_count": bson.M{"$gt": 0},
@@ -375,7 +335,7 @@ func (db *dbQueueStat) RecentErrors(ctx context.Context, window time.Duration, f
 				"errors":  bson.M{"$push": "$status.errors"},
 			}})
 	case AllErrors:
-		reports, err = db.aggregateErrors(ctx,
+		reports, err = db.aggregateErrors(
 			bson.M{"$match": bson.M{
 				"status.completed": true,
 				"status.err_count": bson.M{"$gt": 0},
@@ -397,7 +357,7 @@ func (db *dbQueueStat) RecentErrors(ctx context.Context, window time.Duration, f
 				"errors":  bson.M{"$addToSet": "$errors"},
 			}})
 	case StatsOnly:
-		reports, err = db.aggregateErrors(ctx,
+		reports, err = db.aggregateErrors(
 			bson.M{"$match": bson.M{
 				"status.completed": true,
 				"status.err_count": bson.M{"$gt": 0},
@@ -424,7 +384,7 @@ func (db *dbQueueStat) RecentErrors(ctx context.Context, window time.Duration, f
 	}, nil
 }
 
-func (db *dbQueueStat) RecentJobErrors(ctx context.Context, jobType string, window time.Duration, f ErrorFilter) (*JobErrorsReport, error) {
+func (db *dbLegacyQueueStat) RecentJobErrors(ctx context.Context, jobType string, window time.Duration, f ErrorFilter) (*JobErrorsReport, error) {
 	var err error
 
 	if err = f.Validate(); err != nil {
@@ -441,7 +401,7 @@ func (db *dbQueueStat) RecentJobErrors(ctx context.Context, jobType string, wind
 
 	switch f {
 	case UniqueErrors:
-		reports, err = db.aggregateErrors(ctx,
+		reports, err = db.aggregateErrors(
 			bson.M{"$match": bson.M{
 				"type":             jobType,
 				"status.completed": true,
@@ -456,7 +416,7 @@ func (db *dbQueueStat) RecentJobErrors(ctx context.Context, jobType string, wind
 				"errors":  bson.M{"$push": "$statys.errors"},
 			}})
 	case AllErrors:
-		reports, err = db.aggregateErrors(ctx,
+		reports, err = db.aggregateErrors(
 			bson.M{"$match": bson.M{
 				"type":             jobType,
 				"status.completed": true,
@@ -479,7 +439,7 @@ func (db *dbQueueStat) RecentJobErrors(ctx context.Context, jobType string, wind
 				"errors":  bson.M{"$addToSet": "$errors"},
 			}})
 	case StatsOnly:
-		reports, err = db.aggregateErrors(ctx,
+		reports, err = db.aggregateErrors(
 			bson.M{"$match": bson.M{
 				"type":             jobType,
 				"status.completed": true,
