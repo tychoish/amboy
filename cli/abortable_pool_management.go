@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/cheynewallace/tabby"
-	"github.com/mongodb/amboy/rest"
+	"github.com/deciduosity/amboy/rest"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )

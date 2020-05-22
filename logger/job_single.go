@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/amboy/job"
-	"github.com/mongodb/grip/message"
-	"github.com/mongodb/grip/send"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/job"
+	"github.com/deciduosity/grip/message"
+	"github.com/deciduosity/grip/send"
 )
 
 type sendMessageJob struct {

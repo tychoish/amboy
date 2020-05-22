@@ -3,9 +3,9 @@ package queue
 import (
 	"context"
 
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/amboy/pool"
-	"github.com/mongodb/grip"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/pool"
+	"github.com/deciduosity/grip"
 )
 
 // RemoteUnordered are queues that use a Driver as backend for job

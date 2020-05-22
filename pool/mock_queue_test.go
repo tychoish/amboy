@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/amboy/job"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/job"
 	"github.com/pkg/errors"
 )
 

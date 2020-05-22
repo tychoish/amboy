@@ -9,8 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/amboy/job"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/job"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )

@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/amboy/dependency"
-	"github.com/mongodb/amboy/registry"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/dependency"
+	"github.com/deciduosity/amboy/registry"
 	"github.com/stretchr/testify/suite"
 )
 

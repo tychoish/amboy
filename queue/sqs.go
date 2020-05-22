@@ -13,12 +13,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/google/uuid"
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/amboy/pool"
-	"github.com/mongodb/amboy/registry"
-	"github.com/mongodb/grip"
-	"github.com/mongodb/grip/message"
-	"github.com/mongodb/grip/recovery"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/pool"
+	"github.com/deciduosity/amboy/registry"
+	"github.com/deciduosity/grip"
+	"github.com/deciduosity/grip/message"
+	"github.com/deciduosity/grip/recovery"
 	"github.com/pkg/errors"
 )
 

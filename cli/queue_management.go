@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/cheynewallace/tabby"
-	"github.com/mongodb/amboy/management"
+	"github.com/deciduosity/amboy/management"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )

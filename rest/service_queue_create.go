@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/evergreen-ci/gimlet"
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/amboy/registry"
-	"github.com/mongodb/grip"
+	"github.com/deciduosity/gimlet"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/registry"
+	"github.com/deciduosity/grip"
 )
 
 type createResponse struct {

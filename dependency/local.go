@@ -3,7 +3,7 @@ package dependency
 import (
 	"os"
 
-	"github.com/mongodb/grip"
+	"github.com/deciduosity/grip"
 )
 
 // LocalFile describes a dependency between a task and local

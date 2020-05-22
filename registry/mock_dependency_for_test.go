@@ -1,6 +1,6 @@
 package registry
 
-import "github.com/mongodb/amboy/dependency"
+import "github.com/deciduosity/amboy/dependency"
 
 // this is is a mock dependency implementation that's here
 

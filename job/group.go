@@ -4,10 +4,10 @@ import (
 	"context"
 	"sync"
 
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/amboy/dependency"
-	"github.com/mongodb/amboy/registry"
-	"github.com/mongodb/grip"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/dependency"
+	"github.com/deciduosity/amboy/registry"
+	"github.com/deciduosity/grip"
 	"github.com/pkg/errors"
 )
 

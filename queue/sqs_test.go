@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/amboy/job"
-	"github.com/mongodb/amboy/pool"
-	"github.com/mongodb/grip"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/job"
+	"github.com/deciduosity/amboy/pool"
+	"github.com/deciduosity/grip"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )

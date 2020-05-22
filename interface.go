@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/mongodb/amboy/dependency"
-	"github.com/mongodb/grip"
+	"github.com/deciduosity/amboy/dependency"
+	"github.com/deciduosity/grip"
 )
 
 // LockTimeout describes the default period of time that a queue will respect

@@ -3,8 +3,8 @@ package queue
 import (
 	"context"
 
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/grip"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/grip"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 )

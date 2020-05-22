@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/evergreen-ci/gimlet"
-	"github.com/mongodb/amboy/management"
+	"github.com/deciduosity/gimlet"
+	"github.com/deciduosity/amboy/management"
 	"github.com/pkg/errors"
 )
 

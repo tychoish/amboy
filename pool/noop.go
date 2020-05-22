@@ -3,7 +3,7 @@ package pool
 import (
 	"context"
 
-	"github.com/mongodb/amboy"
+	"github.com/deciduosity/amboy"
 	"github.com/pkg/errors"
 )
 

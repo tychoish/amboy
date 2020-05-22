@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/mongodb/amboy"
+	"github.com/deciduosity/amboy"
 	"github.com/pkg/errors"
 )
 

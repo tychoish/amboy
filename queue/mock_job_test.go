@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/amboy/dependency"
-	"github.com/mongodb/amboy/job"
-	"github.com/mongodb/amboy/registry"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/dependency"
+	"github.com/deciduosity/amboy/job"
+	"github.com/deciduosity/amboy/registry"
 )
 
 var mockJobCounters *mockJobRunEnv

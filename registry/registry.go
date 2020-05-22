@@ -3,7 +3,7 @@ package registry
 import (
 	"sync"
 
-	"github.com/mongodb/grip"
+	"github.com/deciduosity/grip"
 	"github.com/pkg/errors"
 )
 

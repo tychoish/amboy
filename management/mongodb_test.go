@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mongodb/amboy/queue"
+	"github.com/deciduosity/amboy/queue"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/mongo"

@@ -25,8 +25,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/amboy/dependency"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/dependency"
 	"github.com/pkg/errors"
 )
 

@@ -17,9 +17,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/grip"
-	"github.com/mongodb/grip/recovery"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/grip"
+	"github.com/deciduosity/grip/recovery"
 )
 
 // NewSimpleRateLimitedWorkers returns a worker pool that sleeps for

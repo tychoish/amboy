@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mongodb/amboy/benchmarks"
+	"github.com/deciduosity/amboy/benchmarks"
 )
 
 func main() {

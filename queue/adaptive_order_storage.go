@@ -4,8 +4,8 @@ import (
 	"context"
 	"math/rand"
 
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/amboy/dependency"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/dependency"
 )
 
 type adaptiveOrderItems struct {

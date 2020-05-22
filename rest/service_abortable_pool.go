@@ -3,8 +3,8 @@ package rest
 import (
 	"net/http"
 
-	"github.com/evergreen-ci/gimlet"
-	"github.com/mongodb/amboy"
+	"github.com/deciduosity/gimlet"
+	"github.com/deciduosity/amboy"
 	"github.com/pkg/errors"
 )
 

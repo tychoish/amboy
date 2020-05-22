@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mongodb/amboy/job"
-	"github.com/mongodb/amboy/pool"
+	"github.com/deciduosity/amboy/job"
+	"github.com/deciduosity/amboy/pool"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )

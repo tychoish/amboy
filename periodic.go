@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/mongodb/grip"
-	"github.com/mongodb/grip/message"
-	"github.com/mongodb/grip/recovery"
+	"github.com/deciduosity/grip"
+	"github.com/deciduosity/grip/message"
+	"github.com/deciduosity/grip/recovery"
 	"github.com/pkg/errors"
 )
 

@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/evergreen-ci/gimlet"
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/grip"
-	"github.com/mongodb/grip/message"
+	"github.com/deciduosity/gimlet"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/grip"
+	"github.com/deciduosity/grip/message"
 	"github.com/pkg/errors"
 )
 
