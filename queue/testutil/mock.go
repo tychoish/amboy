@@ -1,18 +1,24 @@
-package queue
+package testutil
 
 import (
 	"context"
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/dependency"
 	"github.com/deciduosity/amboy/job"
 	"github.com/deciduosity/amboy/registry"
+	"github.com/google/uuid"
 )
 
-var mockJobCounters *mockJobRunEnv
+type Counters interface {
+	Reset()
+	Inc()
+	Count() int
+}
+
+var MockJobCounters Counters
 
 type mockJobRunEnv struct {
 	runCount int
@@ -41,8 +47,8 @@ func (e *mockJobRunEnv) Reset() {
 }
 
 func init() {
-	mockJobCounters = &mockJobRunEnv{}
-	registry.AddJobType("mock", func() amboy.Job { return newMockJob() })
+	MockJobCounters = &mockJobRunEnv{}
+	registry.AddJobType("mock", NewMockJob)
 	registry.AddJobType("sleep", func() amboy.Job { return newSleepJob() })
 }
 
@@ -51,7 +57,13 @@ type mockJob struct {
 	job.Base `bson:"job_base" json:"job_base" yaml:"job_base"`
 }
 
-func newMockJob() *mockJob {
+func MakeMockJob(id string) amboy.Job {
+	j := NewMockJob().(*mockJob)
+	j.SetID(id)
+	return j
+}
+
+func NewMockJob() amboy.Job {
 	j := &mockJob{
 		Base: job.Base{
 			JobType: amboy.JobType{
@@ -67,12 +79,18 @@ func newMockJob() *mockJob {
 func (j *mockJob) Run(_ context.Context) {
 	defer j.MarkComplete()
 
-	mockJobCounters.Inc()
+	MockJobCounters.Inc()
 }
 
 type sleepJob struct {
 	Sleep time.Duration
 	job.Base
+}
+
+func NewSleepJob(dur time.Duration) amboy.Job {
+	j := newSleepJob()
+	j.Sleep = dur
+	return j
 }
 
 func newSleepJob() *sleepJob {

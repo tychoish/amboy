@@ -11,6 +11,7 @@ import (
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/job"
 	"github.com/deciduosity/amboy/pool"
+	"github.com/deciduosity/amboy/queue/testutil"
 	"github.com/deciduosity/grip"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -118,8 +119,7 @@ func TestSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			for ii := 0; ii < inside; ii++ {
-				j := newMockJob()
-				j.SetID(fmt.Sprintf("%d-%d-%d", i, ii, job.GetNumber()))
+				j := testutil.MakeMockJob(fmt.Sprintf("%d-%d-%d", i, ii, job.GetNumber()))
 				assert.NoError(q.Put(ctx, j))
 			}
 		}(i)
@@ -140,7 +140,7 @@ func TestMultipleSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 	}
 
 	// case two
-	mockJobCounters.Reset()
+	testutil.MockJobCounters.Reset()
 
 	assert := assert.New(t) // nolint
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -166,8 +166,7 @@ func TestMultipleSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			for ii := 0; ii < inside; ii++ {
-				j := newMockJob()
-				j.SetID(fmt.Sprintf("%d-%d-%d", i, ii, job.GetNumber()))
+				j := testutil.MakeMockJob(fmt.Sprintf("%d-%d-%d", i, ii, job.GetNumber()))
 				assert.NoError(q2.Put(ctx, j))
 			}
 		}(i)

@@ -9,6 +9,7 @@ import (
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/job"
 	"github.com/deciduosity/amboy/pool"
+	"github.com/deciduosity/amboy/queue/testutil"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -316,7 +317,7 @@ func (s *RemoteUnorderedSuite) TestTimeInfoPersists() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	s.require.NoError(s.queue.SetDriver(s.driver))
-	j := newMockJob()
+	j := testutil.NewMockJob()
 	s.Zero(j.TimeInfo())
 	s.NoError(s.queue.Put(ctx, j))
 	go s.queue.jobServer(ctx)

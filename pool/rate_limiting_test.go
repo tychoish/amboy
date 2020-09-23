@@ -2,7 +2,6 @@ package pool
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -123,7 +122,6 @@ func TestAvergeTimeCalculator(t *testing.T) {
 	j := job.NewShellJob("hostname", "")
 	assert.False(j.Status().Completed)
 	val := p.runJob(ctx, j)
-	fmt.Println(val)
 	assert.True(val > time.Microsecond)
 	assert.True(j.Status().Completed)
 
