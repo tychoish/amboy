@@ -1,4 +1,4 @@
-package queue
+package mdbq
 
 import (
 	"context"

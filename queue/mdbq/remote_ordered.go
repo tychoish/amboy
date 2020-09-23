@@ -1,4 +1,4 @@
-package queue
+package mdbq
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/dependency"
 	"github.com/deciduosity/amboy/pool"
+	"github.com/deciduosity/amboy/queue"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
 )
@@ -29,7 +30,7 @@ type remoteSimpleOrdered struct {
 // runner with the specified number of workers.
 func newSimpleRemoteOrdered(size int) remoteQueue {
 	q := &remoteSimpleOrdered{remoteBase: newRemoteBase()}
-	q.dispatcher = NewDispatcher(q)
+	q.dispatcher = queue.NewDispatcher(q)
 	grip.Error(q.SetRunner(pool.NewLocalWorkers(size, q)))
 	grip.Infof("creating new remote job queue with %d workers", size)
 
@@ -101,7 +102,7 @@ func (q *remoteSimpleOrdered) Next(ctx context.Context) amboy.Job {
 					// this is just an optimization; if there's one dependency it's easy
 					// to move that job up in the queue by submitting it here.
 					dj, ok := q.Get(ctx, edges[0])
-					if ok && isDispatchable(dj.Status(), q.Info().LockTimeout) {
+					if ok && amboy.IsDispatchable(dj.Status(), q.Info().LockTimeout) {
 						// might need to make this non-blocking.
 						q.dispatcher.Release(ctx, job)
 						if q.dispatcher.Dispatch(ctx, dj) == nil {

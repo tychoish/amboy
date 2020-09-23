@@ -1,10 +1,11 @@
-package queue
+package mdbq
 
 import (
 	"context"
 
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/pool"
+	"github.com/deciduosity/amboy/queue"
 	"github.com/deciduosity/grip"
 )
 
@@ -22,7 +23,7 @@ func newRemoteUnordered(size int) remoteQueue {
 		remoteBase: newRemoteBase(),
 	}
 
-	q.dispatcher = NewDispatcher(q)
+	q.dispatcher = queue.NewDispatcher(q)
 	grip.Error(q.SetRunner(pool.NewLocalWorkers(size, q)))
 	grip.Infof("creating new remote job queue with %d workers", size)
 

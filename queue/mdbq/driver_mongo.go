@@ -1,4 +1,4 @@
-package queue
+package mdbq
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/queue"
 	"github.com/deciduosity/amboy/registry"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
@@ -28,7 +29,7 @@ type mongoDriver struct {
 	instanceID string
 	mu         sync.RWMutex
 	canceler   context.CancelFunc
-	dispatcher Dispatcher
+	dispatcher queue.Dispatcher
 }
 
 // NewMongoDriver constructs a MongoDB backed queue driver
@@ -760,7 +761,7 @@ RETRY:
 					continue CURSOR
 				}
 
-				if !isDispatchable(job.Status(), d.opts.LockTimeout) {
+				if !amboy.IsDispatchable(job.Status(), d.opts.LockTimeout) {
 					dispatchSkips++
 					job = nil
 					continue CURSOR
@@ -773,7 +774,7 @@ RETRY:
 				if err = d.dispatcher.Dispatch(ctx, job); err != nil {
 					dispatchMisses++
 					grip.DebugWhen(
-						isDispatchable(job.Status(), d.opts.LockTimeout),
+						amboy.IsDispatchable(job.Status(), d.opts.LockTimeout),
 						message.WrapError(err, message.Fields{
 							"id":            d.instanceID,
 							"service":       "amboy.queue.mdb",
@@ -904,13 +905,13 @@ func (d *mongoDriver) LockTimeout() time.Duration {
 	return d.opts.LockTimeout
 }
 
-func (d *mongoDriver) Dispatcher() Dispatcher {
+func (d *mongoDriver) Dispatcher() queue.Dispatcher {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	return d.dispatcher
 }
 
-func (d *mongoDriver) SetDispatcher(disp Dispatcher) {
+func (d *mongoDriver) SetDispatcher(disp queue.Dispatcher) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.dispatcher = disp

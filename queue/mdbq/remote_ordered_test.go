@@ -1,4 +1,4 @@
-package queue
+package mdbq
 
 import (
 	"context"
@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/dependency"
 	"github.com/deciduosity/amboy/job"
 	"github.com/deciduosity/amboy/registry"
 	"github.com/deciduosity/grip"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

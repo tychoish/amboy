@@ -1,4 +1,4 @@
-package queue
+package mdbq
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/queue"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
 	"github.com/google/uuid"
@@ -23,7 +24,7 @@ type remoteBase struct {
 	id         string
 	started    bool
 	driver     remoteQueueDriver
-	dispatcher Dispatcher
+	dispatcher queue.Dispatcher
 	driverType string
 	channel    chan amboy.Job
 	blocked    map[string]struct{}
@@ -334,20 +335,6 @@ func (q *remoteBase) canDispatch(j amboy.Job) bool {
 	}
 
 	q.dispatched[id] = struct{}{}
-	return true
-}
-
-func isDispatchable(stat amboy.JobStatusInfo, lockTimeout time.Duration) bool {
-	if jobCanRestart(stat, lockTimeout) {
-		return true
-	}
-	if stat.Completed {
-		return false
-	}
-	if stat.InProgress {
-		return false
-	}
-
 	return true
 }
 

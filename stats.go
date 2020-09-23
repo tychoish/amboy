@@ -2,6 +2,7 @@ package amboy
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/deciduosity/grip/level"
 	"github.com/deciduosity/grip/message"
@@ -30,6 +31,21 @@ type QueueStats struct {
 func (s QueueStats) String() string {
 	return fmt.Sprintf("running='%d', completed='%d', pending='%d', blocked='%d', total='%d'",
 		s.Running, s.Completed, s.Pending, s.Blocked, s.Total)
+}
+
+// IsDispatchable provides a
+func IsDispatchable(stat JobStatusInfo, lockTimeout time.Duration) bool {
+	if stat.InProgress && time.Since(stat.ModificationTime) > lockTimeout {
+		return true
+	}
+	if stat.Completed {
+		return false
+	}
+	if stat.InProgress {
+		return false
+	}
+
+	return true
 }
 
 // IsComplete reutrns true when the total number of tasks are equal to

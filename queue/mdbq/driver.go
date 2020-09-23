@@ -1,10 +1,12 @@
-package queue
+package mdbq
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/queue"
 	"github.com/deciduosity/grip"
 )
 
@@ -27,8 +29,8 @@ type remoteQueueDriver interface {
 
 	LockTimeout() time.Duration
 
-	SetDispatcher(Dispatcher)
-	Dispatcher() Dispatcher
+	SetDispatcher(queue.Dispatcher)
+	Dispatcher() queue.Dispatcher
 }
 
 // MongoDBOptions is a struct passed to the NewMongo constructor to
@@ -86,4 +88,16 @@ func (opts *MongoDBOptions) Validate() error {
 		opts.Format = amboy.BSON
 	}
 	return catcher.Resolve()
+}
+
+func addJobsSuffix(s string) string {
+	return s + ".jobs"
+}
+
+func trimJobsSuffix(s string) string {
+	return strings.TrimSuffix(s, ".jobs")
+}
+
+func addGroupSufix(s string) string {
+	return s + ".group"
 }

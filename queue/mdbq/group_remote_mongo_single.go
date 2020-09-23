@@ -1,10 +1,11 @@
-package queue
+package mdbq
 
 import (
 	"context"
 	"time"
 
 	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/queue"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
 	"github.com/deciduosity/grip/recovery"
@@ -18,7 +19,7 @@ type remoteMongoQueueGroupSingle struct {
 	client   *mongo.Client
 	opts     MongoDBQueueGroupOptions
 	dbOpts   MongoDBOptions
-	cache    GroupCache
+	cache    queue.GroupCache
 }
 
 // NewMongoDBSingleQueueGroup constructs a new remote queue group. If ttl is 0, the queues will not be
@@ -45,7 +46,7 @@ func NewMongoDBSingleQueueGroup(ctx context.Context, opts MongoDBQueueGroupOptio
 		client:   client,
 		dbOpts:   mdbopts,
 		opts:     opts,
-		cache:    NewGroupCache(opts.TTL),
+		cache:    queue.NewGroupCache(opts.TTL),
 	}
 
 	if opts.PruneFrequency > 0 && opts.TTL > 0 {
