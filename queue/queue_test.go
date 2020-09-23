@@ -12,13 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/job"
 	"github.com/deciduosity/amboy/pool"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/level"
 	"github.com/deciduosity/grip/send"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -557,9 +557,9 @@ func UnorderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 	}
 
 	statCounter := 0
-	for stat := range q.JobStats(ctx) {
+	for job := range q.Results(ctx) {
 		statCounter++
-		assert.True(t, stat.ID != "")
+		assert.True(t, job.ID() != "")
 	}
 	assert.Equal(t, numJobs, statCounter, fmt.Sprintf("want jobStats for every job"))
 
@@ -615,9 +615,9 @@ func OrderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runner 
 	}
 
 	statCounter := 0
-	for stat := range q.JobStats(ctx) {
+	for job := range q.Results(ctx) {
 		statCounter++
-		require.True(t, stat.ID != "")
+		require.True(t, job.ID() != "")
 	}
 	require.Equal(t, statCounter, numJobs)
 }

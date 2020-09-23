@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/registry"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -607,62 +607,6 @@ func (d *mongoDriver) Jobs(ctx context.Context) <-chan amboy.Job {
 			"message":   "database interface error",
 		}))
 	}()
-	return output
-}
-
-func (d *mongoDriver) JobStats(ctx context.Context) <-chan amboy.JobStatusInfo {
-	output := make(chan amboy.JobStatusInfo)
-	go func() {
-		defer close(output)
-		q := bson.M{}
-		d.modifyQueryForGroup(q)
-
-		iter, err := d.getCollection().Find(ctx,
-			q,
-			&options.FindOptions{
-				Sort: bson.M{"status.mod_ts": -1},
-				Projection: bson.M{
-					"_id":    1,
-					"status": 1,
-				},
-			})
-		if err != nil {
-			grip.Warning(message.WrapError(err, message.Fields{
-				"id":        d.instanceID,
-				"service":   "amboy.queue.mdb",
-				"operation": "job status iterator",
-				"message":   "problem with query",
-				"is_group":  d.opts.UseGroups,
-				"group":     d.opts.GroupName,
-			}))
-			return
-		}
-
-		for iter.Next(ctx) {
-			j := &registry.JobInterchange{}
-			if err := iter.Decode(j); err != nil {
-				grip.Warning(message.WrapError(err, message.Fields{
-					"id":        d.instanceID,
-					"service":   "amboy.queue.monto",
-					"operation": "job status iterator",
-					"message":   "problem converting job obj",
-					"is_group":  d.opts.UseGroups,
-					"group":     d.opts.GroupName,
-				}))
-				continue
-			}
-			d.processNameForUsers(j)
-			j.Status.ID = j.Name
-			select {
-			case <-ctx.Done():
-				return
-			case output <- j.Status:
-			}
-
-		}
-
-	}()
-
 	return output
 }
 

@@ -23,7 +23,6 @@ type remoteQueueDriver interface {
 	Next(context.Context) amboy.Job
 
 	Stats(context.Context) amboy.QueueStats
-	JobStats(context.Context) <-chan amboy.JobStatusInfo
 	Complete(context.Context, amboy.Job) error
 
 	LockTimeout() time.Duration

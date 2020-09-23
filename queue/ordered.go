@@ -24,12 +24,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/dependency"
 	"github.com/deciduosity/amboy/pool"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/simple"
@@ -214,31 +214,6 @@ func (q *depGraphOrderedLocal) Results(ctx context.Context) <-chan amboy.Job {
 		}
 	}()
 
-	return output
-}
-
-// JobStats returns job status documents for all jobs tracked by the
-// queue. This implementation returns status for jobs in a random order.
-func (q *depGraphOrderedLocal) JobStats(ctx context.Context) <-chan amboy.JobStatusInfo {
-	output := make(chan amboy.JobStatusInfo)
-	go func() {
-		q.mutex.RLock()
-		defer q.mutex.RUnlock()
-		defer close(output)
-		for _, job := range q.tasks.m {
-			if ctx.Err() != nil {
-				return
-			}
-			s := job.Status()
-			s.ID = job.ID()
-			select {
-			case <-ctx.Done():
-				return
-			case output <- s:
-			}
-
-		}
-	}()
 	return output
 }
 

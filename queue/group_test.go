@@ -255,9 +255,7 @@ func TestQueueGroup(t *testing.T) {
 					}
 
 					closer := func(cctx context.Context) error {
-						catcher := grip.NewBasicCatcher()
-						catcher.Add(client.Database(mopts.DB).Drop(cctx))
-						return catcher.Resolve()
+						return client.Database(mopts.DB).Drop(cctx)
 					}
 
 					opts := MongoDBQueueGroupOptions{
@@ -474,7 +472,7 @@ func TestQueueGroup(t *testing.T) {
 					ctx, cancel := context.WithTimeout(bctx, 10*time.Second)
 					defer cancel()
 
-					g, closer, err := group.Constructor(ctx, time.Second)
+					g, closer, err := group.Constructor(ctx, (1*time.Second)+(500*time.Millisecond))
 					defer func() { require.NoError(t, closer(ctx)) }()
 					require.NoError(t, err)
 					require.NotNil(t, g)
@@ -496,9 +494,14 @@ func TestQueueGroup(t *testing.T) {
 					require.NoError(t, q1.Put(ctx, j1))
 					require.NoError(t, q2.Put(ctx, j2))
 					require.NoError(t, q2.Put(ctx, j3))
+					require.Equal(t, 1, q1.Stats(ctx).Total)
+					require.Equal(t, 2, q2.Stats(ctx).Total)
 
 					amboy.WaitInterval(ctx, q2, 10*time.Millisecond)
 					amboy.WaitInterval(ctx, q1, 10*time.Millisecond)
+
+					require.Equal(t, 1, q1.Stats(ctx).Total)
+					require.Equal(t, 2, q2.Stats(ctx).Total)
 
 					// Queues should have completed work
 					assert.True(t, q1.Stats(ctx).IsComplete())
@@ -508,7 +511,7 @@ func TestQueueGroup(t *testing.T) {
 
 					require.Equal(t, 2, g.Len())
 
-					time.Sleep(2 * time.Second)
+					time.Sleep(3 * time.Second)
 					require.NoError(t, g.Prune(ctx))
 
 					require.Equal(t, 0, g.Len())

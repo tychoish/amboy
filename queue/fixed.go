@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/pool"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
 	"github.com/deciduosity/grip/recovery"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -208,24 +208,6 @@ func (q *limitedSizeLocal) Results(ctx context.Context) <-chan amboy.Job {
 	}
 	close(out)
 	q.toDelete = newCompleted
-
-	return out
-}
-
-// JobStats returns an iterator for job status documents for all jobs
-// in the queue. For this queue implementation *queued* jobs are returned
-// first.
-func (q *limitedSizeLocal) JobStats(ctx context.Context) <-chan amboy.JobStatusInfo {
-	q.mu.RLock()
-	defer q.mu.RUnlock()
-
-	out := make(chan amboy.JobStatusInfo, len(q.storage))
-	for name, job := range q.storage {
-		stat := job.Status()
-		stat.ID = name
-		out <- stat
-	}
-	close(out)
 
 	return out
 }

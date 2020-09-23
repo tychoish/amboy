@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/job"
 	"github.com/deciduosity/amboy/pool"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -310,31 +310,6 @@ checkResults:
 	s.True(qStat.Total == created)
 	s.True(qStat.Completed <= observed, fmt.Sprintf("%d <= %d", qStat.Completed, observed))
 	s.Equal(created, observed+numLocked, "%+v", qStat)
-}
-
-func (s *RemoteUnorderedSuite) TestJobStatsIterator() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	s.require.NoError(s.queue.SetDriver(s.driver))
-
-	names := make(map[string]struct{})
-
-	for i := 0; i < 30; i++ {
-		cmd := fmt.Sprintf("echo 'foo: %d'", i)
-		j := job.NewShellJob(cmd, "")
-
-		s.NoError(s.queue.Put(ctx, j))
-		names[j.ID()] = struct{}{}
-	}
-
-	counter := 0
-	for stat := range s.queue.JobStats(ctx) {
-		_, ok := names[stat.ID]
-		s.True(ok)
-		counter++
-	}
-	s.Equal(len(names), counter)
-	s.Equal(counter, 30)
 }
 
 func (s *RemoteUnorderedSuite) TestTimeInfoPersists() {

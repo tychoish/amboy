@@ -20,12 +20,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/pool"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
 	"github.com/deciduosity/grip/recovery"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -253,50 +253,6 @@ func (q *shuffledLocal) Results(ctx context.Context) <-chan amboy.Job {
 	}
 
 	return output
-}
-
-// JobStats returns JobStatusInfo objects for all jobs tracked by the
-// queue. The operation returns jobs first that have been dispatched
-// (e.g. currently working,) then pending (queued for dispatch,) and
-// finally completed.
-func (q *shuffledLocal) JobStats(ctx context.Context) <-chan amboy.JobStatusInfo {
-	out := make(chan amboy.JobStatusInfo)
-
-	q.operations <- func(
-		pending map[string]amboy.Job,
-		completed map[string]amboy.Job,
-		dispatched map[string]amboy.Job,
-		toDelete *fixedStorage,
-	) {
-
-		defer close(out)
-		for _, j := range dispatched {
-			if ctx.Err() != nil {
-				return
-			}
-			stat := j.Status()
-			stat.ID = j.ID()
-			out <- stat
-		}
-		for _, j := range pending {
-			if ctx.Err() != nil {
-				return
-			}
-			stat := j.Status()
-			stat.ID = j.ID()
-			out <- stat
-		}
-		for _, j := range completed {
-			if ctx.Err() != nil {
-				return
-			}
-			stat := j.Status()
-			stat.ID = j.ID()
-			out <- stat
-		}
-	}
-
-	return out
 }
 
 // Stats returns a standard report on the number of pending, running,

@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/pool"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/recovery"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -182,35 +182,6 @@ func (q *adaptiveLocalOrdering) Results(ctx context.Context) <-chan amboy.Job {
 	select {
 	case <-ctx.Done():
 		out := make(chan amboy.Job)
-		close(out)
-		return out
-	case q.operations <- op:
-		return <-ret
-	}
-}
-
-func (q *adaptiveLocalOrdering) JobStats(ctx context.Context) <-chan amboy.JobStatusInfo {
-	ret := make(chan chan amboy.JobStatusInfo)
-	op := func(opctx context.Context, items *adaptiveOrderItems, fixed *fixedStorage) {
-		out := make(chan amboy.JobStatusInfo, len(items.jobs))
-		defer close(out)
-		defer close(ret)
-
-		for _, j := range items.jobs {
-			if ctx.Err() != nil || opctx.Err() != nil {
-				return
-			}
-
-			stat := j.Status()
-			stat.ID = j.ID()
-			out <- stat
-		}
-		ret <- out
-	}
-
-	select {
-	case <-ctx.Done():
-		out := make(chan amboy.JobStatusInfo)
 		close(out)
 		return out
 	case q.operations <- op:

@@ -12,13 +12,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/pool"
 	"github.com/deciduosity/amboy/registry"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
 	"github.com/deciduosity/grip/recovery"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -255,26 +255,6 @@ func (q *sqsFIFOQueue) Results(ctx context.Context) <-chan amboy.Job {
 		}
 	}()
 	return results
-}
-
-// Returns a channel that produces the status objects for all
-// jobs in the queue, completed and otherwise.
-func (q *sqsFIFOQueue) JobStats(ctx context.Context) <-chan amboy.JobStatusInfo {
-	allInfo := make(chan amboy.JobStatusInfo)
-	go func() {
-		q.mutex.RLock()
-		defer q.mutex.RUnlock()
-		defer close(allInfo)
-		for _, job := range q.tasks.all {
-			select {
-			case <-ctx.Done():
-				return
-			case allInfo <- job.Status():
-			}
-
-		}
-	}()
-	return allInfo
 }
 
 // Returns an object that contains statistics about the

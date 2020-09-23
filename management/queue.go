@@ -13,9 +13,9 @@ type queueManager struct {
 }
 
 // NewQueueManager returns a queue manager that provides the supported
-// Management interface by calling the output of amboy.Queue.Results() and
-// amboy.Queue.JobStats(), iterating over jobs directly. Use this to manage
-// in-memory queue implementations more generically.
+// Management interface by calling the output of amboy.Queue.Results()
+// over jobs directly. Use this to manage in-memory queue
+// implementations more generically.
 //
 // The management algorithms may impact performance of jobs, as queues may
 // require some locking to their Jobs function. Additionally, the speed of
@@ -39,47 +39,35 @@ func (m *queueManager) JobStatus(ctx context.Context, f StatusFilter) (*JobStatu
 	counters := map[string]int{}
 	switch f {
 	case InProgress:
-		for stat := range m.queue.JobStats(ctx) {
-			if stat.InProgress {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if ok {
-					counters[job.Type().Name]++
-				}
+		for job := range m.queue.Results(ctx) {
+			if job.Status().InProgress {
+				counters[job.Type().Name]++
 			}
 		}
 	case Pending:
-		for stat := range m.queue.JobStats(ctx) {
+		for job := range m.queue.Results(ctx) {
+			stat := job.Status()
 			if !stat.Completed && !stat.InProgress {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if ok {
-					counters[job.Type().Name]++
-				}
+				counters[job.Type().Name]++
 			}
 		}
 	case Stale:
-		for stat := range m.queue.JobStats(ctx) {
+		for job := range m.queue.Results(ctx) {
+			stat := job.Status()
 			if !stat.Completed && stat.InProgress && time.Since(stat.ModificationTime) > m.queue.Info().LockTimeout {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if ok {
-					counters[job.Type().Name]++
-				}
+				counters[job.Type().Name]++
 			}
 		}
 	case Completed:
-		for stat := range m.queue.JobStats(ctx) {
+		for job := range m.queue.Results(ctx) {
+			stat := job.Status()
 			if stat.InProgress {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if ok {
-					counters[job.Type().Name]++
-				}
+				counters[job.Type().Name]++
 			}
 		}
 	case All:
-		for stat := range m.queue.JobStats(ctx) {
-			job, ok := m.queue.Get(ctx, stat.ID)
-			if ok {
-				counters[job.Type().Name]++
-			}
+		for job := range m.queue.Results(ctx) {
+			counters[job.Type().Name]++
 		}
 	}
 
@@ -125,11 +113,8 @@ func (m *queueManager) RecentTiming(ctx context.Context, window time.Duration, f
 			}
 		}
 	case Latency:
-		for stat := range m.queue.JobStats(ctx) {
-			job, ok := m.queue.Get(ctx, stat.ID)
-			if !ok {
-				continue
-			}
+		for job := range m.queue.Results(ctx) {
+			stat := job.Status()
 			ti := job.TimeInfo()
 			if !stat.Completed && time.Since(ti.End) < window {
 				jt := job.Type().Name
@@ -137,12 +122,9 @@ func (m *queueManager) RecentTiming(ctx context.Context, window time.Duration, f
 			}
 		}
 	case Running:
-		for stat := range m.queue.JobStats(ctx) {
+		for job := range m.queue.Results(ctx) {
+			stat := job.Status()
 			if !stat.Completed && stat.InProgress {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if !ok {
-					continue
-				}
 				ti := job.TimeInfo()
 				jt := job.Type().Name
 				counters[jt] = append(counters[jt], time.Since(ti.Start))
@@ -190,49 +172,41 @@ func (m *queueManager) JobIDsByState(ctx context.Context, jobType string, f Stat
 
 	switch f {
 	case InProgress:
-		for stat := range m.queue.JobStats(ctx) {
-			if jobType != "" {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if !ok && job.Type().Name != jobType {
-					continue
-				}
+		for job := range m.queue.Results(ctx) {
+			stat := job.Status()
+			if job.Type().Name != jobType {
+				continue
 			}
 			if !stat.Completed && stat.InProgress {
-				ids = append(ids, stat.ID)
+				ids = append(ids, job.ID())
 			}
 		}
 	case Pending:
-		for stat := range m.queue.JobStats(ctx) {
-			if jobType != "" {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if !ok && job.Type().Name != jobType {
-					continue
-				}
+		for job := range m.queue.Results(ctx) {
+			if job.Type().Name != jobType {
+				continue
 			}
+			stat := job.Status()
 			if !stat.Completed && !stat.InProgress {
 				ids = append(ids, stat.ID)
 			}
 		}
 	case Stale:
-		for stat := range m.queue.JobStats(ctx) {
-			if jobType != "" {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if !ok && job.Type().Name != jobType {
-					continue
-				}
+		for job := range m.queue.Results(ctx) {
+			if jobType != job.Type().Name {
+				continue
 			}
+			stat := job.Status()
 			if !stat.Completed && stat.InProgress && time.Since(stat.ModificationTime) > m.queue.Info().LockTimeout {
 				ids = append(ids, stat.ID)
 			}
 		}
 	case Completed:
-		for stat := range m.queue.JobStats(ctx) {
-			if jobType != "" {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if !ok && job.Type().Name != jobType {
-					continue
-				}
+		for job := range m.queue.Results(ctx) {
+			if job.Type().Name != jobType {
+				continue
 			}
+			stat := job.Status()
 			if stat.Completed {
 				ids = append(ids, stat.ID)
 			}
@@ -266,13 +240,9 @@ func (m *queueManager) RecentErrors(ctx context.Context, window time.Duration, f
 
 	switch f {
 	case UniqueErrors:
-		for stat := range m.queue.JobStats(ctx) {
+		for job := range m.queue.Results(ctx) {
+			stat := job.Status()
 			if stat.Completed && stat.ErrorCount > 0 {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if !ok {
-					continue
-				}
-
 				ti := job.TimeInfo()
 				if time.Since(ti.End) > window {
 					continue
@@ -302,13 +272,9 @@ func (m *queueManager) RecentErrors(ctx context.Context, window time.Duration, f
 			collector[k] = v
 		}
 	case AllErrors:
-		for stat := range m.queue.JobStats(ctx) {
+		for job := range m.queue.Results(ctx) {
+			stat := job.Status()
 			if stat.Completed && stat.ErrorCount > 0 {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if !ok {
-					continue
-				}
-
 				ti := job.TimeInfo()
 				if time.Since(ti.End) > window {
 					continue
@@ -324,13 +290,9 @@ func (m *queueManager) RecentErrors(ctx context.Context, window time.Duration, f
 			}
 		}
 	case StatsOnly:
-		for stat := range m.queue.JobStats(ctx) {
+		for job := range m.queue.Results(ctx) {
+			stat := job.Status()
 			if stat.Completed && stat.ErrorCount > 0 {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if !ok {
-					continue
-				}
-
 				ti := job.TimeInfo()
 				if time.Since(ti.End) > window {
 					continue
@@ -382,12 +344,9 @@ func (m *queueManager) RecentJobErrors(ctx context.Context, jobType string, wind
 
 	switch f {
 	case UniqueErrors:
-		for stat := range m.queue.JobStats(ctx) {
+		for job := range m.queue.Results(ctx) {
+			stat := job.Status()
 			if stat.Completed && stat.ErrorCount > 0 {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if !ok {
-					continue
-				}
 				if job.Type().Name != jobType {
 					continue
 				}
@@ -420,12 +379,9 @@ func (m *queueManager) RecentJobErrors(ctx context.Context, jobType string, wind
 			collector[k] = v
 		}
 	case AllErrors:
-		for stat := range m.queue.JobStats(ctx) {
+		for job := range m.queue.Results(ctx) {
+			stat := job.Status()
 			if stat.Completed && stat.ErrorCount > 0 {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if !ok {
-					continue
-				}
 				if job.Type().Name != jobType {
 					continue
 				}
@@ -444,12 +400,9 @@ func (m *queueManager) RecentJobErrors(ctx context.Context, jobType string, wind
 			}
 		}
 	case StatsOnly:
-		for stat := range m.queue.JobStats(ctx) {
+		for job := range m.queue.Results(ctx) {
+			stat := job.Status()
 			if stat.Completed && stat.ErrorCount > 0 {
-				job, ok := m.queue.Get(ctx, stat.ID)
-				if !ok {
-					continue
-				}
 				if job.Type().Name != jobType {
 					continue
 				}
@@ -506,12 +459,12 @@ func (m *queueManager) CompleteJobsByType(ctx context.Context, f StatusFilter, j
 		return errors.New("invalid specification of completed job type")
 	}
 
-	for stat := range m.queue.JobStats(ctx) {
-		job, ok := m.queue.Get(ctx, stat.ID)
-		if ok && job.Type().Name != jobType {
+	for job := range m.queue.Results(ctx) {
+		if job.Type().Name != jobType {
 			continue
 		}
 
+		stat := job.Status()
 		switch f {
 		case Stale:
 			if !stat.InProgress || time.Since(stat.ModificationTime) < m.queue.Info().LockTimeout {
@@ -546,7 +499,9 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 		return errors.New("invalid specification of completed job type")
 	}
 
-	for stat := range m.queue.JobStats(ctx) {
+	for job := range m.queue.Results(ctx) {
+		stat := job.Status()
+
 		if stat.Completed {
 			continue
 		}

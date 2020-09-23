@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/job"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -156,24 +156,6 @@ func (q *QueueTester) Results(ctx context.Context) <-chan amboy.Job {
 			if job.Status().Completed {
 				output <- job
 			}
-		}
-	}()
-
-	return output
-}
-
-func (q *QueueTester) JobStats(ctx context.Context) <-chan amboy.JobStatusInfo {
-	output := make(chan amboy.JobStatusInfo)
-	go func() {
-		defer close(output)
-		for _, job := range q.storage {
-			if ctx.Err() != nil {
-				return
-
-			}
-			status := job.Status()
-			status.ID = job.ID()
-			output <- status
 		}
 	}()
 

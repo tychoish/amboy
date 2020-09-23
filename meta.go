@@ -61,7 +61,8 @@ func Report(ctx context.Context, q Queue, limit int) QueueReport {
 	}
 
 	var count int
-	for stat := range q.JobStats(ctx) {
+	for j := range q.Results(ctx) {
+		stat := j.Status()
 		switch {
 		case stat.Completed:
 			out.Completed = append(out.Completed, stat.ID)

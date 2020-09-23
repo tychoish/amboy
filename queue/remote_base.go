@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -225,10 +225,6 @@ func (q *remoteBase) Results(ctx context.Context) <-chan amboy.Job {
 		}
 	}()
 	return output
-}
-
-func (q *remoteBase) JobStats(ctx context.Context) <-chan amboy.JobStatusInfo {
-	return q.driver.JobStats(ctx)
 }
 
 // Stats returns a amboy.QueueStats object that reflects the progress

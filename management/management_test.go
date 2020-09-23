@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/dependency"
 	"github.com/deciduosity/amboy/job"
 	"github.com/deciduosity/amboy/queue"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -294,7 +294,9 @@ func (s *ManagerSuite) TestCompleteJob() {
 
 	s.Require().NoError(s.manager.CompleteJob(s.ctx, "complete"))
 	jobCount := 0
-	for jobStats := range s.queue.JobStats(s.ctx) {
+	for job := range s.queue.Results(s.ctx) {
+		jobStats := job.Stats()
+
 		if jobStats.ID == "complete" {
 			s.True(jobStats.Completed)
 			_, ok := s.manager.(*dbQueueManager)
@@ -325,7 +327,8 @@ func (s *ManagerSuite) TestCompleteJobsValidFilter() {
 
 	s.Require().NoError(s.manager.CompleteJobs(s.ctx, Pending))
 	jobCount := 0
-	for jobStats := range s.queue.JobStats(s.ctx) {
+	for job := range s.queue.Results(s.ctx) {
+		jobStats := job.Status()
 		s.True(jobStats.Completed)
 		_, ok := s.manager.(*dbQueueManager)
 		if ok {
@@ -351,7 +354,8 @@ func (s *ManagerSuite) TestCompleteJobsByTypeValidFilter() {
 
 	s.Require().NoError(s.manager.CompleteJobsByType(s.ctx, Pending, "test"))
 	jobCount := 0
-	for jobStats := range s.queue.JobStats(s.ctx) {
+	for job := range s.queue.Results(s.ctx) {
+		jobStats := job.Status()
 		if jobStats.ID == "0" || jobStats.ID == "1" {
 			s.True(jobStats.Completed)
 			_, ok := s.manager.(*dbQueueManager)

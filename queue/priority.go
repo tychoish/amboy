@@ -6,11 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/pool"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -145,31 +145,6 @@ func (q *priorityLocalQueue) Results(ctx context.Context) <-chan amboy.Job {
 	}()
 
 	return output
-}
-
-// JobStats returns a job status for every job stored in the
-// queue. Does not include currently in progress tasks.
-func (q *priorityLocalQueue) JobStats(ctx context.Context) <-chan amboy.JobStatusInfo {
-	out := make(chan amboy.JobStatusInfo)
-
-	go func() {
-		defer close(out)
-		for job := range q.storage.Contents() {
-			if ctx.Err() != nil {
-				return
-			}
-			stat := job.Status()
-			stat.ID = job.ID()
-			select {
-			case <-ctx.Done():
-				return
-			case out <- stat:
-			}
-
-		}
-	}()
-
-	return out
 }
 
 // Runner returns the embedded runner instance, which provides and

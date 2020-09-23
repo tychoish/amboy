@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/job"
 	"github.com/deciduosity/grip"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -245,29 +245,6 @@ func (s *DriverSuite) TestJobsMethodReturnsAllJobs() {
 	}
 
 	s.Equal(counter, len(mocks))
-}
-
-func (s *DriverSuite) TestStatsMethodReturnsAllJobs() {
-	names := make(map[string]struct{})
-
-	for i := 0; i < 30; i++ {
-		cmd := fmt.Sprintf("echo 'foo: %d'", i)
-		j := job.NewShellJob(cmd, "")
-
-		s.NoError(s.driver.Put(s.ctx, j))
-		names[j.ID()] = struct{}{}
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	counter := 0
-	for stat := range s.driver.JobStats(ctx) {
-		_, ok := names[stat.ID]
-		s.True(ok)
-		counter++
-	}
-	s.Equal(len(names), counter)
-	s.Equal(counter, 30)
 }
 
 func (s *DriverSuite) TestReturnsDefaultLockTimeout() {
