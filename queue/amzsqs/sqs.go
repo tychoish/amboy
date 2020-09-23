@@ -1,7 +1,9 @@
-package queue
+package amzsqs
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -14,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/pool"
+	"github.com/deciduosity/amboy/queue"
 	"github.com/deciduosity/amboy/registry"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
@@ -21,6 +24,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
+
+// RandomString returns a cryptographically random string.
+func randomString(x int) string {
+	b := make([]byte, x)
+	_, _ = rand.Read(b) // nolint
+	return hex.EncodeToString(b)
+}
 
 const region string = "us-east-1"
 
@@ -30,7 +40,7 @@ type sqsFIFOQueue struct {
 	id         string
 	started    bool
 	numRunning int
-	dispatcher Dispatcher
+	dispatcher queue.Dispatcher
 	tasks      struct { // map jobID to job information
 		completed map[string]bool
 		all       map[string]amboy.Job
@@ -39,11 +49,11 @@ type sqsFIFOQueue struct {
 	mutex  sync.RWMutex
 }
 
-// NewSQSFifoQueue constructs a AWS SQS backed Queue
+// NewFifoQueue constructs a AWS SQS backed Queue
 // implementation. This queue, generally is ephemeral: tasks are
 // removed from the queue, and therefore may not handle jobs across
 // restarts.
-func NewSQSFifoQueue(queueName string, workers int) (amboy.Queue, error) {
+func NewFifoQueue(queueName string, workers int) (amboy.Queue, error) {
 	q := &sqsFIFOQueue{
 		sqsClient: sqs.New(session.Must(session.NewSession(&aws.Config{
 			Region: aws.String(region),
@@ -53,7 +63,7 @@ func NewSQSFifoQueue(queueName string, workers int) (amboy.Queue, error) {
 	q.tasks.completed = make(map[string]bool)
 	q.tasks.all = make(map[string]amboy.Job)
 	q.runner = pool.NewLocalWorkers(workers, q)
-	q.dispatcher = NewDispatcher(q)
+	q.dispatcher = queue.NewDispatcher(q)
 	result, err := q.sqsClient.CreateQueue(&sqs.CreateQueueInput{
 		QueueName: aws.String(fmt.Sprintf("%s.fifo", queueName)),
 		Attributes: map[string]*string{

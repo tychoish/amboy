@@ -1,17 +1,8 @@
 package queue
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"strings"
 )
-
-// RandomString returns a cryptographically random string.
-func randomString(x int) string {
-	b := make([]byte, x)
-	_, _ = rand.Read(b) // nolint
-	return hex.EncodeToString(b)
-}
 
 func addJobsSuffix(s string) string {
 	return s + ".jobs"

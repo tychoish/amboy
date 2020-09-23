@@ -1,4 +1,4 @@
-package queue
+package amzsqs
 
 import (
 	"context"
@@ -35,7 +35,7 @@ func (s *SQSFifoQueueSuite) SetupTest() {
 	defer cancel()
 
 	var err error
-	s.queue, err = NewSQSFifoQueue(randomString(4), 4)
+	s.queue, err = NewFifoQueue(randomString(4), 4)
 	s.NoError(err)
 	r := pool.NewSingle()
 	s.NoError(r.SetQueue(s.queue))
@@ -104,7 +104,7 @@ func TestSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 	assert := assert.New(t)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	q, err := NewSQSFifoQueue(randomString(8), 4)
+	q, err := NewFifoQueue(randomString(8), 4)
 	assert.NoError(err)
 	assert.NoError(q.Start(ctx))
 	wg := &sync.WaitGroup{}
@@ -147,11 +147,11 @@ func TestMultipleSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 
 	defer cancel()
 	name := randomString(8)
-	q, err := NewSQSFifoQueue(name, 4)
+	q, err := NewFifoQueue(name, 4)
 	assert.NoError(err)
 	assert.NoError(q.Start(ctx))
 
-	q2, err := NewSQSFifoQueue(name, 4)
+	q2, err := NewFifoQueue(name, 4)
 	assert.NoError(err)
 	assert.NoError(q2.Start(ctx))
 

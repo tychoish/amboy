@@ -61,16 +61,6 @@ func DefaultQueueTestCases() []testutil.QueueTestCase {
 				return NewShuffledLocal(size, defaultLocalQueueCapcity), func(ctx context.Context) error { return nil }, nil
 			},
 		},
-		{
-			Name:    "SQSFifo",
-			MaxSize: 4,
-			Skip:    true,
-			Constructor: func(ctx context.Context, _ string, size int) (amboy.Queue, testutil.TestCloser, error) {
-				q, err := NewSQSFifoQueue(randomString(4), size)
-				closer := func(ctx context.Context) error { return nil }
-				return q, closer, err
-			},
-		},
 	}
 }
 
