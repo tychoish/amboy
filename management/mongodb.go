@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deciduosity/amboy/queue"
+	"github.com/deciduosity/amboy/queue/mdbq"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
 	"github.com/pkg/errors"
@@ -28,7 +28,7 @@ type DBQueueManagerOptions struct {
 	Group       string
 	SingleGroup bool
 	ByGroups    bool
-	Options     queue.MongoDBOptions
+	Options     mdbq.MongoDBOptions
 }
 
 func (o *DBQueueManagerOptions) hasGroups() bool { return o.SingleGroup || o.ByGroups }

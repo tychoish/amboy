@@ -13,7 +13,7 @@ type queueManager struct {
 }
 
 // NewQueueManager returns a queue manager that provides the supported
-// Management interface by calling the output of amboy.Queue.Results()
+// Management interface by calling the output of amboy.Queue.Jobs()
 // over jobs directly. Use this to manage in-memory queue
 // implementations more generically.
 //
@@ -39,34 +39,34 @@ func (m *queueManager) JobStatus(ctx context.Context, f StatusFilter) (*JobStatu
 	counters := map[string]int{}
 	switch f {
 	case InProgress:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			if job.Status().InProgress {
 				counters[job.Type().Name]++
 			}
 		}
 	case Pending:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			if !stat.Completed && !stat.InProgress {
 				counters[job.Type().Name]++
 			}
 		}
 	case Stale:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			if !stat.Completed && stat.InProgress && time.Since(stat.ModificationTime) > m.queue.Info().LockTimeout {
 				counters[job.Type().Name]++
 			}
 		}
 	case Completed:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			if stat.InProgress {
 				counters[job.Type().Name]++
 			}
 		}
 	case All:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			counters[job.Type().Name]++
 		}
 	}
@@ -104,7 +104,7 @@ func (m *queueManager) RecentTiming(ctx context.Context, window time.Duration, f
 
 	switch f {
 	case Duration:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			ti := job.TimeInfo()
 			if stat.Completed && time.Since(ti.End) < window {
@@ -113,7 +113,7 @@ func (m *queueManager) RecentTiming(ctx context.Context, window time.Duration, f
 			}
 		}
 	case Latency:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			ti := job.TimeInfo()
 			if !stat.Completed && time.Since(ti.End) < window {
@@ -122,7 +122,7 @@ func (m *queueManager) RecentTiming(ctx context.Context, window time.Duration, f
 			}
 		}
 	case Running:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			if !stat.Completed && stat.InProgress {
 				ti := job.TimeInfo()
@@ -172,7 +172,7 @@ func (m *queueManager) JobIDsByState(ctx context.Context, jobType string, f Stat
 
 	switch f {
 	case InProgress:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			if job.Type().Name != jobType {
 				continue
@@ -182,7 +182,7 @@ func (m *queueManager) JobIDsByState(ctx context.Context, jobType string, f Stat
 			}
 		}
 	case Pending:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			if job.Type().Name != jobType {
 				continue
 			}
@@ -192,7 +192,7 @@ func (m *queueManager) JobIDsByState(ctx context.Context, jobType string, f Stat
 			}
 		}
 	case Stale:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			if jobType != job.Type().Name {
 				continue
 			}
@@ -202,7 +202,7 @@ func (m *queueManager) JobIDsByState(ctx context.Context, jobType string, f Stat
 			}
 		}
 	case Completed:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			if job.Type().Name != jobType {
 				continue
 			}
@@ -240,7 +240,7 @@ func (m *queueManager) RecentErrors(ctx context.Context, window time.Duration, f
 
 	switch f {
 	case UniqueErrors:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			if stat.Completed && stat.ErrorCount > 0 {
 				ti := job.TimeInfo()
@@ -272,7 +272,7 @@ func (m *queueManager) RecentErrors(ctx context.Context, window time.Duration, f
 			collector[k] = v
 		}
 	case AllErrors:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			if stat.Completed && stat.ErrorCount > 0 {
 				ti := job.TimeInfo()
@@ -290,7 +290,7 @@ func (m *queueManager) RecentErrors(ctx context.Context, window time.Duration, f
 			}
 		}
 	case StatsOnly:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			if stat.Completed && stat.ErrorCount > 0 {
 				ti := job.TimeInfo()
@@ -344,7 +344,7 @@ func (m *queueManager) RecentJobErrors(ctx context.Context, jobType string, wind
 
 	switch f {
 	case UniqueErrors:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			if stat.Completed && stat.ErrorCount > 0 {
 				if job.Type().Name != jobType {
@@ -379,7 +379,7 @@ func (m *queueManager) RecentJobErrors(ctx context.Context, jobType string, wind
 			collector[k] = v
 		}
 	case AllErrors:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			if stat.Completed && stat.ErrorCount > 0 {
 				if job.Type().Name != jobType {
@@ -400,7 +400,7 @@ func (m *queueManager) RecentJobErrors(ctx context.Context, jobType string, wind
 			}
 		}
 	case StatsOnly:
-		for job := range m.queue.Results(ctx) {
+		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			if stat.Completed && stat.ErrorCount > 0 {
 				if job.Type().Name != jobType {
@@ -459,7 +459,7 @@ func (m *queueManager) CompleteJobsByType(ctx context.Context, f StatusFilter, j
 		return errors.New("invalid specification of completed job type")
 	}
 
-	for job := range m.queue.Results(ctx) {
+	for job := range m.queue.Jobs(ctx) {
 		if job.Type().Name != jobType {
 			continue
 		}
@@ -499,7 +499,7 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 		return errors.New("invalid specification of completed job type")
 	}
 
-	for job := range m.queue.Results(ctx) {
+	for job := range m.queue.Jobs(ctx) {
 		stat := job.Status()
 
 		if stat.Completed {
@@ -526,7 +526,7 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 			continue
 		}
 
-		job, ok := m.queue.Get(ctx, stat.ID)
+		job, ok := m.queue.Get(ctx, job.ID())
 		if !ok {
 			continue
 		}

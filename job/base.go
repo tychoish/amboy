@@ -89,6 +89,7 @@ func (b *Base) SetID(n string) {
 	defer b.mutex.Unlock()
 
 	b.TaskID = n
+	b.status.ID = n
 }
 
 ////////////////////////////////////////////////////////////////////////

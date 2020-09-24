@@ -7,7 +7,9 @@ import (
 
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/queue"
+	"github.com/deciduosity/amboy/registry"
 	"github.com/deciduosity/grip"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // remoteQueueDriver describes the interface between a queue and an out of
@@ -46,7 +48,8 @@ type MongoDBOptions struct {
 	CheckDispatchBy          bool
 	SkipQueueIndexBuilds     bool
 	SkipReportingIndexBuilds bool
-	Format                   amboy.Format
+	Marshler                 registry.Marshaler
+	Unmarshaler              registry.Unmarshaler
 	WaitInterval             time.Duration
 	// TTL sets the number of seconds for a TTL index on the "info.created"
 	// field. If set to zero, the TTL index will not be created and
@@ -69,7 +72,8 @@ func DefaultMongoDBOptions() MongoDBOptions {
 		SkipQueueIndexBuilds:     false,
 		SkipReportingIndexBuilds: false,
 		WaitInterval:             time.Second,
-		Format:                   amboy.BSON,
+		Marshler:                 bson.Marshal,
+		Unmarshaler:              bson.Unmarshal,
 		LockTimeout:              amboy.LockTimeout,
 	}
 }
@@ -81,12 +85,13 @@ func (opts *MongoDBOptions) Validate() error {
 	catcher.NewWhen(opts.URI == "", "must specify connection URI")
 	catcher.NewWhen(opts.DB == "", "must specify database")
 	catcher.NewWhen(opts.LockTimeout < 0, "cannot have negative lock timeout")
+	catcher.NewWhen(opts.Marshler == nil, "must specify a bson marshaler")
+	catcher.NewWhen(opts.Unmarshaler == nil, "must specify a bson unmashlser")
+
 	if opts.LockTimeout == 0 {
 		opts.LockTimeout = amboy.LockTimeout
 	}
-	if !opts.Format.IsValid() {
-		opts.Format = amboy.BSON
-	}
+
 	return catcher.Resolve()
 }
 

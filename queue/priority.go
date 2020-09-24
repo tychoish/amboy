@@ -127,9 +127,9 @@ func (q *priorityLocalQueue) Info() amboy.QueueInfo {
 	}
 }
 
-// Results is a generator of all jobs that report as "Completed" in
+// Jobs is a generator of all jobs that report as "Completed" in
 // the queue.
-func (q *priorityLocalQueue) Results(ctx context.Context) <-chan amboy.Job {
+func (q *priorityLocalQueue) Jobs(ctx context.Context) <-chan amboy.Job {
 	output := make(chan amboy.Job)
 
 	go func() {

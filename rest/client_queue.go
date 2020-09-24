@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deciduosity/gimlet"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/registry"
+	"github.com/deciduosity/gimlet"
 	"github.com/deciduosity/grip"
 	"github.com/pkg/errors"
 )
@@ -201,7 +201,7 @@ func (c *QueueClient) PendingJobs(ctx context.Context) (int, error) {
 
 // SubmitJob adds a job to a remote queue connected to the rest interface.
 func (c *QueueClient) SubmitJob(ctx context.Context, j amboy.Job) (string, error) {
-	ji, err := registry.MakeJobInterchange(j, amboy.JSON)
+	ji, err := registry.MakeJobInterchange(j, json.Marshal)
 	if err != nil {
 		return "", err
 	}
@@ -257,7 +257,7 @@ func (c *QueueClient) FetchJob(ctx context.Context, name string) (amboy.Job, err
 		return nil, err
 	}
 
-	j, err := ji.Resolve(amboy.JSON)
+	j, err := ji.Resolve(json.Unmarshal)
 	if err != nil {
 		return nil, err
 	}

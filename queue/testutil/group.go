@@ -111,11 +111,11 @@ func RunGroupIntegrationTest(bctx context.Context, t *testing.T, group GroupInte
 			amboy.WaitInterval(ctx, q2, 100*time.Millisecond)
 
 			resultsQ1 := []amboy.Job{}
-			for result := range q1.Results(ctx) {
+			for result := range q1.Jobs(ctx) {
 				resultsQ1 = append(resultsQ1, result)
 			}
 			resultsQ2 := []amboy.Job{}
-			for result := range q2.Results(ctx) {
+			for result := range q2.Jobs(ctx) {
 				resultsQ2 = append(resultsQ2, result)
 			}
 
@@ -132,11 +132,11 @@ func RunGroupIntegrationTest(bctx context.Context, t *testing.T, group GroupInte
 
 			// The queues should be the same, i.e., contain the jobs we expect
 			resultsQ1 = []amboy.Job{}
-			for result := range q1.Results(ctx) {
+			for result := range q1.Jobs(ctx) {
 				resultsQ1 = append(resultsQ1, result)
 			}
 			resultsQ2 = []amboy.Job{}
-			for result := range q2.Results(ctx) {
+			for result := range q2.Jobs(ctx) {
 				resultsQ2 = append(resultsQ2, result)
 			}
 			require.Len(t, resultsQ1, 1)
@@ -195,11 +195,11 @@ func RunGroupIntegrationTest(bctx context.Context, t *testing.T, group GroupInte
 			amboy.WaitInterval(ctx, q4, 10*time.Millisecond)
 
 			resultsQ3 := []amboy.Job{}
-			for result := range q3.Results(ctx) {
+			for result := range q3.Jobs(ctx) {
 				resultsQ3 = append(resultsQ3, result)
 			}
 			resultsQ4 := []amboy.Job{}
-			for result := range q4.Results(ctx) {
+			for result := range q4.Jobs(ctx) {
 				resultsQ4 = append(resultsQ4, result)
 			}
 			require.Len(t, resultsQ3, 1)
@@ -216,11 +216,11 @@ func RunGroupIntegrationTest(bctx context.Context, t *testing.T, group GroupInte
 
 			// The queues should be the same, i.e., contain the jobs we expect
 			resultsQ3 = []amboy.Job{}
-			for result := range q3.Results(ctx) {
+			for result := range q3.Jobs(ctx) {
 				resultsQ3 = append(resultsQ3, result)
 			}
 			resultsQ4 = []amboy.Job{}
-			for result := range q4.Results(ctx) {
+			for result := range q4.Jobs(ctx) {
 				resultsQ4 = append(resultsQ4, result)
 			}
 			require.Len(t, resultsQ3, 1)

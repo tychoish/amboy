@@ -224,8 +224,8 @@ func (q *shuffledLocal) Get(ctx context.Context, name string) (amboy.Job, bool) 
 	}
 }
 
-// Results returns all completed jobs processed by the queue.
-func (q *shuffledLocal) Results(ctx context.Context) <-chan amboy.Job {
+// Jobs returns all completed jobs processed by the queue.
+func (q *shuffledLocal) Jobs(ctx context.Context) <-chan amboy.Job {
 	output := make(chan amboy.Job)
 
 	if !q.Info().Started {
@@ -243,6 +243,22 @@ func (q *shuffledLocal) Results(ctx context.Context) <-chan amboy.Job {
 		defer close(output)
 
 		for _, job := range completed {
+			select {
+			case <-ctx.Done():
+				return
+			case output <- job:
+				continue
+			}
+		}
+		for _, job := range pending {
+			select {
+			case <-ctx.Done():
+				return
+			case output <- job:
+				continue
+			}
+		}
+		for _, job := range dispatched {
 			select {
 			case <-ctx.Done():
 				return

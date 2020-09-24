@@ -26,7 +26,6 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 					MDB:     DefaultMongoDBOptions(),
 					Client:  client,
 				}
-				opts.MDB.Format = amboy.BSON2
 				q, err := NewMongoDBQueue(ctx, opts)
 				if err != nil {
 					return nil, nil, err
@@ -59,7 +58,6 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 					MDB:     DefaultMongoDBOptions(),
 					Client:  client,
 				}
-				opts.MDB.Format = amboy.BSON2
 				opts.MDB.GroupName = "group." + name
 				opts.MDB.UseGroups = true
 				q, err := NewMongoDBQueue(ctx, opts)
@@ -84,40 +82,6 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 			},
 		},
 		{
-			Name:     "MongoUnorderedMGOBSON",
-			IsRemote: true,
-			MaxSize:  32,
-			Constructor: func(ctx context.Context, name string, size int) (amboy.Queue, testutil.TestCloser, error) {
-				opts := MongoDBQueueCreationOptions{
-					Size:    size,
-					Name:    name,
-					Ordered: false,
-					MDB:     DefaultMongoDBOptions(),
-					Client:  client,
-				}
-				opts.MDB.Format = amboy.BSON
-				q, err := NewMongoDBQueue(ctx, opts)
-				if err != nil {
-					return nil, nil, err
-				}
-				rq, ok := q.(remoteQueue)
-				if !ok {
-					return nil, nil, errors.New("invalid queue constructed")
-				}
-
-				closer := func(ctx context.Context) error {
-					d := rq.Driver()
-					if d != nil {
-						d.Close()
-					}
-
-					return client.Database(opts.MDB.DB).Collection(addJobsSuffix(name)).Drop(ctx)
-				}
-
-				return q, closer, nil
-			},
-		},
-		{
 			Name:     "MongoOrdered",
 			IsRemote: true,
 			Constructor: func(ctx context.Context, name string, size int) (amboy.Queue, testutil.TestCloser, error) {
@@ -128,7 +92,6 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 					MDB:     DefaultMongoDBOptions(),
 					Client:  client,
 				}
-				opts.MDB.Format = amboy.BSON2
 				q, err := NewMongoDBQueue(ctx, opts)
 				if err != nil {
 					return nil, nil, err

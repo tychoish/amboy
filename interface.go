@@ -196,8 +196,8 @@ type Queue interface {
 	// put,) or if the queue does not have ownership of the job.
 	Save(context.Context, Job) error
 
-	// Returns a channel that produces completed Job objects.
-	Results(context.Context) <-chan Job
+	// Channel that produces all job objects Job objects.
+	Jobs(context.Context) <-chan Job
 
 	// Returns an object that contains statistics about the
 	// current state of the Queue.

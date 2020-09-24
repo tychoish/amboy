@@ -162,7 +162,7 @@ func (q *adaptiveLocalOrdering) Get(ctx context.Context, name string) (amboy.Job
 	}
 
 }
-func (q *adaptiveLocalOrdering) Results(ctx context.Context) <-chan amboy.Job {
+func (q *adaptiveLocalOrdering) Jobs(ctx context.Context) <-chan amboy.Job {
 	ret := make(chan chan amboy.Job)
 
 	op := func(opctx context.Context, items *adaptiveOrderItems, fixed *fixedStorage) {

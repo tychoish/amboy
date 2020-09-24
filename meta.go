@@ -16,7 +16,10 @@ import (
 func ResolveErrors(ctx context.Context, q Queue) error {
 	catcher := grip.NewCatcher()
 
-	for result := range q.Results(ctx) {
+	for result := range q.Jobs(ctx) {
+		if !result.Status().Completed {
+			continue
+		}
 		if err := ctx.Err(); err != nil {
 			catcher.Add(err)
 			break
@@ -61,7 +64,7 @@ func Report(ctx context.Context, q Queue, limit int) QueueReport {
 	}
 
 	var count int
-	for j := range q.Results(ctx) {
+	for j := range q.Jobs(ctx) {
 		stat := j.Status()
 		switch {
 		case stat.Completed:

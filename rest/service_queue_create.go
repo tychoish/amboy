@@ -2,11 +2,11 @@ package rest
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
-	"github.com/deciduosity/gimlet"
-	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/registry"
+	"github.com/deciduosity/gimlet"
 	"github.com/deciduosity/grip"
 )
 
@@ -27,7 +27,7 @@ func (s *QueueService) createJobResponseBase(ctx context.Context) *createRespons
 
 func (s *QueueService) createJob(ctx context.Context, payload *registry.JobInterchange) (*createResponse, error) {
 	resp := s.createJobResponseBase(ctx)
-	j, err := payload.Resolve(amboy.JSON)
+	j, err := payload.Resolve(json.Unmarshal)
 
 	if err != nil {
 		resp.Error = err.Error()

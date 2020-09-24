@@ -143,7 +143,7 @@ func (q *QueueTester) Start(ctx context.Context) error {
 	return nil
 }
 
-func (q *QueueTester) Results(ctx context.Context) <-chan amboy.Job {
+func (q *QueueTester) Jobs(ctx context.Context) <-chan amboy.Job {
 	output := make(chan amboy.Job)
 
 	go func() {

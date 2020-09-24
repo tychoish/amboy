@@ -110,7 +110,7 @@ func (q *sqsFIFOQueue) Put(ctx context.Context, j amboy.Job) error {
 	curStatus := j.Status()
 	curStatus.ID = dedupID
 	j.SetStatus(curStatus)
-	jobItem, err := registry.MakeJobInterchange(j, amboy.JSON)
+	jobItem, err := registry.MakeJobInterchange(j, json.Marshal)
 	if err != nil {
 		return errors.Wrap(err, "Error converting job in Put")
 	}
@@ -182,7 +182,7 @@ func (q *sqsFIFOQueue) Next(ctx context.Context) amboy.Job {
 	if err != nil {
 		return nil
 	}
-	job, err := jobItem.Resolve(amboy.JSON)
+	job, err := jobItem.Resolve(json.Unmarshal)
 	if err != nil {
 		return nil
 	}
@@ -245,7 +245,7 @@ func (q *sqsFIFOQueue) Complete(ctx context.Context, job amboy.Job) {
 }
 
 // Returns a channel that produces completed Job objects.
-func (q *sqsFIFOQueue) Results(ctx context.Context) <-chan amboy.Job {
+func (q *sqsFIFOQueue) Jobs(ctx context.Context) <-chan amboy.Job {
 	results := make(chan amboy.Job)
 
 	go func() {

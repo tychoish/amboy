@@ -191,12 +191,12 @@ func (q *depGraphOrderedLocal) Next(ctx context.Context) amboy.Job {
 	}
 }
 
-// Results provides an iterator of all "result objects," or completed
+// Jobs provides an iterator of all "result objects," or completed
 // amboy.Job objects. Does not wait for all results to be complete, and is
 // closed when all results have been exhausted, even if there are more
 // results pending. Other implementations may have different semantics
 // for this method.
-func (q *depGraphOrderedLocal) Results(ctx context.Context) <-chan amboy.Job {
+func (q *depGraphOrderedLocal) Jobs(ctx context.Context) <-chan amboy.Job {
 	output := make(chan amboy.Job)
 
 	go func() {

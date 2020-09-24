@@ -79,7 +79,7 @@ func UnorderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 
 	grip.Infof("workers complete for %d worker smoke test", size.Size)
 	assert.Equal(t, numJobs, q.Stats(ctx).Completed, fmt.Sprintf("%+v", q.Stats(ctx)))
-	for result := range q.Results(ctx) {
+	for result := range q.Jobs(ctx) {
 		assert.True(t, result.Status().Completed, fmt.Sprintf("with %d workers", size.Size))
 
 		// assert that we had valid time info persisted
@@ -89,7 +89,7 @@ func UnorderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 	}
 
 	statCounter := 0
-	for job := range q.Results(ctx) {
+	for job := range q.Jobs(ctx) {
 		statCounter++
 		assert.True(t, job.ID() != "")
 	}
@@ -142,12 +142,12 @@ func OrderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runner 
 	require.Equal(t, numJobs, q.Stats(ctx).Total, fmt.Sprintf("with %d workers", size.Size))
 	amboy.WaitInterval(ctx, q, 50*time.Millisecond)
 	require.Equal(t, numJobs, q.Stats(ctx).Completed, fmt.Sprintf("%+v", q.Stats(ctx)))
-	for result := range q.Results(ctx) {
+	for result := range q.Jobs(ctx) {
 		require.True(t, result.Status().Completed, fmt.Sprintf("with %d workers", size.Size))
 	}
 
 	statCounter := 0
-	for job := range q.Results(ctx) {
+	for job := range q.Jobs(ctx) {
 		statCounter++
 		require.True(t, job.ID() != "")
 	}
@@ -236,7 +236,7 @@ waitLoop:
 	assert.Equal(t, numJobs, stats.Completed)
 
 	completed := 0
-	for result := range q.Results(ctx) {
+	for result := range q.Jobs(ctx) {
 		status := result.Status()
 		ti := result.TimeInfo()
 
@@ -394,7 +394,7 @@ func MultiExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, 
 	// and unique
 	firstCount := 0
 	results := make(map[string]struct{})
-	for result := range qOne.Results(ctx) {
+	for result := range qOne.Jobs(ctx) {
 		firstCount++
 		assert.True(t, result.Status().Completed)
 		results[result.ID()] = struct{}{}
@@ -403,7 +403,7 @@ func MultiExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, 
 	secondCount := 0
 	// make sure that all of the results in the second queue match
 	// the results in the first queue.
-	for result := range qTwo.Results(ctx) {
+	for result := range qTwo.Jobs(ctx) {
 		secondCount++
 		assert.True(t, result.Status().Completed)
 		results[result.ID()] = struct{}{}

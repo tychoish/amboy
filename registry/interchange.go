@@ -23,21 +23,24 @@ type JobInterchange struct {
 	Dependency *DependencyInterchange `json:"dependency,omitempty" bson:"dependency,omitempty" yaml:"dependency,omitempty"`
 }
 
+type Marshaler func(interface{}) ([]byte, error)
+type Unmarshaler func([]byte, interface{}) error
+
 // MakeJobInterchange changes a Job interface into a JobInterchange
 // structure, for easier serialization.
-func MakeJobInterchange(j amboy.Job, f amboy.Format) (*JobInterchange, error) {
+func MakeJobInterchange(j amboy.Job, convertTo Marshaler) (*JobInterchange, error) {
 	typeInfo := j.Type()
 
 	if typeInfo.Version < 0 {
 		return nil, errors.New("cannot use jobs with versions less than 0 with job interchange")
 	}
 
-	dep, err := makeDependencyInterchange(f, j.Dependency())
+	dep, err := makeDependencyInterchange(convertTo, j.Dependency())
 	if err != nil {
 		return nil, err
 	}
 
-	data, err := convertTo(f, j)
+	data, err := convertTo(j)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +65,7 @@ func MakeJobInterchange(j amboy.Job, f amboy.Format) (*JobInterchange, error) {
 // JobInterchange object isn't registered or the current version of
 // the job produced by the registry is *not* the same as the version
 // of the Job.
-func (j *JobInterchange) Resolve(f amboy.Format) (amboy.Job, error) {
+func (j *JobInterchange) Resolve(convertFrom Unmarshaler) (amboy.Job, error) {
 	factory, err := GetJobFactory(j.Type)
 	if err != nil {
 		return nil, err
@@ -75,12 +78,12 @@ func (j *JobInterchange) Resolve(f amboy.Format) (amboy.Job, error) {
 			j.Name, j.Version, job.Type().Version, j.Type)
 	}
 
-	dep, err := convertToDependency(f, j.Dependency)
+	dep, err := convertToDependency(convertFrom, j.Dependency)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	err = convertFrom(f, j.Job, job)
+	err = convertFrom(j.Job, job)
 	if err != nil {
 		return nil, errors.Wrap(err, "converting job body")
 	}
@@ -111,10 +114,10 @@ type DependencyInterchange struct {
 
 // MakeDependencyInterchange converts a dependency.Manager document to
 // its DependencyInterchange format.
-func makeDependencyInterchange(f amboy.Format, d dependency.Manager) (*DependencyInterchange, error) {
+func makeDependencyInterchange(convertTo Marshaler, d dependency.Manager) (*DependencyInterchange, error) {
 	typeInfo := d.Type()
 
-	data, err := convertTo(f, d)
+	data, err := convertTo(d)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +135,7 @@ func makeDependencyInterchange(f amboy.Format, d dependency.Manager) (*Dependenc
 // convertToDependency uses the registry to convert a
 // DependencyInterchange object to the correct dependnecy.Manager
 // type.
-func convertToDependency(f amboy.Format, d *DependencyInterchange) (dependency.Manager, error) {
+func convertToDependency(convertFrom Unmarshaler, d *DependencyInterchange) (dependency.Manager, error) {
 	factory, err := GetDependencyFactory(d.Type)
 	if err != nil {
 		return nil, err
@@ -149,7 +152,7 @@ func convertToDependency(f amboy.Format, d *DependencyInterchange) (dependency.M
 	// interchange object, but want to use the type information
 	// associated with the object that we produced with the
 	// factory.
-	err = convertFrom(f, d.Dependency, dep)
+	err = convertFrom(d.Dependency, dep)
 	if err != nil {
 		return nil, errors.Wrap(err, "converting dependency")
 	}

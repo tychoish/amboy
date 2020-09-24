@@ -85,7 +85,7 @@ func (s *SQSFifoQueueSuite) TestCompleteMethodChangesStatsAndResults() {
 	s.queue.Complete(context.Background(), j)
 
 	counter := 0
-	results := s.queue.Results(context.Background())
+	results := s.queue.Jobs(context.Background())
 	for job := range results {
 		s.Require().NotNil(job)
 		s.Equal(j.ID(), job.ID())
@@ -112,7 +112,7 @@ func TestSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 	const (
 		inside  = 250
 		outside = 2
-	)
+	)g
 
 	wg.Add(outside)
 	for i := 0; i < outside; i++ {

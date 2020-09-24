@@ -2,6 +2,7 @@ package job
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 
 	"github.com/deciduosity/amboy"
@@ -61,7 +62,7 @@ func (g *Group) Add(j amboy.Job) error {
 			name, g.ID())
 	}
 
-	job, err := registry.MakeJobInterchange(j, amboy.JSON)
+	job, err := registry.MakeJobInterchange(j, json.Marshal)
 	if err != nil {
 		return err
 	}
@@ -91,7 +92,7 @@ func (g *Group) Run(ctx context.Context) {
 			break
 		}
 
-		runnableJob, err := job.Resolve(amboy.JSON)
+		runnableJob, err := job.Resolve(json.Unmarshal)
 		if err != nil {
 			g.AddError(err)
 			continue
@@ -124,7 +125,7 @@ func (g *Group) Run(ctx context.Context) {
 			jobErr := j.Error()
 			g.AddError(jobErr)
 
-			job, err := registry.MakeJobInterchange(j, amboy.JSON)
+			job, err := registry.MakeJobInterchange(j, json.Marshal)
 			if err != nil {
 				g.AddError(err)
 				return

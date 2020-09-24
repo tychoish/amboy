@@ -105,6 +105,8 @@ func TestQueueGroup(t *testing.T) {
 						DB:           remoteTest.db,
 						URI:          remoteTest.uri,
 						WaitInterval: time.Millisecond,
+						Marshler:     bson.Marshal,
+						Unmarshaler:  bson.Unmarshal,
 					}
 
 					remoteOpts := MongoDBQueueGroupOptions{
@@ -135,6 +137,8 @@ func TestQueueGroup(t *testing.T) {
 						WaitInterval: time.Millisecond,
 						DB:           remoteTest.db,
 						URI:          remoteTest.uri,
+						Marshler:     bson.Marshal,
+						Unmarshaler:  bson.Unmarshal,
 					}
 
 					remoteOpts := MongoDBQueueGroupOptions{
@@ -195,6 +199,8 @@ func TestQueueGroup(t *testing.T) {
 						WaitInterval: time.Millisecond,
 						DB:           "amboy_group_test",
 						URI:          "mongodb://localhost:27017",
+						Marshler:     bson.Marshal,
+						Unmarshaler:  bson.Unmarshal,
 					}
 
 					closer := func(cctx context.Context) error {
@@ -228,6 +234,8 @@ func TestQueueGroup(t *testing.T) {
 						DB:           "amboy_group_test",
 						URI:          "mongodb://localhost:27017",
 						WaitInterval: time.Millisecond,
+						Marshler:     bson.Marshal,
+						Unmarshaler:  bson.Unmarshal,
 					}
 
 					closer := func(cctx context.Context) error {

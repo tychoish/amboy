@@ -422,7 +422,7 @@ func (d *mongoDriver) Get(ctx context.Context, name string) (amboy.Job, error) {
 
 	d.processNameForUsers(j)
 
-	output, err := j.Resolve(d.opts.Format)
+	output, err := j.Resolve(d.opts.Unmarshaler)
 	if err != nil {
 		return nil, errors.Wrapf(err,
 			"GET problem converting '%s' to job object", name)
@@ -432,7 +432,7 @@ func (d *mongoDriver) Get(ctx context.Context, name string) (amboy.Job, error) {
 }
 
 func (d *mongoDriver) Put(ctx context.Context, j amboy.Job) error {
-	job, err := registry.MakeJobInterchange(j, d.opts.Format)
+	job, err := registry.MakeJobInterchange(j, d.opts.Marshler)
 	if err != nil {
 		return errors.Wrap(err, "problem converting job to interchange format")
 	}
@@ -525,7 +525,7 @@ func (d *mongoDriver) prepareInterchange(j amboy.Job) (*registry.JobInterchange,
 	stat.ModificationTime = time.Now()
 	j.SetStatus(stat)
 
-	job, err := registry.MakeJobInterchange(j, d.opts.Format)
+	job, err := registry.MakeJobInterchange(j, d.opts.Marshler)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem converting job to interchange format")
 	}
@@ -583,7 +583,7 @@ func (d *mongoDriver) Jobs(ctx context.Context) <-chan amboy.Job {
 
 			d.processNameForUsers(j)
 
-			job, err = j.Resolve(d.opts.Format)
+			job, err = j.Resolve(d.opts.Unmarshaler)
 			if err != nil {
 				grip.Warning(message.WrapError(err, message.Fields{
 					"id":        d.instanceID,
@@ -723,7 +723,7 @@ RETRY:
 					continue CURSOR
 				}
 
-				job, err = j.Resolve(d.opts.Format)
+				job, err = j.Resolve(d.opts.Unmarshaler)
 				if err != nil {
 					grip.Warning(message.WrapError(err, message.Fields{
 						"id":            d.instanceID,

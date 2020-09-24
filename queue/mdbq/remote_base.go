@@ -207,21 +207,16 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) {
 	}
 }
 
-// Results provides a generator that iterates all completed jobs.
-func (q *remoteBase) Results(ctx context.Context) <-chan amboy.Job {
+// Jobs provides a generator that iterates all completed jobs.
+func (q *remoteBase) Jobs(ctx context.Context) <-chan amboy.Job {
 	output := make(chan amboy.Job)
 	go func() {
 		defer close(output)
 		for j := range q.driver.Jobs(ctx) {
-			if ctx.Err() != nil {
+			select {
+			case <-ctx.Done():
 				return
-			}
-			if j.Status().Completed {
-				select {
-				case <-ctx.Done():
-					return
-				case output <- j:
-				}
+			case output <- j:
 			}
 		}
 	}()

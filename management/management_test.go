@@ -9,12 +9,19 @@ import (
 	"github.com/deciduosity/amboy/dependency"
 	"github.com/deciduosity/amboy/job"
 	"github.com/deciduosity/amboy/queue"
+	"github.com/deciduosity/amboy/queue/mdbq"
+	"github.com/deciduosity/amboy/registry"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+func init() {
+	job.RegisterDefaultJobs()
+	registry.AddJobType("test", func() amboy.Job { return makeTestJob() })
+}
 
 type ManagerSuite struct {
 	queue   amboy.Queue
@@ -33,7 +40,7 @@ func TestManagerSuiteBackedByMongoDB(t *testing.T) {
 	name := uuid.New().String()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	opts := queue.DefaultMongoDBOptions()
+	opts := mdbq.DefaultMongoDBOptions()
 	opts.DB = "amboy_test"
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(opts.URI))
 	require.NoError(t, err)
@@ -48,14 +55,14 @@ func TestManagerSuiteBackedByMongoDB(t *testing.T) {
 
 	s.setup = func() {
 		s.Require().NoError(client.Database(opts.DB).Drop(ctx))
-		args := queue.MongoDBQueueCreationOptions{
+		args := mdbq.MongoDBQueueCreationOptions{
 			Size:   2,
 			Name:   name,
 			MDB:    opts,
 			Client: client,
 		}
 
-		remote, err := queue.NewMongoDBQueue(ctx, args)
+		remote, err := mdbq.NewMongoDBQueue(ctx, args)
 		require.NoError(t, err)
 		s.queue = remote
 	}
@@ -74,7 +81,7 @@ func TestManagerSuiteBackedByMongoDBSingleGroup(t *testing.T) {
 	name := uuid.New().String()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	opts := queue.DefaultMongoDBOptions()
+	opts := mdbq.DefaultMongoDBOptions()
 	opts.DB = "amboy_test"
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(opts.URI))
 	require.NoError(t, err)
@@ -94,14 +101,14 @@ func TestManagerSuiteBackedByMongoDBSingleGroup(t *testing.T) {
 
 	s.setup = func() {
 		s.Require().NoError(client.Database(opts.DB).Drop(ctx))
-		args := queue.MongoDBQueueCreationOptions{
+		args := mdbq.MongoDBQueueCreationOptions{
 			Size:   2,
 			Name:   name,
 			MDB:    opts,
 			Client: client,
 		}
 
-		remote, err := queue.NewMongoDBQueue(ctx, args)
+		remote, err := mdbq.NewMongoDBQueue(ctx, args)
 		require.NoError(t, err)
 		s.queue = remote
 	}
@@ -120,7 +127,7 @@ func TestManagerSuiteBackedByMongoDBMultiGroup(t *testing.T) {
 	name := uuid.New().String()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	opts := queue.DefaultMongoDBOptions()
+	opts := mdbq.DefaultMongoDBOptions()
 	opts.DB = "amboy_test"
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(opts.URI))
 	require.NoError(t, err)
@@ -140,14 +147,14 @@ func TestManagerSuiteBackedByMongoDBMultiGroup(t *testing.T) {
 
 	s.setup = func() {
 		s.Require().NoError(client.Database(opts.DB).Drop(ctx))
-		args := queue.MongoDBQueueCreationOptions{
+		args := mdbq.MongoDBQueueCreationOptions{
 			Size:   2,
 			Name:   name,
 			MDB:    opts,
 			Client: client,
 		}
 
-		remote, err := queue.NewMongoDBQueue(ctx, args)
+		remote, err := mdbq.NewMongoDBQueue(ctx, args)
 		require.NoError(t, err)
 		s.queue = remote
 	}
@@ -294,10 +301,10 @@ func (s *ManagerSuite) TestCompleteJob() {
 
 	s.Require().NoError(s.manager.CompleteJob(s.ctx, "complete"))
 	jobCount := 0
-	for job := range s.queue.Results(s.ctx) {
-		jobStats := job.Stats()
+	for job := range s.queue.Jobs(s.ctx) {
+		jobStats := job.Status()
 
-		if jobStats.ID == "complete" {
+		if job.ID() == "complete" {
 			s.True(jobStats.Completed)
 			_, ok := s.manager.(*dbQueueManager)
 			if ok {
@@ -327,9 +334,10 @@ func (s *ManagerSuite) TestCompleteJobsValidFilter() {
 
 	s.Require().NoError(s.manager.CompleteJobs(s.ctx, Pending))
 	jobCount := 0
-	for job := range s.queue.Results(s.ctx) {
+	for job := range s.queue.Jobs(s.ctx) {
 		jobStats := job.Status()
-		s.True(jobStats.Completed)
+
+		s.True(jobStats.Completed, "id='%s' status='%+v'", job.ID(), jobStats)
 		_, ok := s.manager.(*dbQueueManager)
 		if ok {
 			s.Equal(3, jobStats.ModificationCount)
@@ -354,9 +362,9 @@ func (s *ManagerSuite) TestCompleteJobsByTypeValidFilter() {
 
 	s.Require().NoError(s.manager.CompleteJobsByType(s.ctx, Pending, "test"))
 	jobCount := 0
-	for job := range s.queue.Results(s.ctx) {
+	for job := range s.queue.Jobs(s.ctx) {
 		jobStats := job.Status()
-		if jobStats.ID == "0" || jobStats.ID == "1" {
+		if job.ID() == "0" || job.ID() == "1" {
 			s.True(jobStats.Completed)
 			_, ok := s.manager.(*dbQueueManager)
 			if ok {
@@ -376,14 +384,20 @@ type testJob struct {
 }
 
 func newTestJob(id string) *testJob {
+	j := makeTestJob()
+	j.Base.TaskID = id
+	j.SetDependency(dependency.NewAlways())
+
+	return j
+}
+
+func makeTestJob() *testJob {
 	j := &testJob{
 		Base: job.Base{
-			TaskID:  id,
 			JobType: amboy.JobType{Name: "test"},
 		},
 	}
 	j.SetDependency(dependency.NewAlways())
-
 	return j
 }
 

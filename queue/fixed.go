@@ -193,21 +193,16 @@ func (q *limitedSizeLocal) Info() amboy.QueueInfo {
 	}
 }
 
-// Results is a generator of all completed tasks in the queue.
-func (q *limitedSizeLocal) Results(ctx context.Context) <-chan amboy.Job {
-	q.mu.Lock()
-	defer q.mu.Unlock()
+// Jobs is a generator of all completed tasks in the queue.
+func (q *limitedSizeLocal) Jobs(ctx context.Context) <-chan amboy.Job {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
 
-	newCompleted := make(chan string, q.capacity)
-	out := make(chan amboy.Job, len(q.toDelete))
-	close(q.toDelete)
-	for name := range q.toDelete {
-		j := q.storage[name]
-		newCompleted <- name
-		out <- j
+	out := make(chan amboy.Job, len(q.storage))
+	for name := range q.storage {
+		out <- q.storage[name]
 	}
 	close(out)
-	q.toDelete = newCompleted
 
 	return out
 }

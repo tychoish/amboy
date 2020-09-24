@@ -133,7 +133,7 @@ func (s *OrderedQueueSuite) TestResultsChannelProducesPointersToConsistentJobObj
 
 	amboy.WaitInterval(ctx, s.queue, 250*time.Millisecond)
 
-	for result := range s.queue.Results(ctx) {
+	for result := range s.queue.Jobs(ctx) {
 		s.Equal(j.ID(), result.ID())
 		s.True(result.Status().Completed)
 	}

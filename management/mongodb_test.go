@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/deciduosity/amboy/queue"
+	"github.com/deciduosity/amboy/queue/mdbq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -21,7 +21,7 @@ func TestMongoDBConstructors(t *testing.T) {
 	require.NoError(t, client.Connect(ctx))
 
 	t.Run("NilSessionShouldError", func(t *testing.T) {
-		opts := queue.DefaultMongoDBOptions()
+		opts := mdbq.DefaultMongoDBOptions()
 		opts.DB = "amboy_test"
 		conf := DBQueueManagerOptions{Options: opts}
 
@@ -30,7 +30,7 @@ func TestMongoDBConstructors(t *testing.T) {
 		assert.Nil(t, db)
 	})
 	t.Run("UnpingableSessionError", func(t *testing.T) {
-		opts := queue.DefaultMongoDBOptions()
+		opts := mdbq.DefaultMongoDBOptions()
 		opts.DB = "amboy_test"
 		conf := DBQueueManagerOptions{Options: opts}
 
@@ -39,7 +39,7 @@ func TestMongoDBConstructors(t *testing.T) {
 		assert.Nil(t, db)
 	})
 	t.Run("BuildNewConnector", func(t *testing.T) {
-		opts := queue.DefaultMongoDBOptions()
+		opts := mdbq.DefaultMongoDBOptions()
 		opts.DB = "amboy_test"
 		conf := DBQueueManagerOptions{Name: "foo", Options: opts}
 
@@ -53,7 +53,7 @@ func TestMongoDBConstructors(t *testing.T) {
 		assert.NotZero(t, r.collection)
 	})
 	t.Run("DialWithNewConstructor", func(t *testing.T) {
-		opts := queue.DefaultMongoDBOptions()
+		opts := mdbq.DefaultMongoDBOptions()
 		opts.DB = "amboy_test"
 		conf := DBQueueManagerOptions{Name: "foo", Options: opts}
 
@@ -62,7 +62,7 @@ func TestMongoDBConstructors(t *testing.T) {
 		assert.NotNil(t, r)
 	})
 	t.Run("DialWithBadURI", func(t *testing.T) {
-		opts := queue.DefaultMongoDBOptions()
+		opts := mdbq.DefaultMongoDBOptions()
 		opts.DB = "amboy_test"
 		opts.URI = "mongodb://lochost:26016"
 		conf := DBQueueManagerOptions{Options: opts}

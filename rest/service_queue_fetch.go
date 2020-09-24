@@ -1,11 +1,11 @@
 package rest
 
 import (
+	"encoding/json"
 	"net/http"
 
-	"github.com/deciduosity/gimlet"
-	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/registry"
+	"github.com/deciduosity/gimlet"
 	"github.com/deciduosity/grip"
 )
 
@@ -21,7 +21,7 @@ func (s *QueueService) Fetch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := registry.MakeJobInterchange(job, amboy.JSON)
+	resp, err := registry.MakeJobInterchange(job, json.Marshal)
 	if err != nil {
 		grip.Warningf("problem converting job %s to interchange format", name)
 		gimlet.WriteJSONResponse(w, http.StatusInternalServerError, resp)
