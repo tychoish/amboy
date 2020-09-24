@@ -1,11 +1,11 @@
-package management
+package mdbq
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	"github.com/deciduosity/amboy/queue/mdbq"
+	"github.com/deciduosity/amboy/management"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
 	"github.com/pkg/errors"
@@ -28,7 +28,7 @@ type DBQueueManagerOptions struct {
 	Group       string
 	SingleGroup bool
 	ByGroups    bool
-	Options     mdbq.MongoDBOptions
+	Options     MongoDBOptions
 }
 
 func (o *DBQueueManagerOptions) hasGroups() bool { return o.SingleGroup || o.ByGroups }
@@ -54,7 +54,7 @@ func (o *DBQueueManagerOptions) Validate() error {
 // NewDBQueueManager produces a queue manager for (remote) queues that persist
 // jobs in MongoDB. This implementation does not interact with the queue
 // directly, and manages by interacting with the database directly.
-func NewDBQueueManager(ctx context.Context, opts DBQueueManagerOptions) (Manager, error) {
+func NewDBQueueManager(ctx context.Context, opts DBQueueManagerOptions) (management.Manager, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func NewDBQueueManager(ctx context.Context, opts DBQueueManagerOptions) (Manager
 // MakeDBQueueManager make it possible to produce a queue manager with an
 // existing database Connection. This operations runs the "ping" command and
 // and will return an error if there is no session or no active server.
-func MakeDBQueueManager(ctx context.Context, opts DBQueueManagerOptions, client *mongo.Client) (Manager, error) {
+func MakeDBQueueManager(ctx context.Context, opts DBQueueManagerOptions, client *mongo.Client) (management.Manager, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, err
 	}
@@ -101,16 +101,16 @@ func MakeDBQueueManager(ctx context.Context, opts DBQueueManagerOptions, client 
 	return db, nil
 }
 
-func (db *dbQueueManager) aggregateCounters(ctx context.Context, stages ...bson.M) ([]JobCounters, error) {
+func (db *dbQueueManager) aggregateCounters(ctx context.Context, stages ...bson.M) ([]management.JobCounters, error) {
 	cursor, err := db.collection.Aggregate(ctx, stages, options.Aggregate().SetAllowDiskUse(true))
 	if err != nil {
 		return nil, errors.Wrap(err, "problem running aggregation")
 	}
 
 	catcher := grip.NewBasicCatcher()
-	out := []JobCounters{}
+	out := []management.JobCounters{}
 	for cursor.Next(ctx) {
-		val := JobCounters{}
+		val := management.JobCounters{}
 		err = cursor.Decode(&val)
 		if err != nil {
 			catcher.Add(err)
@@ -126,16 +126,16 @@ func (db *dbQueueManager) aggregateCounters(ctx context.Context, stages ...bson.
 	return out, nil
 }
 
-func (db *dbQueueManager) aggregateRuntimes(ctx context.Context, stages ...bson.M) ([]JobRuntimes, error) {
+func (db *dbQueueManager) aggregateRuntimes(ctx context.Context, stages ...bson.M) ([]management.JobRuntimes, error) {
 	cursor, err := db.collection.Aggregate(ctx, stages, options.Aggregate().SetAllowDiskUse(true))
 	if err != nil {
 		return nil, errors.Wrap(err, "problem running aggregation")
 	}
 
 	catcher := grip.NewBasicCatcher()
-	out := []JobRuntimes{}
+	out := []management.JobRuntimes{}
 	for cursor.Next(ctx) {
-		val := JobRuntimes{}
+		val := management.JobRuntimes{}
 		err = cursor.Decode(&val)
 		if err != nil {
 			catcher.Add(err)
@@ -151,16 +151,16 @@ func (db *dbQueueManager) aggregateRuntimes(ctx context.Context, stages ...bson.
 	return out, nil
 }
 
-func (db *dbQueueManager) aggregateErrors(ctx context.Context, stages ...bson.M) ([]JobErrorsForType, error) {
+func (db *dbQueueManager) aggregateErrors(ctx context.Context, stages ...bson.M) ([]management.JobErrorsForType, error) {
 	cursor, err := db.collection.Aggregate(ctx, stages, options.Aggregate().SetAllowDiskUse(true))
 	if err != nil {
 		return nil, errors.Wrap(err, "problem running aggregation")
 	}
 
 	catcher := grip.NewBasicCatcher()
-	out := []JobErrorsForType{}
+	out := []management.JobErrorsForType{}
 	for cursor.Next(ctx) {
-		val := JobErrorsForType{}
+		val := management.JobErrorsForType{}
 		err = cursor.Decode(&val)
 		if err != nil {
 			catcher.Add(err)
@@ -216,7 +216,7 @@ func (db *dbQueueManager) findJobs(ctx context.Context, match bson.M) ([]string,
 	}
 }
 
-func (db *dbQueueManager) JobStatus(ctx context.Context, f StatusFilter) (*JobStatusReport, error) {
+func (db *dbQueueManager) JobStatus(ctx context.Context, f management.StatusFilter) (*management.JobStatusReport, error) {
 	if err := f.Validate(); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -235,20 +235,20 @@ func (db *dbQueueManager) JobStatus(ctx context.Context, f StatusFilter) (*JobSt
 	}
 
 	switch f {
-	case InProgress:
+	case management.InProgress:
 		match["status.in_prog"] = true
 		match["status.completed"] = false
-	case Pending:
+	case management.Pending:
 		match["status.in_prog"] = false
 		match["status.completed"] = false
-	case Stale:
+	case management.Stale:
 		match["status.in_prog"] = true
 		match["status.mod_ts"] = bson.M{"$gt": time.Now().Add(-db.opts.Options.LockTimeout)}
 		match["status.completed"] = false
-	case Completed:
+	case management.Completed:
 		match["status.in_prog"] = false
 		match["status.completed"] = true
-	case All:
+	case management.All:
 		// pass (all jobs, completed and in progress)
 	default:
 		return nil, errors.New("invalid job status filter")
@@ -273,13 +273,13 @@ func (db *dbQueueManager) JobStatus(ctx context.Context, f StatusFilter) (*JobSt
 		return nil, errors.WithStack(err)
 	}
 
-	return &JobStatusReport{
+	return &management.JobStatusReport{
 		Filter: string(f),
 		Stats:  counters,
 	}, nil
 }
 
-func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration, f RuntimeFilter) (*JobRuntimeReport, error) {
+func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration, f management.RuntimeFilter) (*management.JobRuntimeReport, error) {
 	if window <= time.Second {
 		return nil, errors.New("must specify windows greater than one second")
 	}
@@ -293,7 +293,7 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 
 	groupOp := "$group"
 	switch f {
-	case Duration:
+	case management.Duration:
 		match = bson.M{
 			"status.completed": true,
 			"time_info.end":    bson.M{"$gt": time.Now().Add(-window)},
@@ -307,7 +307,7 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 				},
 			}},
 		}
-	case Latency:
+	case management.Latency:
 		now := time.Now()
 		match = bson.M{
 			"status.completed":  false,
@@ -322,7 +322,7 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 				}},
 			},
 		}
-	case Running:
+	case management.Running:
 		now := time.Now()
 		groupOp = "$project"
 		match = bson.M{
@@ -360,14 +360,14 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &JobRuntimeReport{
+	return &management.JobRuntimeReport{
 		Filter: string(f),
 		Period: window,
 		Stats:  runtimes,
 	}, nil
 }
 
-func (db *dbQueueManager) JobIDsByState(ctx context.Context, jobType string, f StatusFilter) (*JobReportIDs, error) {
+func (db *dbQueueManager) JobIDsByState(ctx context.Context, jobType string, f management.StatusFilter) (*management.JobReportIDs, error) {
 	if err := f.Validate(); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -378,14 +378,14 @@ func (db *dbQueueManager) JobIDsByState(ctx context.Context, jobType string, f S
 	}
 
 	switch f {
-	case InProgress:
+	case management.InProgress:
 		query["status.in_prog"] = true
-	case Pending:
+	case management.Pending:
 		query["status.in_prog"] = false
-	case Stale:
+	case management.Stale:
 		query["status.in_prog"] = true
 		query["status.mod_ts"] = bson.M{"$gt": time.Now().Add(-db.opts.Options.LockTimeout)}
-	case Completed:
+	case management.Completed:
 		query["status.in_prog"] = false
 		query["status.completed"] = true
 	default:
@@ -401,14 +401,14 @@ func (db *dbQueueManager) JobIDsByState(ctx context.Context, jobType string, f S
 		return nil, errors.WithStack(err)
 	}
 
-	return &JobReportIDs{
+	return &management.JobReportIDs{
 		Filter: string(f),
 		Type:   jobType,
 		IDs:    ids,
 	}, nil
 }
 
-func (db *dbQueueManager) RecentErrors(ctx context.Context, window time.Duration, f ErrorFilter) (*JobErrorsReport, error) {
+func (db *dbQueueManager) RecentErrors(ctx context.Context, window time.Duration, f management.ErrorFilter) (*management.JobErrorsReport, error) {
 	if window <= time.Second {
 		return nil, errors.New("must specify windows greater than one second")
 	}
@@ -445,9 +445,9 @@ func (db *dbQueueManager) RecentErrors(ctx context.Context, window time.Duration
 	}
 
 	switch f {
-	case UniqueErrors:
+	case management.UniqueErrors:
 		stages = append(stages, bson.M{"$group": group})
-	case AllErrors:
+	case management.AllErrors:
 		stages = append(stages,
 			bson.M{"$group": group},
 			bson.M{"$unwind": "$status.errors"},
@@ -458,7 +458,7 @@ func (db *dbQueueManager) RecentErrors(ctx context.Context, window time.Duration
 				"average": bson.M{"$first": "$average"},
 				"errors":  bson.M{"$addToSet": "$errors"},
 			}})
-	case StatsOnly:
+	case management.StatsOnly:
 		delete(group, "errors")
 		stages = append(stages, bson.M{"$group": group})
 	default:
@@ -473,7 +473,7 @@ func (db *dbQueueManager) RecentErrors(ctx context.Context, window time.Duration
 			"total":   "$total",
 			"average": "$average",
 		}
-		if f != StatsOnly {
+		if f != management.StatsOnly {
 			prj["errors"] = "$errors"
 		}
 
@@ -485,14 +485,14 @@ func (db *dbQueueManager) RecentErrors(ctx context.Context, window time.Duration
 		return nil, errors.WithStack(err)
 	}
 
-	return &JobErrorsReport{
+	return &management.JobErrorsReport{
 		Period:         window,
 		FilteredByType: false,
 		Data:           reports,
 	}, nil
 }
 
-func (db *dbQueueManager) RecentJobErrors(ctx context.Context, jobType string, window time.Duration, f ErrorFilter) (*JobErrorsReport, error) {
+func (db *dbQueueManager) RecentJobErrors(ctx context.Context, jobType string, window time.Duration, f management.ErrorFilter) (*management.JobErrorsReport, error) {
 	if window <= time.Second {
 		return nil, errors.New("must specify windows greater than one second")
 	}
@@ -531,9 +531,9 @@ func (db *dbQueueManager) RecentJobErrors(ctx context.Context, jobType string, w
 	}
 
 	switch f {
-	case UniqueErrors:
+	case management.UniqueErrors:
 		stages = append(stages, bson.M{"$group": group})
-	case AllErrors:
+	case management.AllErrors:
 		stages = append(stages,
 			bson.M{"$group": group},
 			bson.M{"$unwind": "$status.errors"},
@@ -544,7 +544,7 @@ func (db *dbQueueManager) RecentJobErrors(ctx context.Context, jobType string, w
 				"average": bson.M{"$first": "$average"},
 				"errors":  bson.M{"$addToSet": "$errors"},
 			}})
-	case StatsOnly:
+	case management.StatsOnly:
 		delete(group, "errors")
 		stages = append(stages, bson.M{"$group": group})
 	default:
@@ -562,7 +562,7 @@ func (db *dbQueueManager) RecentJobErrors(ctx context.Context, jobType string, w
 	if db.opts.ByGroups {
 		prj["group"] = "$_id.group"
 
-		if f != StatsOnly {
+		if f != management.StatsOnly {
 			prj["errors"] = "$errors"
 		}
 	}
@@ -574,7 +574,7 @@ func (db *dbQueueManager) RecentJobErrors(ctx context.Context, jobType string, w
 		return nil, errors.WithStack(err)
 	}
 
-	return &JobErrorsReport{
+	return &management.JobErrorsReport{
 		Period:         window,
 		FilteredByType: true,
 		Data:           reports,
@@ -589,24 +589,24 @@ func (*dbQueueManager) getUpdateStatement() bson.M {
 	}
 }
 
-func (db *dbQueueManager) completeJobs(ctx context.Context, query bson.M, f StatusFilter) error {
+func (db *dbQueueManager) completeJobs(ctx context.Context, query bson.M, f management.StatusFilter) error {
 	if db.opts.Group != "" {
 		query["group"] = db.opts.Group
 	}
 
 	switch f {
-	case Completed:
+	case management.Completed:
 		return errors.New("cannot mark completed jobs complete")
-	case InProgress:
+	case management.InProgress:
 		query["status.completed"] = false
 		query["status.in_prog"] = true
-	case Stale:
+	case management.Stale:
 		query["status.in_prog"] = true
 		query["status.mod_ts"] = bson.M{"$gt": time.Now().Add(-db.opts.Options.LockTimeout)}
-	case Pending:
+	case management.Pending:
 		query["status.completed"] = false
 		query["status.in_prog"] = false
-	case All:
+	case management.All:
 		query["status.in_prog"] = false
 	default:
 		return errors.New("invalid job status filter")
@@ -635,11 +635,11 @@ func (db *dbQueueManager) CompleteJob(ctx context.Context, name string) error {
 	return errors.Wrapf(err, "problem marking job with name '%s' complete", name)
 }
 
-func (db *dbQueueManager) CompleteJobsByType(ctx context.Context, f StatusFilter, jobType string) error {
+func (db *dbQueueManager) CompleteJobsByType(ctx context.Context, f management.StatusFilter, jobType string) error {
 	return db.completeJobs(ctx, bson.M{"type": jobType}, f)
 }
 
-func (db *dbQueueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
+func (db *dbQueueManager) CompleteJobs(ctx context.Context, f management.StatusFilter) error {
 	return db.completeJobs(ctx, bson.M{}, f)
 
 }

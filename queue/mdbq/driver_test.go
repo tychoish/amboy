@@ -28,8 +28,6 @@ type DriverSuite struct {
 	suite.Suite
 }
 
-// Each driver should invoke this suite:
-
 func TestDriverSuiteWithMongoDBInstance(t *testing.T) {
 	tests := new(DriverSuite)
 	tests.uuid = uuid.New().String()
