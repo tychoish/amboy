@@ -80,7 +80,7 @@ func UnorderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 	grip.Infof("workers complete for %d worker smoke test", size.Size)
 	assert.Equal(t, numJobs, q.Stats(ctx).Completed, fmt.Sprintf("%+v", q.Stats(ctx)))
 	for result := range q.Jobs(ctx) {
-		assert.True(t, result.Status().Completed, fmt.Sprintf("with %d workers", size.Size))
+		require.True(t, result.Status().Completed, fmt.Sprintf("with %d workers", size.Size))
 
 		// assert that we had valid time info persisted
 		ti := result.TimeInfo()
@@ -429,7 +429,7 @@ func ManyQueueTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 	for i := 0; i < sz; i++ {
 		q, closer, err := test.Constructor(ctx, driverID, size.Size)
 		require.NoError(t, err)
-		defer func() { require.NoError(t, closer(ctx)) }()
+		defer func() { cancel(); require.NoError(t, closer(ctx)) }()
 
 		require.NoError(t, q.Start(ctx))
 		queues = append(queues, q)

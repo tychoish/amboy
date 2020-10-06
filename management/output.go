@@ -11,9 +11,9 @@ type JobStatusReport struct {
 
 // JobCounters holds data for counts of jobs by type.
 type JobCounters struct {
-	ID    string `bson:"_id" json:"type" yaml:"type"`
-	Count int    `bson:"count" json:"count" yaml:"count"`
-	Group string `bson:"group,omitempty" json:"group,omitempty" yaml:"group,omitempty"`
+	ID    string `bson:"_id" json:"type" yaml:"type" db:"type"`
+	Count int    `bson:"count" json:"count" yaml:"count" db:"count"`
+	Group string `bson:"group,omitempty" json:"group,omitempty" yaml:"group,omitempty" db:"queue_group"`
 }
 
 // JobRuntimeReport contains data for the runtime of jobs, by type,
@@ -26,9 +26,9 @@ type JobRuntimeReport struct {
 
 // JobRuntimes holds data for runtimes of jobs by type.
 type JobRuntimes struct {
-	ID       string        `bson:"_id" json:"type" yaml:"type"`
-	Duration time.Duration `bson:"duration" json:"duration" yaml:"duration"`
-	Group    string        `bson:"group,omitempty" json:"group,omitempty" yaml:"group,omitempty"`
+	ID       string        `bson:"_id" json:"type" yaml:"type" db:"type"`
+	Duration time.Duration `bson:"duration" json:"duration" yaml:"duration" db:"duration"`
+	Group    string        `bson:"group,omitempty" json:"group,omitempty" yaml:"group,omitempty" db:"queue_group"`
 }
 
 // JobReportIDs contains the IDs of all jobs of a specific type.
@@ -50,10 +50,10 @@ type JobErrorsReport struct {
 // JobErrorsForType holds data about the errors for a specific type of
 // jobs.
 type JobErrorsForType struct {
-	ID      string   `bson:"_id" json:"type" yaml:"type"`
-	Count   int      `bson:"count" json:"count" yaml:"count"`
-	Total   int      `bson:"total" json:"total" yaml:"total"`
-	Average float64  `bson:"average" json:"average" yaml:"average"`
-	Errors  []string `bson:"errors,omitempty" json:"errors,omitempty" yaml:"errors,omitempty"`
-	Group   string   `bson:"group,omitempty" json:"group,omitempty" yaml:"group,omitempty"`
+	ID      string   `bson:"_id" json:"type" yaml:"type" db:"type"`
+	Count   int      `bson:"count" json:"count" yaml:"count" db:"count"`
+	Total   int      `bson:"total" json:"total" yaml:"total" db:"total"`
+	Average float64  `bson:"average" json:"average" yaml:"average" db:"average"`
+	Errors  []string `bson:"errors,omitempty" json:"errors,omitempty" yaml:"errors,omitempty" db:"errors"`
+	Group   string   `bson:"group,omitempty" json:"group,omitempty" yaml:"group,omitempty" db:"queue_group"`
 }

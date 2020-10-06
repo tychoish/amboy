@@ -90,6 +90,7 @@ func (b *Base) SetID(n string) {
 
 	b.TaskID = n
 	b.status.ID = n
+	b.timeInfo.ID = n
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -214,7 +215,7 @@ func (b *Base) SetStatus(s amboy.JobStatusInfo) {
 	defer b.mutex.Unlock()
 
 	b.status = s
-
+	b.status.ID = b.TaskID
 }
 
 // TimeInfo returns the job's TimeInfo object. The runner
@@ -254,6 +255,10 @@ func (b *Base) UpdateTimeInfo(i amboy.JobTimeInfo) {
 
 	if i.MaxTime != 0 {
 		b.timeInfo.MaxTime = i.MaxTime
+	}
+
+	if i.ID != "" {
+		b.timeInfo.ID = i.ID
 	}
 }
 

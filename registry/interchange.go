@@ -11,19 +11,24 @@ import (
 // instances. Interchange is also used internally as part of JobGroup
 // Job type.
 type JobInterchange struct {
-	Name       string                 `json:"name" bson:"_id" yaml:"name"`
-	Type       string                 `json:"type" bson:"type" yaml:"type"`
-	Group      string                 `bson:"group,omitempty" json:"group,omitempty" yaml:"group,omitempty"`
-	Version    int                    `json:"version" bson:"version" yaml:"version"`
-	Priority   int                    `json:"priority" bson:"priority" yaml:"priority"`
-	Status     amboy.JobStatusInfo    `bson:"status" json:"status" yaml:"status"`
-	Scopes     []string               `bson:"scopes,omitempty" json:"scopes,omitempty" yaml:"scopes,omitempty"`
-	TimeInfo   amboy.JobTimeInfo      `bson:"time_info" json:"time_info,omitempty" yaml:"time_info,omitempty"`
-	Job        rawJob                 `json:"job" bson:"job" yaml:"job"`
-	Dependency *DependencyInterchange `json:"dependency,omitempty" bson:"dependency,omitempty" yaml:"dependency,omitempty"`
+	Name       string                 `json:"name" bson:"_id" yaml:"name" db:"id"`
+	Type       string                 `json:"type" bson:"type" yaml:"type" db:"type"`
+	Group      string                 `bson:"group,omitempty" json:"group,omitempty" yaml:"group,omitempty" db:"queue_group"`
+	Version    int                    `json:"version" bson:"version" yaml:"version" db:"version"`
+	Priority   int                    `json:"priority" bson:"priority" yaml:"priority" db:"priority"`
+	Status     amboy.JobStatusInfo    `bson:"status" json:"status" yaml:"status" db:"status"`
+	Scopes     []string               `bson:"scopes,omitempty" json:"scopes,omitempty" yaml:"scopes,omitempty" db:"scopes"`
+	TimeInfo   amboy.JobTimeInfo      `bson:"time_info" json:"time_info,omitempty" yaml:"time_info,omitempty" db:"time_info"`
+	Job        rawJob                 `json:"job" bson:"job" yaml:"job" db:"job"`
+	Dependency *DependencyInterchange `json:"dependency,omitempty" bson:"dependency,omitempty" yaml:"dependency,omitempty" db:"depdendency"`
 }
 
 type Marshaler func(interface{}) ([]byte, error)
+
+// Unmrashaler describes a standard function that takes a byte slice
+// and populates an object from this serialized view, and is available
+// as a type to make it more clear that queue implementations are
+// responsible for mantaining their population
 type Unmarshaler func([]byte, interface{}) error
 
 // MakeJobInterchange changes a Job interface into a JobInterchange
@@ -56,6 +61,10 @@ func MakeJobInterchange(j amboy.Job, convertTo Marshaler) (*JobInterchange, erro
 		Dependency: dep,
 	}
 
+	output.Status.ID = output.Name
+	output.TimeInfo.ID = output.Name
+	output.Dependency.ID = output.Name
+
 	return output, nil
 }
 
@@ -78,17 +87,22 @@ func (j *JobInterchange) Resolve(convertFrom Unmarshaler) (amboy.Job, error) {
 			j.Name, j.Version, job.Type().Version, j.Type)
 	}
 
-	dep, err := convertToDependency(convertFrom, j.Dependency)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
 	err = convertFrom(j.Job, job)
 	if err != nil {
 		return nil, errors.Wrap(err, "converting job body")
 	}
 
-	job.SetDependency(dep)
+	if j.Dependency != nil {
+		// it would be reasonable to only do this when the dependency
+		// is not nil.
+		dep, err := convertToDependency(convertFrom, j.Dependency)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		job.SetDependency(dep)
+	}
+
 	job.SetPriority(j.Priority)
 	job.SetStatus(j.Status)
 	job.UpdateTimeInfo(j.TimeInfo)
@@ -106,10 +120,11 @@ func (j *JobInterchange) Raw() []byte { return j.Job }
 // DependencyInterchange objects between processes, which have the
 // type information in easy to access and index-able locations.
 type DependencyInterchange struct {
-	Type       string        `json:"type" bson:"type" yaml:"type"`
-	Version    int           `json:"version" bson:"version" yaml:"version"`
-	Edges      []string      `bson:"edges" json:"edges" yaml:"edges"`
-	Dependency rawDependency `json:"dependency" bson:"dependency" yaml:"dependency"`
+	ID         string        `bson:"id,omitempty" json:"id,omitempty" yaml:"id,omitempty" db:"id"`
+	Type       string        `json:"type" bson:"type" yaml:"type" db:"dep_type"`
+	Version    int           `json:"version" bson:"version" yaml:"version" db:"dep_version"`
+	Edges      []string      `bson:"edges" json:"edges" yaml:"edges" db:"edges"`
+	Dependency rawDependency `json:"dependency" bson:"dependency" yaml:"dependency" db:"dependency"`
 }
 
 // MakeDependencyInterchange converts a dependency.Manager document to
@@ -152,8 +167,8 @@ func convertToDependency(convertFrom Unmarshaler, d *DependencyInterchange) (dep
 	// interchange object, but want to use the type information
 	// associated with the object that we produced with the
 	// factory.
-	err = convertFrom(d.Dependency, dep)
-	if err != nil {
+
+	if err := convertFrom(d.Dependency, dep); err != nil {
 		return nil, errors.Wrap(err, "converting dependency")
 	}
 

@@ -446,6 +446,10 @@ func (m *queueManager) CompleteJob(ctx context.Context, name string) error {
 		return errors.Errorf("cannot recover job with name '%s'", name)
 	}
 
+	status := j.Status()
+	status.ModificationCount += 2
+	j.SetStatus(status)
+
 	m.queue.Complete(ctx, j)
 	return nil
 }
@@ -485,6 +489,9 @@ func (m *queueManager) CompleteJobsByType(ctx context.Context, f StatusFilter, j
 			continue
 		}
 
+		status := job.Status()
+		status.ModificationCount += 2
+		job.SetStatus(status)
 		m.queue.Complete(ctx, job)
 	}
 
@@ -530,7 +537,9 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 		if !ok {
 			continue
 		}
-
+		status := job.Status()
+		status.ModificationCount += 2
+		job.SetStatus(status)
 		m.queue.Complete(ctx, job)
 	}
 

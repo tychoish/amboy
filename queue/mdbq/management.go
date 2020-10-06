@@ -291,7 +291,6 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 	var match bson.M
 	var group bson.M
 
-	groupOp := "$group"
 	switch f {
 	case management.Duration:
 		match = bson.M{
@@ -305,8 +304,7 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 					"$subtract": []string{"$time_info.end", "$time_info.start"}},
 					1000000, // convert to nanoseconds
 				},
-			}},
-		}
+			}}}
 	case management.Latency:
 		now := time.Now()
 		match = bson.M{
@@ -320,21 +318,21 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 					"$subtract": []interface{}{now, "$time_info.created"}},
 					1000000, // convert to nanoseconds
 				}},
-			},
-		}
+			}}
 	case management.Running:
 		now := time.Now()
-		groupOp = "$project"
 		match = bson.M{
 			"status.completed": false,
 			"status.in_prog":   true,
 		}
 		group = bson.M{
-			"_id": "$_id",
-			"duration": bson.M{
-				"$subtract": []interface{}{now, "$time_info.created"},
-			},
-		}
+			"_id": "$type",
+			"duration": bson.M{"$avg": bson.M{
+				"$multiply": []interface{}{bson.M{
+					"$subtract": []interface{}{now, "$time_info.created"}},
+					1000000, // convert to nanoseconds
+				}},
+			}}
 	default:
 		return nil, errors.New("invalid job runtime filter")
 	}
@@ -345,7 +343,7 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 
 	stages := []bson.M{
 		{"$match": match},
-		{groupOp: group},
+		{"$group": group},
 	}
 
 	if db.opts.ByGroups {
@@ -430,7 +428,7 @@ func (db *dbQueueManager) RecentErrors(ctx context.Context, window time.Duration
 		"count":   bson.M{"$sum": 1},
 		"total":   bson.M{"$sum": "$status.err_count"},
 		"average": bson.M{"$avg": "$status.err_count"},
-		"errors":  bson.M{"$push": "$status.errors"},
+		"errors":  bson.M{"$addToSet": "$status.errors"},
 	}
 
 	if db.opts.SingleGroup {
@@ -456,7 +454,7 @@ func (db *dbQueueManager) RecentErrors(ctx context.Context, window time.Duration
 				"count":   bson.M{"$first": "$count"},
 				"total":   bson.M{"$first": "$total"},
 				"average": bson.M{"$first": "$average"},
-				"errors":  bson.M{"$addToSet": "$errors"},
+				"errors":  bson.M{"$push": "$errors"},
 			}})
 	case management.StatsOnly:
 		delete(group, "errors")
@@ -641,5 +639,4 @@ func (db *dbQueueManager) CompleteJobsByType(ctx context.Context, f management.S
 
 func (db *dbQueueManager) CompleteJobs(ctx context.Context, f management.StatusFilter) error {
 	return db.completeJobs(ctx, bson.M{}, f)
-
 }

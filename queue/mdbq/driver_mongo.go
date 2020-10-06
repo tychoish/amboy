@@ -14,6 +14,7 @@ import (
 	"github.com/deciduosity/amboy/registry"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
+	"github.com/deciduosity/grip/recovery"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
@@ -373,11 +374,9 @@ func (d *mongoDriver) Close() {
 	}
 }
 
-func buildCompoundID(n, id string) string { return fmt.Sprintf("%s.%s", n, id) }
-
 func (d *mongoDriver) getIDFromName(name string) string {
 	if d.opts.UseGroups {
-		return buildCompoundID(d.opts.GroupName, name)
+		return fmt.Sprintf("%s.%s", d.opts.GroupName, name)
 	}
 
 	return name
@@ -397,7 +396,7 @@ func (d *mongoDriver) processJobForGroup(j *registry.JobInterchange) {
 	}
 
 	j.Group = d.opts.GroupName
-	j.Name = buildCompoundID(d.opts.GroupName, j.Name)
+	j.Name = d.getIDFromName(j.Name)
 }
 
 func (d *mongoDriver) modifyQueryForGroup(q bson.M) {
@@ -550,6 +549,7 @@ func (d *mongoDriver) Jobs(ctx context.Context) <-chan amboy.Job {
 	output := make(chan amboy.Job)
 	go func() {
 		defer close(output)
+		defer recovery.LogStackTraceAndContinue("jobs iterator", "amboy.queue.mdbq", d.instanceID)
 		q := bson.M{}
 		d.modifyQueryForGroup(q)
 
@@ -617,15 +617,14 @@ func (d *mongoDriver) getNextQuery() bson.M {
 	d.mu.RUnlock()
 	now := time.Now()
 	qd := bson.M{
+		"status.completed": false,
 		"$or": []bson.M{
 			{
-				"status.completed": false,
-				"status.in_prog":   false,
+				"status.in_prog": false,
 			},
 			{
-				"status.completed": false,
-				"status.in_prog":   true,
-				"status.mod_ts":    bson.M{"$lte": now.Add(-lockTimeout)},
+				"status.in_prog": true,
+				"status.mod_ts":  bson.M{"$lte": now.Add(-lockTimeout)},
 			},
 		},
 	}
@@ -761,11 +760,13 @@ RETRY:
 					continue CURSOR
 				}
 
-				if !amboy.IsDispatchable(job.Status(), d.opts.LockTimeout) {
+				if d.scopesInUse(ctx, job.Scopes()) {
 					dispatchSkips++
 					job = nil
 					continue CURSOR
-				} else if d.scopesInUse(ctx, job.Scopes()) && !jobCanRestart(job.Status(), d.opts.LockTimeout) {
+				}
+
+				if !amboy.IsDispatchable(job.Status(), d.opts.LockTimeout) {
 					dispatchSkips++
 					job = nil
 					continue CURSOR

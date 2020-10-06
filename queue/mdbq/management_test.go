@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/deciduosity/amboy/management"
+	"github.com/deciduosity/amboy/queue/testutil"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,7 +16,7 @@ import (
 )
 
 func TestManagerSuiteBackedByMongoDB(t *testing.T) {
-	s := new(managerSuite)
+	s := new(testutil.ManagerSuite)
 	name := uuid.New().String()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -23,7 +24,7 @@ func TestManagerSuiteBackedByMongoDB(t *testing.T) {
 	opts.DB = "amboy_test"
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(opts.URI))
 	require.NoError(t, err)
-	s.factory = func() management.Manager {
+	s.Factory = func() management.Manager {
 		manager, err := MakeDBQueueManager(ctx, DBQueueManagerOptions{
 			Options: opts,
 			Name:    name,
@@ -32,7 +33,7 @@ func TestManagerSuiteBackedByMongoDB(t *testing.T) {
 		return manager
 	}
 
-	s.setup = func() {
+	s.Setup = func() {
 		s.Require().NoError(client.Database(opts.DB).Drop(ctx))
 		args := MongoDBQueueCreationOptions{
 			Size:   2,
@@ -43,12 +44,12 @@ func TestManagerSuiteBackedByMongoDB(t *testing.T) {
 
 		remote, err := NewMongoDBQueue(ctx, args)
 		require.NoError(t, err)
-		s.queue = remote
+		s.Queue = remote
 	}
 
-	s.cleanup = func() error {
+	s.Cleanup = func() error {
 		require.NoError(t, client.Disconnect(ctx))
-		s.queue.Runner().Close(ctx)
+		s.Queue.Runner().Close(ctx)
 		return nil
 	}
 
@@ -56,7 +57,7 @@ func TestManagerSuiteBackedByMongoDB(t *testing.T) {
 }
 
 func TestManagerSuiteBackedByMongoDBSingleGroup(t *testing.T) {
-	s := new(managerSuite)
+	s := new(testutil.ManagerSuite)
 	name := uuid.New().String()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -64,7 +65,7 @@ func TestManagerSuiteBackedByMongoDBSingleGroup(t *testing.T) {
 	opts.DB = "amboy_test"
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(opts.URI))
 	require.NoError(t, err)
-	s.factory = func() management.Manager {
+	s.Factory = func() management.Manager {
 		manager, err := MakeDBQueueManager(ctx, DBQueueManagerOptions{
 			Options:     opts,
 			Name:        name,
@@ -78,7 +79,7 @@ func TestManagerSuiteBackedByMongoDBSingleGroup(t *testing.T) {
 	opts.UseGroups = true
 	opts.GroupName = "foo"
 
-	s.setup = func() {
+	s.Setup = func() {
 		s.Require().NoError(client.Database(opts.DB).Drop(ctx))
 		args := MongoDBQueueCreationOptions{
 			Size:   2,
@@ -89,12 +90,12 @@ func TestManagerSuiteBackedByMongoDBSingleGroup(t *testing.T) {
 
 		remote, err := NewMongoDBQueue(ctx, args)
 		require.NoError(t, err)
-		s.queue = remote
+		s.Queue = remote
 	}
 
-	s.cleanup = func() error {
+	s.Cleanup = func() error {
 		require.NoError(t, client.Disconnect(ctx))
-		s.queue.Runner().Close(ctx)
+		s.Queue.Runner().Close(ctx)
 		return nil
 	}
 
@@ -102,7 +103,7 @@ func TestManagerSuiteBackedByMongoDBSingleGroup(t *testing.T) {
 }
 
 func TestManagerSuiteBackedByMongoDBMultiGroup(t *testing.T) {
-	s := new(managerSuite)
+	s := new(testutil.ManagerSuite)
 	name := uuid.New().String()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -110,7 +111,7 @@ func TestManagerSuiteBackedByMongoDBMultiGroup(t *testing.T) {
 	opts.DB = "amboy_test"
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(opts.URI))
 	require.NoError(t, err)
-	s.factory = func() management.Manager {
+	s.Factory = func() management.Manager {
 		manager, err := MakeDBQueueManager(ctx, DBQueueManagerOptions{
 			Options:  opts,
 			Name:     name,
@@ -124,7 +125,7 @@ func TestManagerSuiteBackedByMongoDBMultiGroup(t *testing.T) {
 	opts.UseGroups = true
 	opts.GroupName = "foo"
 
-	s.setup = func() {
+	s.Setup = func() {
 		s.Require().NoError(client.Database(opts.DB).Drop(ctx))
 		args := MongoDBQueueCreationOptions{
 			Size:   2,
@@ -138,9 +139,9 @@ func TestManagerSuiteBackedByMongoDBMultiGroup(t *testing.T) {
 		s.queue = remote
 	}
 
-	s.cleanup = func() error {
+	s.Cleanup = func() error {
 		require.NoError(t, client.Disconnect(ctx))
-		s.queue.Runner().Close(ctx)
+		s.Queue.Runner().Close(ctx)
 		return nil
 	}
 

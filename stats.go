@@ -33,7 +33,8 @@ func (s QueueStats) String() string {
 		s.Running, s.Completed, s.Pending, s.Blocked, s.Total)
 }
 
-// IsDispatchable provides a
+// IsDispatchable reports if a job acn be dispatched (e.g. its not in
+// progress and not complete) or if it is in progress the lock has expired.
 func IsDispatchable(stat JobStatusInfo, lockTimeout time.Duration) bool {
 	if stat.InProgress && time.Since(stat.ModificationTime) > lockTimeout {
 		return true

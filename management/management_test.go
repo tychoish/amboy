@@ -18,16 +18,16 @@ func TestManagerSuiteBackedByQueueMethods(t *testing.T) {
 	defer cancel()
 
 	s := new(ManagerSuite)
-	s.setup = func() {
-		s.queue = queue.NewLocalLimitedSize(2, 128)
-		s.Require().NoError(s.queue.Start(ctx))
+	s.Setup = func() {
+		s.Queue = queue.NewLocalLimitedSize(2, 128)
+		s.Require().NoError(s.Queue.Start(ctx))
 	}
 
-	s.factory = func() Manager {
-		return NewQueueManager(s.queue)
+	s.Factory = func() Manager {
+		return NewQueueManager(s.Queue)
 	}
 
-	s.cleanup = func() error {
+	s.Cleanup = func() error {
 		return nil
 	}
 	suite.Run(t, s)

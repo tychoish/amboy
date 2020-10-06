@@ -11,139 +11,141 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// NOTE: this file is largely duplicated in amboy/queue/ sub-packages
+// NOTE: this file is largely duplicated in the amboy/queue/testutil package
 // that implement specific management interfaces.
 
 func init() {
 	registry.AddJobType("test", func() amboy.Job { return makeTestJob() })
 }
 
-type managerSuite struct {
-	queue   amboy.Queue
-	manager Manager
-	ctx     context.Context
-	cancel  context.CancelFunc
+type ManagerSuite struct {
+	Queue   amboy.Queue
+	Manager Manager
 
-	factory func() Manager
-	setup   func()
-	cleanup func() error
+	Factory func() Manager
+	Setup   func()
+	Cleanup func() error
+
+	ctx    context.Context
+	cancel context.CancelFunc
+
 	suite.Suite
 }
 
-func (s *managerSuite) SetupTest() {
+func (s *ManagerSuite) SetupTest() {
 	s.ctx, s.cancel = context.WithCancel(context.Background())
-	s.setup()
-	s.manager = s.factory()
+	s.Setup()
+	s.Manager = s.Factory()
 }
 
-func (s *managerSuite) TearDownTest() {
+func (s *ManagerSuite) TearDownTest() {
 	s.cancel()
 }
 
-func (s *managerSuite) TearDownSuite() {
-	s.NoError(s.cleanup())
+func (s *ManagerSuite) TearDownSuite() {
+	s.NoError(s.Cleanup())
 }
 
-func (s *managerSuite) TestJobStatusInvalidFilter() {
+func (s *ManagerSuite) TestJobStatusInvalidFilter() {
 	for _, f := range []string{"", "foo", "inprog"} {
-		r, err := s.manager.JobStatus(s.ctx, StatusFilter(f))
+		r, err := s.Manager.JobStatus(s.ctx, StatusFilter(f))
 		s.Error(err)
 		s.Nil(r)
 
-		rr, err := s.manager.JobIDsByState(s.ctx, "foo", StatusFilter(f))
+		rr, err := s.Manager.JobIDsByState(s.ctx, "foo", StatusFilter(f))
 		s.Error(err)
 		s.Nil(rr)
 	}
 }
 
-func (s *managerSuite) TestTimingWithInvalidFilter() {
+func (s *ManagerSuite) TestTimingWithInvalidFilter() {
 	for _, f := range []string{"", "foo", "inprog"} {
-		r, err := s.manager.RecentTiming(s.ctx, time.Hour, RuntimeFilter(f))
+		r, err := s.Manager.RecentTiming(s.ctx, time.Hour, RuntimeFilter(f))
 		s.Error(err)
 		s.Nil(r)
 	}
 }
 
-func (s *managerSuite) TestErrorsWithInvalidFilter() {
+func (s *ManagerSuite) TestErrorsWithInvalidFilter() {
 	for _, f := range []string{"", "foo", "inprog"} {
-		r, err := s.manager.RecentJobErrors(s.ctx, "foo", time.Hour, ErrorFilter(f))
+		r, err := s.Manager.RecentJobErrors(s.ctx, "foo", time.Hour, ErrorFilter(f))
 		s.Error(err)
 		s.Nil(r)
 
-		r, err = s.manager.RecentErrors(s.ctx, time.Hour, ErrorFilter(f))
+		r, err = s.Manager.RecentErrors(s.ctx, time.Hour, ErrorFilter(f))
 		s.Error(err)
 		s.Nil(r)
 	}
 }
 
-func (s *managerSuite) TestJobCounterHighLevel() {
+func (s *ManagerSuite) TestJobCounterHighLevel() {
 	for _, f := range []StatusFilter{InProgress, Pending, Stale} {
-		r, err := s.manager.JobStatus(s.ctx, f)
+		r, err := s.Manager.JobStatus(s.ctx, f)
 		s.NoError(err)
 		s.NotNil(r)
 	}
 
 }
 
-func (s *managerSuite) TestJobCountingIDHighLevel() {
+func (s *ManagerSuite) TestJobCountingIDHighLevel() {
 	for _, f := range []StatusFilter{InProgress, Pending, Stale, Completed} {
-		r, err := s.manager.JobIDsByState(s.ctx, "foo", f)
+		r, err := s.Manager.JobIDsByState(s.ctx, "foo", f)
 		s.NoError(err, "%s", f)
 		s.NotNil(r)
 	}
 }
 
-func (s *managerSuite) TestJobTimingMustBeLongerThanASecond() {
+func (s *ManagerSuite) TestJobTimingMustBeLongerThanASecond() {
 	for _, dur := range []time.Duration{-1, 0, time.Millisecond, -time.Hour} {
-		r, err := s.manager.RecentTiming(s.ctx, dur, Duration)
+		r, err := s.Manager.RecentTiming(s.ctx, dur, Duration)
 		s.Error(err)
 		s.Nil(r)
-		je, err := s.manager.RecentJobErrors(s.ctx, "foo", dur, StatsOnly)
+		je, err := s.Manager.RecentJobErrors(s.ctx, "foo", dur, StatsOnly)
 		s.Error(err)
 		s.Nil(je)
 
-		je, err = s.manager.RecentErrors(s.ctx, dur, StatsOnly)
+		je, err = s.Manager.RecentErrors(s.ctx, dur, StatsOnly)
 		s.Error(err)
 		s.Nil(je)
 
 	}
 }
 
-func (s *managerSuite) TestJobTiming() {
+func (s *ManagerSuite) TestJobTiming() {
 	for _, f := range []RuntimeFilter{Duration, Latency, Running} {
-		r, err := s.manager.RecentTiming(s.ctx, time.Minute, f)
+		r, err := s.Manager.RecentTiming(s.ctx, time.Minute, f)
 		s.NoError(err)
 		s.NotNil(r)
 	}
 }
 
-func (s *managerSuite) TestRecentErrors() {
+func (s *ManagerSuite) TestRecentErrors() {
 	for _, f := range []ErrorFilter{UniqueErrors, AllErrors, StatsOnly} {
-		r, err := s.manager.RecentErrors(s.ctx, time.Minute, f)
+		r, err := s.Manager.RecentErrors(s.ctx, time.Minute, f)
 		s.NoError(err)
 		s.NotNil(r)
 	}
 }
 
-func (s *managerSuite) TestRecentJobErrors() {
+func (s *ManagerSuite) TestRecentJobErrors() {
 	for _, f := range []ErrorFilter{UniqueErrors, AllErrors, StatsOnly} {
-		r, err := s.manager.RecentJobErrors(s.ctx, "shell", time.Minute, f)
+		r, err := s.Manager.RecentJobErrors(s.ctx, "shell", time.Minute, f)
 		s.NoError(err)
 		s.NotNil(r)
 	}
 }
 
-func (s *managerSuite) TestCompleteJob() {
+func (s *ManagerSuite) TestCompleteJob() {
 	j1 := job.NewShellJob("ls", "")
-	s.Require().NoError(s.queue.Put(s.ctx, j1))
+	s.Require().NoError(s.Queue.Put(s.ctx, j1))
 	j2 := newTestJob("complete")
-	s.Require().NoError(s.queue.Put(s.ctx, j2))
+	s.Require().NoError(s.Queue.Put(s.ctx, j2))
 	j3 := newTestJob("uncomplete")
-	s.Require().NoError(s.queue.Put(s.ctx, j3))
+	s.Require().NoError(s.Queue.Put(s.ctx, j3))
 
-	s.Require().NoError(s.manager.CompleteJob(s.ctx, "complete"))
+	s.Require().NoError(s.Manager.CompleteJob(s.ctx, "complete"))
 	jobCount := 0
-	for job := range s.queue.Jobs(s.ctx) {
+	for job := range s.Queue.Jobs(s.ctx) {
 		jobStats := job.Status()
 
 		if job.ID() == "complete" {
@@ -160,22 +162,22 @@ func (s *managerSuite) TestCompleteJob() {
 	s.Equal(3, jobCount)
 }
 
-func (s *managerSuite) TestCompleteJobsInvalidFilter() {
-	s.Error(s.manager.CompleteJobs(s.ctx, "invalid"))
-	s.Error(s.manager.CompleteJobs(s.ctx, Completed))
+func (s *ManagerSuite) TestCompleteJobsInvalidFilter() {
+	s.Error(s.Manager.CompleteJobs(s.ctx, "invalid"))
+	s.Error(s.Manager.CompleteJobs(s.ctx, Completed))
 }
 
-func (s *managerSuite) TestCompleteJobsValidFilter() {
+func (s *ManagerSuite) TestCompleteJobsValidFilter() {
 	j1 := job.NewShellJob("ls", "")
-	s.Require().NoError(s.queue.Put(s.ctx, j1))
+	s.Require().NoError(s.Queue.Put(s.ctx, j1))
 	j2 := newTestJob("0")
-	s.Require().NoError(s.queue.Put(s.ctx, j2))
+	s.Require().NoError(s.Queue.Put(s.ctx, j2))
 	j3 := newTestJob("1")
-	s.Require().NoError(s.queue.Put(s.ctx, j3))
+	s.Require().NoError(s.Queue.Put(s.ctx, j3))
 
-	s.Require().NoError(s.manager.CompleteJobs(s.ctx, Pending))
+	s.Require().NoError(s.Manager.CompleteJobs(s.ctx, Pending))
 	jobCount := 0
-	for job := range s.queue.Jobs(s.ctx) {
+	for job := range s.Queue.Jobs(s.ctx) {
 		jobStats := job.Status()
 
 		s.True(jobStats.Completed, "id='%s' status='%+v'", job.ID(), jobStats)
@@ -187,22 +189,22 @@ func (s *managerSuite) TestCompleteJobsValidFilter() {
 	s.Equal(3, jobCount)
 }
 
-func (s *managerSuite) TestCompleteJobsByTypeInvalidFilter() {
-	s.Error(s.manager.CompleteJobsByType(s.ctx, "invalid", "type"))
-	s.Error(s.manager.CompleteJobsByType(s.ctx, Completed, "type"))
+func (s *ManagerSuite) TestCompleteJobsByTypeInvalidFilter() {
+	s.Error(s.Manager.CompleteJobsByType(s.ctx, "invalid", "type"))
+	s.Error(s.Manager.CompleteJobsByType(s.ctx, Completed, "type"))
 }
 
-func (s *managerSuite) TestCompleteJobsByTypeValidFilter() {
+func (s *ManagerSuite) TestCompleteJobsByTypeValidFilter() {
 	j1 := job.NewShellJob("ls", "")
-	s.Require().NoError(s.queue.Put(s.ctx, j1))
+	s.Require().NoError(s.Queue.Put(s.ctx, j1))
 	j2 := newTestJob("0")
-	s.Require().NoError(s.queue.Put(s.ctx, j2))
+	s.Require().NoError(s.Queue.Put(s.ctx, j2))
 	j3 := newTestJob("1")
-	s.Require().NoError(s.queue.Put(s.ctx, j3))
+	s.Require().NoError(s.Queue.Put(s.ctx, j3))
 
-	s.Require().NoError(s.manager.CompleteJobsByType(s.ctx, Pending, "test"))
+	s.Require().NoError(s.Manager.CompleteJobsByType(s.ctx, Pending, "test"))
 	jobCount := 0
-	for job := range s.queue.Jobs(s.ctx) {
+	for job := range s.Queue.Jobs(s.ctx) {
 		jobStats := job.Status()
 		if job.ID() == "0" || job.ID() == "1" {
 			s.True(jobStats.Completed)

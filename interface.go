@@ -99,14 +99,14 @@ type JobType struct {
 // job and is reported by the Status and set by the SetStatus methods
 // in the Job interface.e
 type JobStatusInfo struct {
-	ID                string    `bson:"id,omitempty" json:"id,omitempty" yaml:"id,omitempty"`
-	Owner             string    `bson:"owner" json:"owner" yaml:"owner"`
-	Completed         bool      `bson:"completed" json:"completed" yaml:"completed"`
-	InProgress        bool      `bson:"in_prog" json:"in_progress" yaml:"in_progress"`
-	ModificationTime  time.Time `bson:"mod_ts" json:"mod_time" yaml:"mod_time"`
-	ModificationCount int       `bson:"mod_count" json:"mod_count" yaml:"mod_count"`
-	ErrorCount        int       `bson:"err_count" json:"err_count" yaml:"err_count"`
-	Errors            []string  `bson:"errors,omitempty" json:"errors,omitempty" yaml:"errors,omitempty"`
+	ID                string    `bson:"id,omitempty" json:"id,omitempty" yaml:"id,omitempty" db:"id"`
+	Owner             string    `bson:"owner" json:"owner" yaml:"owner" db:"owner"`
+	Completed         bool      `bson:"completed" json:"completed" yaml:"completed" db:"completed" `
+	InProgress        bool      `bson:"in_prog" json:"in_progress" yaml:"in_progress" db:"in_progress"`
+	ModificationTime  time.Time `bson:"mod_ts" json:"mod_time" yaml:"mod_time" db:"mod_ts"`
+	ModificationCount int       `bson:"mod_count" json:"mod_count" yaml:"mod_count" db:"mod_count"`
+	ErrorCount        int       `bson:"err_count" json:"err_count" yaml:"err_count" db:"err_count"`
+	Errors            []string  `bson:"errors,omitempty" json:"errors,omitempty" yaml:"errors,omitempty" db:"errors,omitempty"`
 }
 
 // JobTimeInfo stores timing information for a job and is used by both
@@ -121,12 +121,13 @@ type JobStatusInfo struct {
 // implementation supports it, the queue may drop the job if the
 // deadline is in the past when the job would be dispatched.
 type JobTimeInfo struct {
-	Created    time.Time     `bson:"created,omitempty" json:"created,omitempty" yaml:"created,omitempty"`
-	Start      time.Time     `bson:"start,omitempty" json:"start,omitempty" yaml:"start,omitempty"`
-	End        time.Time     `bson:"end,omitempty" json:"end,omitempty" yaml:"end,omitempty"`
-	WaitUntil  time.Time     `bson:"wait_until" json:"wait_until,omitempty" yaml:"wait_until,omitempty"`
-	DispatchBy time.Time     `bson:"dispatch_by" json:"dispatch_by,omitempty" yaml:"dispatch_by,omitempty"`
-	MaxTime    time.Duration `bson:"max_time" json:"max_time,omitempty" yaml:"max_time,omitempty"`
+	ID         string        `bson:"id,omitempty" json:"id,omitempty" yaml:"id,omitempty" db:"id"`
+	Created    time.Time     `bson:"created,omitempty" json:"created,omitempty" yaml:"created,omitempty" db:"created"`
+	Start      time.Time     `bson:"start,omitempty" json:"start,omitempty" yaml:"start,omitempty" db:"started"`
+	End        time.Time     `bson:"end,omitempty" json:"end,omitempty" yaml:"end,omitempty" db:"ended"`
+	WaitUntil  time.Time     `bson:"wait_until" json:"wait_until,omitempty" yaml:"wait_until,omitempty" db:"wait_until"`
+	DispatchBy time.Time     `bson:"dispatch_by" json:"dispatch_by,omitempty" yaml:"dispatch_by,omitempty" db:"dispatch_by"`
+	MaxTime    time.Duration `bson:"max_time" json:"max_time,omitempty" yaml:"max_time,omitempty" db:"max_time"`
 }
 
 // Duration is a convenience function to return a duration for a job.

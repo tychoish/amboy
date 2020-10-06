@@ -159,8 +159,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) {
 				End:   time.Now(),
 			})
 
-			err = q.driver.Complete(ctx, j)
-			if err != nil {
+			if err = q.driver.Complete(ctx, j); err != nil {
 				if time.Since(startAt) > time.Minute+q.Info().LockTimeout {
 					grip.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
@@ -292,13 +291,11 @@ func (q *remoteBase) Start(ctx context.Context) error {
 		return errors.New("cannot start queue with an uninitialized runner")
 	}
 
-	err := q.runner.Start(ctx)
-	if err != nil {
+	if err := q.runner.Start(ctx); err != nil {
 		return errors.Wrap(err, "problem starting runner in remote queue")
 	}
 
-	err = q.driver.Open(ctx)
-	if err != nil {
+	if err := q.driver.Open(ctx); err != nil {
 		return errors.Wrap(err, "problem starting driver in remote queue")
 	}
 

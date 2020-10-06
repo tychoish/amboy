@@ -26,7 +26,7 @@ type remoteMongoQueueGroupSingle struct {
 // TTLed except when the client explicitly calls Prune.
 func NewMongoDBSingleQueueGroup(ctx context.Context, opts MongoDBQueueGroupOptions, client *mongo.Client, mdbopts MongoDBOptions) (amboy.QueueGroup, error) {
 	if err := opts.validate(); err != nil {
-		return nil, errors.Wrap(err, "invalid remote queue options")
+		return nil, errors.Wrap(err, "invalid queue group options")
 	}
 
 	if mdbopts.DB == "" {
@@ -174,8 +174,9 @@ func (g *remoteMongoQueueGroupSingle) Get(ctx context.Context, id string) (amboy
 	}
 
 	if err = g.cache.Set(id, queue, g.opts.TTL); err != nil {
-		// safe to throw away the partially constructed
-		// here, because another won and we  haven't started the workers.
+		// safe to throw away the partially constructed here,
+		// because another won and we haven't started the
+		// workers.
 		if q := g.cache.Get(id); q != nil {
 			return q, nil
 		}
