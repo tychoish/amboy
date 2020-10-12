@@ -1,6 +1,9 @@
-================================================
-``amboy`` -- Task and Worker Pool Infrastructure
-================================================
+===========================================================
+``amboy`` -- Task and Worker Pool Infrastructure |PkgGoDev|
+===========================================================
+
+.. |PkgGoDev| image:: https://pkg.go.dev/badge/deciduosity/amboy
+              :target: https://pkg.go.dev/github.com/deciduosity/amboy
 
 Overview
 --------
