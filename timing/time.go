@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+// Format contains a time format string for use in combination with
+// the rounded time functions. It is easy to read and omits sub-second
+// resolution.
+const Format = "2006-01-02.15-04-05"
+
 // UnixMilli returns t as a Unix time, the number of nanoseconds elapsed since
 // January 1, 1970 UTC. The result is undefined if the Unix time in nanoseconds
 // in cannot be represented by an int64 (a date before the year 1678 or after
