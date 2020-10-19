@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/job"
 	"github.com/deciduosity/amboy/registry"
 	"github.com/stretchr/testify/require"
@@ -71,7 +70,7 @@ func (s *CreateJobSuite) TestAddingAJobThatAlreadyExistsResultsInError() {
 	defer cancel()
 
 	j := job.NewShellJob("true", "")
-	payload, err := registry.MakeJobInterchange(j, amboy.JSON)
+	payload, err := registry.MakeJobInterchange(j, json.Marshal)
 	s.NoError(err)
 
 	s.NoError(s.service.queue.Put(ctx, j))
@@ -89,7 +88,7 @@ func (s *CreateJobSuite) TestAddingJobSuccessfuly() {
 
 	j := job.NewShellJob("true", "")
 
-	payload, err := registry.MakeJobInterchange(j, amboy.JSON)
+	payload, err := registry.MakeJobInterchange(j, json.Marshal)
 	s.NoError(err)
 
 	resp, err := s.service.createJob(ctx, payload)
@@ -127,13 +126,13 @@ func (s *CreateJobSuite) TestRequestToAddJobThatAlreadyExists() {
 	router, err := s.service.App().Handler()
 	s.NoError(err)
 
-	payload, err := registry.MakeJobInterchange(job.NewShellJob("true", ""), amboy.JSON)
+	payload, err := registry.MakeJobInterchange(job.NewShellJob("true", ""), json.Marshal)
 	s.NoError(err)
 
 	rb, err := json.Marshal(payload)
 	s.NoError(err)
 
-	j, err := payload.Resolve(amboy.JSON)
+	j, err := payload.Resolve(json.Unmarshal)
 	s.NoError(err)
 
 	s.NoError(s.service.queue.Put(ctx, j))
@@ -161,7 +160,7 @@ func (s *CreateJobSuite) TestRequestToAddNewJobRegistersJob() {
 
 	startingTotal := s.service.queue.Stats(ctx).Total
 	j := job.NewShellJob("true", "")
-	payload, err := registry.MakeJobInterchange(j, amboy.JSON)
+	payload, err := registry.MakeJobInterchange(j, json.Marshal)
 	s.NoError(err)
 
 	rb, err := json.Marshal(payload)

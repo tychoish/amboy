@@ -313,6 +313,26 @@ func (q *adaptiveLocalOrdering) Complete(ctx context.Context, j amboy.Job) {
 	}
 }
 
+func (q *adaptiveLocalOrdering) Delete(ctx context.Context, id string) error {
+	wait := make(chan int)
+	op := func(ctx context.Context, items *adaptiveOrderItems, fixed *fixedStorage) {
+		defer close(wait)
+		if fixed.Delete(id) == 1 {
+			wait <- items.delete(ctx, id)
+		}
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil
+	case q.operations <- op:
+		if num := <-wait; num == 0 {
+			return errors.New("no job found")
+		}
+		return nil
+	}
+}
+
 func (q *adaptiveLocalOrdering) Runner() amboy.Runner { return q.runner }
 func (q *adaptiveLocalOrdering) SetRunner(r amboy.Runner) error {
 	if q.runner != nil && q.runner.Started() {

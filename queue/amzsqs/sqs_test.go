@@ -112,7 +112,7 @@ func TestSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 	const (
 		inside  = 250
 		outside = 2
-	)g
+	)
 
 	wg.Add(outside)
 	for i := 0; i < outside; i++ {

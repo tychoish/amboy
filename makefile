@@ -1,7 +1,7 @@
 # start project configuration
 name := amboy
 buildDir := build
-packages := $(name) dependency job registry pool queue rest logger management cli queue-amzsqs
+packages := $(name) dependency job registry pool queue rest logger management cli queue-amzsqs queue-pgq queue-mdbq
 orgPath := github.com/mongodb
 projectPath := $(orgPath)/$(name)
 # end project configuration

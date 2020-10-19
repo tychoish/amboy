@@ -33,6 +33,8 @@ type remoteQueueDriver interface {
 
 	SetDispatcher(queue.Dispatcher)
 	Dispatcher() queue.Dispatcher
+
+	Delete(context.Context, string) error
 }
 
 // MongoDBOptions is a struct passed to the NewMongo constructor to

@@ -22,6 +22,7 @@ func TestManagerSuiteBackedByMongoDB(t *testing.T) {
 	defer cancel()
 	opts := DefaultMongoDBOptions()
 	opts.DB = "amboy_test"
+	opts.CheckWaitUntil = true
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(opts.URI))
 	require.NoError(t, err)
 	s.Factory = func() management.Manager {
@@ -48,12 +49,12 @@ func TestManagerSuiteBackedByMongoDB(t *testing.T) {
 	}
 
 	s.Cleanup = func() error {
-		require.NoError(t, client.Disconnect(ctx))
 		s.Queue.Runner().Close(ctx)
 		return nil
 	}
 
 	suite.Run(t, s)
+	require.NoError(t, client.Disconnect(ctx))
 }
 
 func TestManagerSuiteBackedByMongoDBSingleGroup(t *testing.T) {
@@ -94,12 +95,12 @@ func TestManagerSuiteBackedByMongoDBSingleGroup(t *testing.T) {
 	}
 
 	s.Cleanup = func() error {
-		require.NoError(t, client.Disconnect(ctx))
 		s.Queue.Runner().Close(ctx)
 		return nil
 	}
 
 	suite.Run(t, s)
+	require.NoError(t, client.Disconnect(ctx))
 }
 
 func TestManagerSuiteBackedByMongoDBMultiGroup(t *testing.T) {
@@ -136,16 +137,16 @@ func TestManagerSuiteBackedByMongoDBMultiGroup(t *testing.T) {
 
 		remote, err := NewMongoDBQueue(ctx, args)
 		require.NoError(t, err)
-		s.queue = remote
+		s.Queue = remote
 	}
 
 	s.Cleanup = func() error {
-		require.NoError(t, client.Disconnect(ctx))
 		s.Queue.Runner().Close(ctx)
 		return nil
 	}
 
 	suite.Run(t, s)
+	require.NoError(t, client.Disconnect(ctx))
 }
 
 func TestMongoDBConstructors(t *testing.T) {

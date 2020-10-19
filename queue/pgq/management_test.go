@@ -33,6 +33,7 @@ func TestManager(t *testing.T) {
 		}
 
 		opts.Options.UseGroups = false
+		opts.Options.CheckWaitUntil = true
 
 		s.Setup = func() {
 			db, closer = GetTestDatabase(ctx, t)
@@ -67,6 +68,7 @@ func TestManager(t *testing.T) {
 		opts.Options.UseGroups = true
 		opts.Options.GroupName = "foo"
 		opts.SingleGroup = true
+		opts.Options.CheckWaitUntil = true
 
 		s.Setup = func() {
 			db, closer = GetTestDatabase(ctx, t)
@@ -101,6 +103,7 @@ func TestManager(t *testing.T) {
 		opts.Options.UseGroups = true
 		opts.Options.GroupName = "foo"
 		opts.ByGroups = true
+		opts.Options.CheckWaitUntil = true
 
 		s.Setup = func() {
 			db, closer = GetTestDatabase(ctx, t)

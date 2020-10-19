@@ -237,3 +237,12 @@ func (q *priorityLocalQueue) Start(ctx context.Context) error {
 
 	return nil
 }
+
+func (q *priorityLocalQueue) Delete(ctx context.Context, id string) error {
+	q.storage.Remove(id)
+
+	if num := q.fixed.Delete(id); num == 0 {
+		return errors.Errorf("job %s does not exist and cannot be removed", id)
+	}
+	return nil
+}

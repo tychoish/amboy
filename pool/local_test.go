@@ -101,7 +101,7 @@ func (s *LocalWorkersSuite) TestPoolStartsAndProcessesJobs() {
 	amboy.WaitInterval(ctx, s.queue, 100*time.Millisecond)
 
 	counter := 0
-	for j := range s.queue.Results(ctx) {
+	for j := range s.queue.Jobs(ctx) {
 		s.True(j.Status().Completed)
 		counter++
 	}

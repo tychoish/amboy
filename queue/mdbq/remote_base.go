@@ -54,9 +54,11 @@ func (q *remoteBase) Put(ctx context.Context, j amboy.Job) error {
 		return errors.New("cannot add jobs with versions less than 0")
 	}
 
-	j.UpdateTimeInfo(amboy.JobTimeInfo{
-		Created: time.Now(),
-	})
+	ti := j.TimeInfo()
+	if ti.Created.IsZero() {
+		ti.Created = time.Now()
+		j.UpdateTimeInfo(ti)
+	}
 
 	if err := j.TimeInfo().Validate(); err != nil {
 		return errors.Wrap(err, "invalid job timeinfo")
@@ -332,4 +334,8 @@ func (q *remoteBase) canDispatch(j amboy.Job) bool {
 
 func jobCanRestart(stat amboy.JobStatusInfo, lockTimeout time.Duration) bool {
 	return stat.InProgress && time.Since(stat.ModificationTime) > lockTimeout
+}
+
+func (q *remoteBase) Delete(ctx context.Context, id string) error {
+	return errors.WithStack(q.driver.Delete(ctx, id))
 }

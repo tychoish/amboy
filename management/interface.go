@@ -11,6 +11,10 @@ import (
 // utility for queue management that make it possible to get more details about
 // the running jobs in an amboy queue and gives users broader capabilities than
 // the Queue interface itself.
+//
+// The PruneJobs method takes advantage of queues that implement a
+// Delete method, and deletes jobs matching a status before (or after)
+// the most relevant time stamp.
 type Manager interface {
 	JobStatus(context.Context, StatusFilter) (*JobStatusReport, error)
 	RecentTiming(context.Context, time.Duration, RuntimeFilter) (*JobRuntimeReport, error)
@@ -20,6 +24,7 @@ type Manager interface {
 	CompleteJobsByType(context.Context, StatusFilter, string) error
 	CompleteJob(context.Context, string) error
 	CompleteJobs(context.Context, StatusFilter) error
+	PruneJobs(context.Context, time.Time, int, StatusFilter) (int, error)
 }
 
 // StatusFilter defines a number of dimensions with which to filter

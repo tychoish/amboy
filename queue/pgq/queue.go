@@ -154,6 +154,16 @@ func isPgDuplicateError(err error) bool {
 }
 
 func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
+	ti := j.TimeInfo()
+	if ti.Created.IsZero() {
+		ti.Created = time.Now()
+		j.UpdateTimeInfo(ti)
+	}
+
+	if err := j.TimeInfo().Validate(); err != nil {
+		return errors.Wrap(err, "invalid job timeinfo")
+	}
+
 	payload, err := registry.MakeJobInterchange(j, json.Marshal)
 	if err != nil {
 		return errors.Wrap(err, "problem converting job to interchange format")
@@ -680,7 +690,7 @@ func (q *sqlQueue) Next(ctx context.Context) amboy.Job {
 				}
 
 				if job.TimeInfo().IsStale() {
-					_, err := q.db.ExecContext(ctx, "DELETE FROM jobs WHERE id = $1")
+					_, err := q.db.ExecContext(ctx, "DELETE FROM jobs WHERE id = $1", job.ID())
 					grip.Notice(message.WrapError(err, message.Fields{
 						"id":        q.id,
 						"service":   "amboy.queue.pgq",
@@ -821,5 +831,23 @@ func (q *sqlQueue) SetRunner(r amboy.Runner) error {
 	}
 
 	q.runner = r
+	return nil
+}
+
+func (q *sqlQueue) Delete(ctx context.Context, id string) error {
+	res, err := q.db.ExecContext(ctx, "DELETE FROM jobs WHERE id = $1", id)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	num, err := res.RowsAffected()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if num == 0 {
+		return errors.Errorf("could not delete ")
+	}
+
 	return nil
 }

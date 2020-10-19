@@ -2,10 +2,11 @@ package rest
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
-	"github.com/deciduosity/gimlet"
 	"github.com/deciduosity/amboy/management"
+	"github.com/deciduosity/gimlet"
 	"github.com/pkg/errors"
 )
 
@@ -37,6 +38,7 @@ func (s *ManagementService) App() *gimlet.APIApp {
 	app.AddRoute("/jobs/mark_complete/{name}").Version(1).Post().Handler(s.MarkComplete)
 	app.AddRoute("/jobs/mark_complete_by_type/{type}/{filter}").Version(1).Post().Handler(s.MarkCompleteByType)
 	app.AddRoute("/jobs/mark_many_complete/{filter}").Version(1).Post().Handler(s.MarkManyComplete)
+	app.AddRoute("/jobs/prune/{filter}/{time_stamp}/{limit}").Version(1).Delete().Handler(s.PruneJobs)
 
 	return app
 }
@@ -179,6 +181,7 @@ func (s *ManagementService) MarkComplete(rw http.ResponseWriter, r *http.Request
 	if err := s.manager.CompleteJob(ctx, name); err != nil {
 		gimlet.WriteResponse(rw, gimlet.MakeTextErrorResponder(errors.Wrapf(err,
 			"problem complete job '%s'", name)))
+		return
 	}
 
 	gimlet.WriteJSON(rw, struct {
@@ -201,6 +204,7 @@ func (s *ManagementService) MarkCompleteByType(rw http.ResponseWriter, r *http.R
 	if err := s.manager.CompleteJobsByType(ctx, management.StatusFilter(filter), jobType); err != nil {
 		gimlet.WriteResponse(rw, gimlet.MakeTextErrorResponder(errors.Wrapf(err,
 			"problem completing jobs by type '%s'", jobType)))
+		return
 	}
 
 	gimlet.WriteJSON(rw, struct {
@@ -222,11 +226,46 @@ func (s *ManagementService) MarkManyComplete(rw http.ResponseWriter, r *http.Req
 	if err := s.manager.CompleteJobs(ctx, management.StatusFilter(filter)); err != nil {
 		gimlet.WriteResponse(rw, gimlet.MakeTextErrorResponder(errors.Wrapf(err,
 			"problem completing jobs with filter '%s'", filter)))
+		return
 	}
 
 	gimlet.WriteJSON(rw, struct {
 		Message string `json:"message"`
 	}{
 		Message: "mark jobs complete by type successful",
+	})
+}
+
+func (s *ManagementService) PruneJobs(rw http.ResponseWriter, r *http.Request) {
+	vars := gimlet.GetVars(r)
+	filter := vars["filter"]
+	ts, err := time.Parse(vars["time_stamp"], time.RFC3339)
+	if err != nil {
+		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(errors.Wrapf(err,
+			"problem time duration from %s", vars["time_stamp"])))
+		return
+	}
+
+	limit, err := strconv.Atoi(vars["limit"])
+	if err != nil {
+		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(errors.Wrapf(err,
+			"problem limit from %s", vars["limit"])))
+		return
+	}
+
+	ctx := r.Context()
+	num, err := s.manager.PruneJobs(ctx, ts, limit, management.StatusFilter(filter))
+	if err != nil {
+		gimlet.WriteResponse(rw, gimlet.MakeTextErrorResponder(errors.Wrapf(err,
+			"problem completing jobs with filter '%s'", filter)))
+		return
+	}
+
+	gimlet.WriteJSON(rw, struct {
+		Message string `json:"message"`
+		Number  int    `json:"number"`
+	}{
+		Message: "prune jobs successful",
+		Number:  num,
 	})
 }

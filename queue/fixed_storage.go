@@ -13,8 +13,9 @@ import (
 ////////////////////////////////////////////////////////////////////////
 
 type fixedStorageItem struct {
-	id string
-	ts time.Time
+	id      string
+	ts      time.Time
+	deleted bool
 }
 
 type fixedStorageHeap []*fixedStorageItem
@@ -61,12 +62,31 @@ func (s *fixedStorage) Pop() string {
 	s.Lock()
 	defer s.Unlock()
 
-	item, ok := heap.Pop(s.heap).(*fixedStorageItem)
-	if !ok || item == nil {
-		return ""
-	}
+	for {
+		if s.heap.Len() == 0 {
+			return ""
+		}
 
-	return item.id
+		item, ok := heap.Pop(s.heap).(*fixedStorageItem)
+		if !ok || item == nil || item.deleted {
+			continue
+		}
+
+		return item.id
+	}
+}
+
+func (s *fixedStorage) Delete(id string) int {
+	count := 0
+	items := *s.heap.(*fixedStorageHeap)
+	for idx := range items {
+		if items[idx].id == id {
+			count++
+			items[idx].deleted = true
+			return 1
+		}
+	}
+	return 0
 }
 
 func (s *fixedStorage) Oversize() int {

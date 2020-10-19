@@ -407,6 +407,45 @@ func (q *shuffledLocal) Complete(ctx context.Context, j amboy.Job) {
 	}
 }
 
+func (q *shuffledLocal) Delete(ctx context.Context, id string) error {
+	res := make(chan error)
+
+	op := func(
+		pending map[string]amboy.Job,
+		completed map[string]amboy.Job,
+		dispatched map[string]amboy.Job,
+		toDelete *fixedStorage,
+	) {
+		defer close(res)
+
+		if _, ok := dispatched[id]; ok {
+			res <- errors.New("cannot delete dispatched job")
+			return
+		}
+
+		if num := toDelete.Delete(id); num != 0 {
+			return
+		}
+
+		if _, ok := pending[id]; ok {
+			delete(pending, id)
+			return
+		}
+
+		if _, ok := completed[id]; ok {
+			delete(pending, id)
+			return
+		}
+	}
+
+	select {
+	case <-ctx.Done():
+		return errors.WithStack(ctx.Err())
+	case q.operations <- op:
+		return <-res
+	}
+}
+
 // SetRunner modifies the embedded amboy.Runner instance, and return an
 // error if the current runner has started.
 func (q *shuffledLocal) SetRunner(r amboy.Runner) error {

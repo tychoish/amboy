@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/grip"
 	"github.com/pkg/errors"
 )
 
@@ -544,4 +545,67 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 	}
 
 	return nil
+}
+
+func (m queueManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f StatusFilter) (int, error) {
+	if err := f.Validate(); err != nil {
+		return 0, errors.WithStack(err)
+	}
+
+	grip.WarningWhen(f == InProgress || f == All, "deleting in progress has undefined implications")
+
+	if ts.After(time.Now()) {
+		return 0, errors.New("cannot prune jobs from the future")
+	}
+
+	dq, ok := m.queue.(amboy.DeletableJobQueue)
+	if !ok {
+		return 0, errors.New("queue does not support deletion")
+	}
+
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithCancel(ctx)
+	defer cancel()
+
+	catcher := grip.NewBasicCatcher()
+	count := 0
+
+	for job := range dq.Jobs(ctx) {
+		stat := job.Status()
+		ti := job.TimeInfo()
+		id := job.ID()
+
+		switch f {
+		case Completed:
+			if stat.Completed && ti.End.Before(ts) {
+				count++
+				catcher.Wrapf(dq.Delete(ctx, id), "problem deleting stale job '%s'", id)
+			}
+		case Stale:
+			if stat.InProgress && time.Since(stat.ModificationTime) > m.queue.Info().LockTimeout && ti.Start.Before(ts) {
+				count++
+				catcher.Wrapf(dq.Delete(ctx, id), "problem deleting stale job '%s'", id)
+			}
+		case InProgress:
+			if stat.InProgress && ti.Start.Before(ts) {
+				count++
+				catcher.Wrapf(dq.Delete(ctx, id), "problem deleting in progress job '%s'", id)
+			}
+		case Pending:
+			if !stat.Completed && !stat.InProgress && ti.Created.Before(ts) {
+				count++
+				catcher.Wrapf(dq.Delete(ctx, id), "problem deleting pending job '%s'", id)
+			}
+		case All:
+			if !stat.Completed && !stat.InProgress && ti.Created.Before(ts) {
+				count++
+				catcher.Wrapf(dq.Delete(ctx, id), "problem deleting pending job '%s'", id)
+			}
+		}
+		if limit > 0 && limit >= count {
+			break
+		}
+	}
+
+	return count, catcher.Resolve()
 }

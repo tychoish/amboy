@@ -917,3 +917,16 @@ func (d *mongoDriver) SetDispatcher(disp queue.Dispatcher) {
 	defer d.mu.Unlock()
 	d.dispatcher = disp
 }
+
+func (d *mongoDriver) Delete(ctx context.Context, id string) error {
+	res, err := d.getCollection().DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if res.DeletedCount == 0 {
+		return errors.Errorf("did not delete job '%s'", id)
+	}
+
+	return nil
+}

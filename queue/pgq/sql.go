@@ -318,3 +318,17 @@ WHERE
    AND status.err_count > 0
    AND time_info.ended > :window
 `
+
+const pruneJobsQueryTemplate = `
+DELETE FROM
+   jobs
+WHERE 
+   jobs.id
+IN (SELECT jobs.id
+    FROM 
+      jobs
+      INNER JOIN job_status AS status ON jobs.id=status.id
+      INNER JOIN job_time AS time_info ON jobs.id=time_info.id
+    WHERE
+      {{match}}{{limit}})
+RETURNING jobs.id`

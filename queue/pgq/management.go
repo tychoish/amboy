@@ -447,3 +447,81 @@ func (m *sqlManager) doCompleteJobs(ctx context.Context, filter management.Statu
 
 	return nil
 }
+
+func (m *sqlManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f management.StatusFilter) (int, error) {
+	if err := f.Validate(); err != nil {
+		return 0, errors.WithStack(err)
+	}
+
+	where := []string{}
+	if m.opts.SingleGroup {
+		where = append(where, "queue_group = :queue_group")
+	}
+
+	switch f {
+	case management.Completed:
+		where = append(where,
+			"completed = true",
+			"in_progress = false",
+			"ended < :ts")
+	case management.InProgress:
+		where = append(where,
+			"completed = false",
+			"in_progress = true",
+			"started < :ts")
+	case management.Pending:
+		where = append(where,
+			"completed = false",
+			"in_progress = false",
+			"created < :ts")
+	case management.Stale:
+		where = append(where,
+			"in_progress = true",
+			"completed = false",
+			"mod_ts > :lock_timeout",
+			"started < :ts")
+	case management.All:
+		where = append(where,
+			"created < :ts")
+	default:
+		return 0, errors.New("invalid job status filter")
+	}
+
+	query := pruneJobsQueryTemplate
+
+	query = strings.Replace(query, "{{match}}",
+		strings.Join(where, "\n      AND "), 1)
+
+	if limit > 0 {
+		query = strings.Replace(query, "{{limit}}", fmt.Sprint("\n   LIMIT ", limit), 1)
+	} else {
+		query = strings.Replace(query, "{{limit}}", "", 1)
+	}
+
+	stmt, err := m.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return 0, errors.Wrap(err, "problem preparing query")
+	}
+
+	args := struct {
+		LockTimeout time.Time `db:"lock_timeout"`
+		Timestamp   time.Time `db:"ts"`
+		Group       string    `db:"queue_group"`
+	}{
+		LockTimeout: time.Now().Add(-m.opts.Options.LockTimeout),
+		Timestamp:   ts,
+		Group:       m.opts.Options.GroupName,
+	}
+
+	res, err := stmt.ExecContext(ctx, args)
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+
+	num, err := res.RowsAffected()
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+
+	return int(num), nil
+}

@@ -68,6 +68,40 @@ func (items *adaptiveOrderItems) remove(id string) {
 	items.completed = new
 }
 
+func (items *adaptiveOrderItems) updateCompleted(ctx context.Context) {
+	new := make([]string, 0, len(items.completed))
+
+	for _, id := range items.completed {
+		if ctx.Err() != nil {
+			return
+		}
+
+		if _, ok := items.jobs[id]; !ok {
+			continue
+		}
+
+		new = append(new, id)
+	}
+	items.completed = new
+}
+
+func (items *adaptiveOrderItems) updatePassed(ctx context.Context) {
+	new := make([]string, 0, len(items.passed))
+
+	for _, id := range items.passed {
+		if ctx.Err() != nil {
+			return
+		}
+
+		if _, ok := items.jobs[id]; !ok {
+			continue
+		}
+
+		new = append(new, id)
+	}
+	items.passed = new
+}
+
 func (items *adaptiveOrderItems) updateWaiting(ctx context.Context) {
 	new := []string{}
 
@@ -161,18 +195,46 @@ func (items *adaptiveOrderItems) updateStalled(ctx context.Context) {
 	items.stalled = new
 }
 
-func (items *adaptiveOrderItems) refilter(ctx context.Context) {
-	items.updateWaiting(ctx)
-	items.updateStalled(ctx)
-
+func (items *adaptiveOrderItems) updateReady(ctx context.Context) {
 	// shuffle the order of the ready queue.
 	//   in the future this might be good to sort based on the
 	//   number of edges, and randomized otherwise.
 	if len(items.ready) > 1 {
 		new := make([]string, len(items.ready))
 		for i, r := range rand.Perm(len(items.ready)) {
+			if ctx.Err() != nil {
+				return
+			}
+
+			if _, ok := items.jobs[items.ready[r]]; !ok {
+				continue
+			}
+
 			new[i] = items.ready[r]
 		}
 		items.ready = new
 	}
+
+}
+
+func (items *adaptiveOrderItems) refilter(ctx context.Context) {
+	items.updateWaiting(ctx)
+	items.updateStalled(ctx)
+	items.updateReady(ctx)
+}
+
+func (items *adaptiveOrderItems) delete(ctx context.Context, id string) int {
+	if _, ok := items.jobs[id]; !ok {
+		return 0
+	}
+
+	delete(items.jobs, id)
+
+	items.updateCompleted(ctx)
+	items.updatePassed(ctx)
+	items.updateWaiting(ctx)
+	items.updateStalled(ctx)
+	items.updateReady(ctx)
+
+	return 1
 }

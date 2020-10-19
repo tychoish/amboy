@@ -133,6 +133,11 @@ func (q *limitedSizeLocal) Next(ctx context.Context) amboy.Job {
 
 		select {
 		case job := <-q.channel:
+			if _, ok := q.Get(ctx, job.ID()); !ok {
+				// if the job's been deleted just continue
+				continue
+			}
+
 			ti := job.TimeInfo()
 			if ti.IsStale() {
 				q.mu.Lock()
@@ -264,8 +269,11 @@ func (q *limitedSizeLocal) Complete(ctx context.Context, j amboy.Job) {
 	q.storage[j.ID()] = j
 
 	if len(q.toDelete) == q.capacity-1 {
-		delete(q.storage, <-q.toDelete)
-		q.deletedCount++
+		id := <-q.toDelete
+		if _, ok := q.storage[id]; ok {
+			delete(q.storage, id)
+			q.deletedCount++
+		}
 	}
 
 	grip.Alert(message.WrapError(

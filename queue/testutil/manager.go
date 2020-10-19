@@ -214,6 +214,127 @@ func (s *ManagerSuite) TestCompleteJobsByTypeValidFilter() {
 	s.Equal(3, jobCount)
 }
 
+func (s *ManagerSuite) TestPruneCompletedJobs() {
+	var j *testJob
+	j = makeTestJob()
+	j.SetID("one")
+	j.MarkComplete()
+	j.UpdateTimeInfo(amboy.JobTimeInfo{End: time.Now().Add(-time.Hour)})
+	s.Require().NoError(s.Queue.Put(s.ctx, j))
+
+	j = makeTestJob()
+	j.SetID("two")
+	j.MarkComplete()
+	j.UpdateTimeInfo(amboy.JobTimeInfo{End: time.Now().Add(-time.Hour)})
+	s.Require().NoError(s.Queue.Put(s.ctx, j))
+
+	j = makeTestJob()
+	j.SetID("three")
+	j.MarkComplete()
+	j.UpdateTimeInfo(amboy.JobTimeInfo{End: time.Now().Add(time.Hour)})
+	s.Require().NoError(s.Queue.Put(s.ctx, j))
+
+	j = makeTestJob()
+	j.SetID("four")
+	j.MarkComplete()
+	j.UpdateTimeInfo(amboy.JobTimeInfo{End: time.Now().Add(time.Hour)})
+	s.Require().NoError(s.Queue.Put(s.ctx, j))
+
+	stat := s.Queue.Stats(s.ctx)
+	s.Equal(4, stat.Total)
+	s.Equal(4, stat.Completed)
+	num, err := s.Manager.PruneJobs(s.ctx, time.Now().Add(-30*time.Minute), 0, management.Completed)
+	s.Require().NoError(err)
+	s.Equal(2, num)
+
+	stat = s.Queue.Stats(s.ctx)
+	s.Equal(2, stat.Total)
+	s.Equal(2, stat.Completed)
+}
+
+func (s *ManagerSuite) TestPruneCompletedJobsWithLimit() {
+	var j *testJob
+	j = makeTestJob()
+	j.SetID("one")
+	j.MarkComplete()
+	j.UpdateTimeInfo(amboy.JobTimeInfo{End: time.Now().Add(-time.Hour)})
+	s.Require().NoError(s.Queue.Put(s.ctx, j))
+
+	j = makeTestJob()
+	j.SetID("two")
+	j.MarkComplete()
+	j.UpdateTimeInfo(amboy.JobTimeInfo{End: time.Now().Add(-time.Hour)})
+	s.Require().NoError(s.Queue.Put(s.ctx, j))
+
+	j = makeTestJob()
+	j.SetID("three")
+	j.MarkComplete()
+	j.UpdateTimeInfo(amboy.JobTimeInfo{End: time.Now().Add(time.Hour)})
+	s.Require().NoError(s.Queue.Put(s.ctx, j))
+
+	j = makeTestJob()
+	j.SetID("four")
+	j.MarkComplete()
+	j.UpdateTimeInfo(amboy.JobTimeInfo{End: time.Now().Add(time.Hour)})
+	s.Require().NoError(s.Queue.Put(s.ctx, j))
+
+	stat := s.Queue.Stats(s.ctx)
+	s.Equal(4, stat.Total)
+	s.Equal(4, stat.Completed)
+	num, err := s.Manager.PruneJobs(s.ctx, time.Now().Add(-30*time.Minute), 1, management.Completed)
+	s.Require().NoError(err)
+	s.Equal(1, num)
+
+	stat = s.Queue.Stats(s.ctx)
+	s.Equal(3, stat.Total)
+	s.Equal(3, stat.Completed)
+}
+
+func (s *ManagerSuite) TestPrunePending() {
+	var j *testJob
+	j = makeTestJob()
+	j.SetID("one")
+	j.UpdateTimeInfo(amboy.JobTimeInfo{
+		Created:   time.Now().Add(-time.Hour),
+		WaitUntil: time.Now().Add(24 * time.Hour),
+	})
+	s.Require().NoError(s.Queue.Put(s.ctx, j))
+
+	j = makeTestJob()
+	j.SetID("two")
+	j.UpdateTimeInfo(amboy.JobTimeInfo{
+		Created:   time.Now().Add(-time.Hour),
+		WaitUntil: time.Now().Add(24 * time.Hour),
+	})
+	s.Require().NoError(s.Queue.Put(s.ctx, j))
+
+	j = makeTestJob()
+	j.SetID("three")
+	j.UpdateTimeInfo(amboy.JobTimeInfo{
+		Created:   time.Now().Add(time.Hour),
+		WaitUntil: time.Now().Add(24 * time.Hour),
+	})
+	s.Require().NoError(s.Queue.Put(s.ctx, j))
+
+	j = makeTestJob()
+	j.SetID("four")
+	j.UpdateTimeInfo(amboy.JobTimeInfo{
+		Created:   time.Now().Add(time.Hour),
+		WaitUntil: time.Now().Add(24 * time.Hour),
+	})
+	s.Require().NoError(s.Queue.Put(s.ctx, j))
+
+	stat := s.Queue.Stats(s.ctx)
+	s.Equal(4, stat.Total)
+	s.Equal(4, stat.Pending)
+	num, err := s.Manager.PruneJobs(s.ctx, time.Now().Add(-30*time.Minute), 0, management.Pending)
+	s.Require().NoError(err)
+	s.Equal(2, num)
+	stat = s.Queue.Stats(s.ctx)
+	s.Equal(2, stat.Total)
+	s.Equal(2, stat.Pending)
+}
+
 type testJob struct {
 	job.Base
 }

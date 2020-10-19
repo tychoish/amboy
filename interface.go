@@ -249,6 +249,18 @@ type QueueGroup interface {
 	Queues(context.Context) []string
 }
 
+// DeletableJobQueue describes an optional feature superset of a queue
+// that allows some jobs to be deleted from the underlying storage by
+// passing that job's ID.
+//
+// Queue implementations may decide how to handle deletion of jobs if
+// they implement it at all. In most cases the deletion of an
+// in-progress job will result in undefined behavior.
+type DeletableJobQueue interface {
+	Queue
+	Delete(context.Context, string) error
+}
+
 // Runner describes a simple worker interface for executing jobs in
 // the context of a Queue. Used by queue implementations to run
 // tasks. Generally Queue implementations will spawn a runner as part

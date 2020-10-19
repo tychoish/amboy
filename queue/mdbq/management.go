@@ -640,3 +640,60 @@ func (db *dbQueueManager) CompleteJobsByType(ctx context.Context, f management.S
 func (db *dbQueueManager) CompleteJobs(ctx context.Context, f management.StatusFilter) error {
 	return db.completeJobs(ctx, bson.M{}, f)
 }
+
+func (db *dbQueueManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f management.StatusFilter) (int, error) {
+	if err := f.Validate(); err != nil {
+		return 0, errors.WithStack(err)
+	}
+
+	if limit > 1 {
+		return 0, errors.New("limits of greater than 1 are not supported ")
+	}
+
+	match := bson.M{}
+
+	if db.opts.SingleGroup {
+		match["group"] = db.opts.Group
+	}
+
+	switch f {
+	case management.InProgress:
+		match["status.in_prog"] = true
+		match["status.completed"] = false
+		match["time_info.start"] = bson.M{"$lt": ts}
+	case management.Pending:
+		match["status.in_prog"] = false
+		match["status.completed"] = false
+		match["time_info.created"] = bson.M{"$lt": ts}
+	case management.Stale:
+		match["status.in_prog"] = true
+		match["status.completed"] = false
+		match["status.mod_ts"] = bson.M{"$gt": time.Now().Add(-db.opts.Options.LockTimeout)}
+		match["time_info.start"] = bson.M{"$lt": ts}
+	case management.Completed:
+		match["status.in_prog"] = false
+		match["status.completed"] = true
+		match["time_info.end"] = bson.M{"$lt": ts}
+	case management.All:
+		match["time_info.created"] = bson.M{"$lt": ts}
+	default:
+		return 0, errors.New("invalid job status filter")
+	}
+
+	var (
+		res *mongo.DeleteResult
+		err error
+	)
+
+	if limit == 1 {
+		res, err = db.collection.DeleteOne(ctx, match)
+	} else {
+		res, err = db.collection.DeleteMany(ctx, match)
+	}
+
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+
+	return int(res.DeletedCount), nil
+}

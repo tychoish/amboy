@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/deciduosity/gimlet"
 	"github.com/deciduosity/amboy/management"
+	"github.com/deciduosity/gimlet"
 	"github.com/pkg/errors"
 )
 
@@ -212,4 +212,39 @@ func (c *managementClient) CompleteJobs(ctx context.Context, f management.Status
 	}
 
 	return nil
+}
+
+func (c *managementClient) PruneJobs(ctx context.Context, ts time.Time, limit int, f management.StatusFilter) (int, error) {
+	path := fmt.Sprintf("/jobs/prune/%s/%s/%d", f, ts.Format(time.RFC3339), limit)
+	req, err := http.NewRequest(http.MethodDelete, c.url+path, nil)
+	if err != nil {
+		return 0, errors.Wrap(err, "problem building request")
+	}
+	req = req.WithContext(ctx)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return 0, errors.Wrap(err, "error processing request")
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		var msg string
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			msg = errors.Wrap(err, "problem reading response body").Error()
+		} else {
+			msg = string(data)
+		}
+		return 0, errors.Errorf("status code '%s' returned with message: '%s'", resp.Status, msg)
+	}
+
+	out := struct {
+		Message string `json:"message"`
+		Number  int    `json:"int"`
+	}{}
+	if err := gimlet.GetJSON(resp.Body, &out); err != nil {
+		return 0, errors.Wrap(err, "problem parsing result")
+	}
+
+	return out.Number, nil
 }
