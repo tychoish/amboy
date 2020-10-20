@@ -162,7 +162,7 @@ func (g *sqlGroup) startQueues(ctx context.Context) error {
 func (g *sqlGroup) getQueues(ctx context.Context) ([]string, error) {
 	var groups []string
 
-	if err := g.db.GetContext(ctx, &groups, getActiveGroups, time.Now().Add(-g.opts.TTL)); err != nil {
+	if err := g.db.SelectContext(ctx, &groups, getActiveGroups, time.Now().Add(-g.opts.TTL)); err != nil {
 		if err == sql.ErrNoRows {
 			return []string{}, nil
 		}

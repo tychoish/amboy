@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/job"
@@ -81,6 +82,9 @@ func TestQueue(t *testing.T) {
 		q, err := NewQueue(db, Options{})
 		require.NoError(t, err)
 		j := job.NewShellJob("ls", "")
+		j.UpdateTimeInfo(amboy.JobTimeInfo{
+			Created: time.Now().UTC().Round(time.Millisecond),
+		})
 		id := j.ID()
 		require.NoError(t, q.Put(ctx, j))
 		jrt, ok := q.Get(ctx, id)

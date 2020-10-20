@@ -83,9 +83,8 @@ FROM
    jobs
    INNER JOIN job_status AS status ON jobs.id=status.id
 WHERE
-   status.completed = false
-   OR (status.completed = true AND status.mod_ts >= $1)
-`
+   (status.completed = false OR (status.completed = true AND status.mod_ts >= $1))
+   AND queue_group != ''`
 
 const getJobByID = `
 SELECT

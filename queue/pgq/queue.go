@@ -487,9 +487,16 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 	if err = tx.GetContext(ctx, &count, "SELECT COUNT(*) FROM job_errors WHERE id = $1", job.Name); err != nil {
 		return errors.Wrap(err, "problem counting errors")
 	}
-
 	if len(job.Status.Errors) > count {
-		for _, e := range job.Status.Errors[count-1:] {
+		var idx int
+		if count <= 0 {
+			idx = 0
+		} else {
+			idx = count - 1
+
+		}
+
+		for _, e := range job.Status.Errors[idx:] {
 			_, err := tx.NamedExecContext(ctx, fmt.Sprintln(
 				"INSERT INTO job_errors (id, edge)",
 				"VALUES (:id, :edge)"),
