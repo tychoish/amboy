@@ -19,6 +19,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func init() {
+	job.RegisterDefaultJobs()
+}
+
 func GetTestDatabase(bctx context.Context, t *testing.T) (*sqlx.DB, func() error) {
 	db, closer, err := MakeTestDatabase(bctx, uuid.New().String()[0:7])
 	require.NoError(t, err)

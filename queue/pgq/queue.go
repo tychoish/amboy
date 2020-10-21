@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/job"
 	"github.com/deciduosity/amboy/pool"
 	"github.com/deciduosity/amboy/queue"
 	"github.com/deciduosity/amboy/registry"
@@ -24,10 +23,6 @@ import (
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 )
-
-func init() {
-	job.RegisterDefaultJobs()
-}
 
 type sqlQueue struct {
 	db         *sqlx.DB
@@ -493,7 +488,6 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 			idx = 0
 		} else {
 			idx = count - 1
-
 		}
 
 		for _, e := range job.Status.Errors[idx:] {
