@@ -203,7 +203,7 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	for _, e := range payload.Status.Errors {
 		_, err := tx.NamedExecContext(ctx, fmt.Sprintln(
 			"INSERT INTO job_errors (id, edge)",
-			"VALUES (:id, :edge)"),
+			"VALUES (:id, :error)"),
 			struct {
 				ID    string `db:"id"`
 				Error string `db:"error"`
