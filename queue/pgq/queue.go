@@ -492,8 +492,8 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 
 		for _, e := range job.Status.Errors[idx:] {
 			_, err := tx.NamedExecContext(ctx, fmt.Sprintln(
-				"INSERT INTO job_errors (id, edge)",
-				"VALUES (:id, :edge)"),
+				"INSERT INTO job_errors (id, error)",
+				"VALUES (:id, :error)"),
 				struct {
 					ID    string `db:"id"`
 					Error string `db:"error"`
