@@ -206,7 +206,7 @@ func WaitUntilTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 	// waitC for things to finish
 	const (
 		interval = 100 * time.Millisecond
-		maxTime  = 3 * time.Second
+		maxTime  = 10 * time.Second
 	)
 	var dur time.Duration
 	timer := time.NewTimer(interval)

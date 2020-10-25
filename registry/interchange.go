@@ -167,7 +167,6 @@ func convertToDependency(convertFrom Unmarshaler, d *DependencyInterchange) (dep
 	// interchange object, but want to use the type information
 	// associated with the object that we produced with the
 	// factory.
-
 	if err := convertFrom(d.Dependency, dep); err != nil {
 		return nil, errors.Wrap(err, "converting dependency")
 	}

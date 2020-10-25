@@ -36,6 +36,7 @@ func MakeTestDatabase(bctx context.Context, name string) (*sqlx.DB, func() error
 
 	tdb, err := sqlx.ConnectContext(ctx, "postgres", "user=amboy database=postgres sslmode=disable")
 	if err != nil {
+		cancel()
 		return nil, nil, err
 	}
 	tdb.SetMaxOpenConns(128)

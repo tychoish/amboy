@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"runtime"
 	"strings"
@@ -86,6 +87,14 @@ func (opts *Options) Validate() error {
 // are immutable after the job is Put into the queue. Similarly, jobs
 // must treat the Error array in the amboy.JobStatuseInfo as
 // append-only.
+//
+// Be aware, that in the current release this implementation will log
+// warnings if some job metadata is above maxint32, (e.g. priority,
+// error count), and error if more critical values are above this
+// threshold (e.g. mod Count and version). Also because MaxTime is
+// stored internally as an int32 of milliseconds (maximum ~500 hours),
+// rather than go's native 64bit integer of nanoseconds, attempting to
+// set longer maxtimes results in an error.
 func NewQueue(db *sqlx.DB, opts Options) (amboy.Queue, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, errors.WithStack(err)
@@ -148,6 +157,48 @@ func isPgDuplicateError(err error) bool {
 	return false
 }
 
+func (q *sqlQueue) prepareForDB(j *registry.JobInterchange) error {
+	truncMaxTime := time.Duration(j.TimeInfo.MaxTime.Milliseconds())
+	if truncMaxTime > time.Duration(math.MaxInt32) {
+		return errors.Errorf("maxTime must be less than %s, [%s]", time.Duration(math.MaxInt32), j.TimeInfo.MaxTime)
+	}
+	j.TimeInfo.MaxTime = truncMaxTime
+
+	if j.Status.ModificationCount > math.MaxInt32 {
+		return errors.Errorf("modification count exceeded maxint32 [%d]", j.Status.ModificationCount)
+	}
+	if j.Version > math.MaxInt32 {
+		return errors.Errorf("version exceeded maxint32 [%d]", j.Version)
+	}
+
+	if j.Priority > math.MaxInt32 {
+		j.Priority = math.MaxInt32
+		grip.Warning(message.Fields{
+			"job_id":   j.Name,
+			"priority": j.Priority,
+			"mesage":   "priority is over maxint32",
+			"queue_id": q.ID(),
+		})
+	}
+
+	if j.Status.ErrorCount > math.MaxInt32 {
+		j.Status.ErrorCount = math.MaxInt32
+		grip.Warning(message.Fields{
+			"job_id":      j.Name,
+			"error_count": j.Status.ErrorCount,
+			"num_errors":  len(j.Status.Errors),
+			"mesage":      "priority is over maxint32",
+			"queue_id":    q.ID(),
+		})
+	}
+
+	return nil
+}
+
+func (q *sqlQueue) prepareFromDB(j *registry.JobInterchange) {
+	j.TimeInfo.MaxTime = time.Duration(j.TimeInfo.MaxTime * time.Millisecond)
+}
+
 func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	ti := j.TimeInfo()
 	if ti.Created.IsZero() {
@@ -163,7 +214,9 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	if err != nil {
 		return errors.Wrap(err, "problem converting job to interchange format")
 	}
-
+	if err := q.prepareForDB(payload); err != nil {
+		return errors.Wrap(err, "problem preparing job for database")
+	}
 	q.processJobForGroup(payload)
 
 	tx, err := q.db.BeginTxx(ctx, nil)
@@ -272,7 +325,11 @@ func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.
 		return nil, false
 	}
 
-	if err := tx.SelectContext(ctx, &payload.Status.Errors, getErrorsForJob, id); err != nil {
+	if err := tx.SelectContext(ctx, &payload.JobStatusInfo.Errors, getErrorsForJob, id); err != nil {
+		return nil, false
+	}
+
+	if err := tx.SelectContext(ctx, &payload.DependencyInterchange.Edges, getEdgesForJob, id); err != nil {
 		return nil, false
 	}
 
@@ -282,6 +339,7 @@ func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.
 	payload.JobInterchange.TimeInfo = payload.JobTimeInfo
 
 	q.processNameForUsers(&payload.JobInterchange)
+	q.prepareFromDB(&payload.JobInterchange)
 
 	job, err := payload.JobInterchange.Resolve(json.Unmarshal)
 	if err != nil {
@@ -415,6 +473,9 @@ RETRY:
 func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) error {
 	q.processJobForGroup(job)
 	defer func() { q.processNameForUsers(job) }()
+	if err := q.prepareForDB(job); err != nil {
+		return errors.Wrap(err, "fatal error with job")
+	}
 
 	tx, err := q.db.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
@@ -664,6 +725,7 @@ func (q *sqlQueue) Next(ctx context.Context) amboy.Job {
 			defer rows.Close()
 		CURSOR:
 			for rows.Next() {
+
 				if ctx.Err() != nil {
 					return nil
 				}

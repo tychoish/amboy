@@ -17,6 +17,12 @@ func RunSmokeTest(bctx context.Context, t *testing.T, test QueueTestCase) {
 	}
 
 	t.Run(test.Name, func(t *testing.T) {
+		t.Run("Serialization", func(t *testing.T) {
+			ctx, cancel := context.WithCancel(bctx)
+			defer cancel()
+			RunSerializationTest(ctx, t, test)
+		})
+
 		for _, runner := range DefaultPoolTestCases() {
 			if test.IsRemote && runner.SkipRemote {
 				continue

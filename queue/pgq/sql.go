@@ -108,6 +108,15 @@ WHERE
    id = $1
 `
 
+const getEdgesForJob = `
+SELECT
+   edge
+FROM
+   dependency_edges
+WHERE
+   id = $1
+`
+
 const updateJob = `
 UPDATE
    jobs
