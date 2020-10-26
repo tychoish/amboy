@@ -180,7 +180,7 @@ func (q *depGraphOrderedLocal) Next(ctx context.Context) amboy.Job {
 	case <-ctx.Done():
 		return nil
 	case job := <-q.channel:
-		grip.Error(message.WrapError(q.dispatcher.Dispatch(ctx, job),
+		grip.Debug(message.WrapError(q.dispatcher.Dispatch(ctx, job),
 			message.Fields{
 				"job":    job.ID(),
 				"event":  "improperly dispatched job",

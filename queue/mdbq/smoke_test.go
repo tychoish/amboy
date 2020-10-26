@@ -16,8 +16,9 @@ import (
 func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 	return []testutil.QueueTestCase{
 		{
-			Name:     "MongoUnordered",
-			IsRemote: true,
+			Name:                 "MongoUnordered",
+			IsRemote:             true,
+			DisableParallelTests: true,
 			Constructor: func(ctx context.Context, name string, size int) (amboy.Queue, testutil.TestCloser, error) {
 				opts := MongoDBQueueCreationOptions{
 					Size:    size,
@@ -48,8 +49,9 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 			},
 		},
 		{
-			Name:     "MongoGroupUnordered",
-			IsRemote: true,
+			Name:                 "MongoGroupUnordered",
+			IsRemote:             true,
+			DisableParallelTests: true,
 			Constructor: func(ctx context.Context, name string, size int) (amboy.Queue, testutil.TestCloser, error) {
 				opts := MongoDBQueueCreationOptions{
 					Size:    size,
@@ -82,8 +84,9 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 			},
 		},
 		{
-			Name:     "MongoOrdered",
-			IsRemote: true,
+			Name:                 "MongoOrdered",
+			IsRemote:             true,
+			DisableParallelTests: true,
 			Constructor: func(ctx context.Context, name string, size int) (amboy.Queue, testutil.TestCloser, error) {
 				opts := MongoDBQueueCreationOptions{
 					Size:    size,

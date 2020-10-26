@@ -12,13 +12,65 @@ import (
 	"github.com/google/uuid"
 )
 
+type counterCacheImpl struct {
+	cache map[string]Counters
+	mutex sync.Mutex
+}
+
+var counterCache *counterCacheImpl
+
+func init() {
+	counterCache = &counterCacheImpl{
+		cache: map[string]Counters{},
+	}
+
+	registry.AddJobType("mock", NewMockJob)
+	registry.AddJobType("sleep", func() amboy.Job { return newSleepJob() })
+}
+
+type CounterCache interface {
+	Put(string, Counters)
+	Get(string) Counters
+	Reset(string)
+}
+
+func GetCounterCache() CounterCache {
+	return counterCache
+}
+
+func (cc *counterCacheImpl) Get(name string) Counters {
+	cc.mutex.Lock()
+	defer cc.mutex.Unlock()
+
+	count, ok := cc.cache[name]
+	if ok {
+		return count
+	}
+
+	count = &mockJobRunEnv{}
+	cc.cache[name] = count
+	return count
+}
+
+func (cc *counterCacheImpl) Reset(name string) {
+	cc.mutex.Lock()
+	defer cc.mutex.Unlock()
+
+	delete(cc.cache, name)
+}
+
+func (cc *counterCacheImpl) Put(name string, counter Counters) {
+	cc.mutex.Lock()
+	defer cc.mutex.Unlock()
+
+	cc.cache[name] = counter
+}
+
 type Counters interface {
 	Reset()
 	Inc()
 	Count() int
 }
-
-var MockJobCounters Counters
 
 type mockJobRunEnv struct {
 	runCount int
@@ -46,19 +98,15 @@ func (e *mockJobRunEnv) Reset() {
 	e.runCount = 0
 }
 
-func init() {
-	MockJobCounters = &mockJobRunEnv{}
-	registry.AddJobType("mock", NewMockJob)
-	registry.AddJobType("sleep", func() amboy.Job { return newSleepJob() })
-}
-
 //
 type mockJob struct {
+	Test     string `bson:"test_name" json:"test_name" yaml:"test_name"`
 	job.Base `bson:"job_base" json:"job_base" yaml:"job_base"`
 }
 
-func MakeMockJob(id string) amboy.Job {
+func MakeMockJob(id string, name string) amboy.Job {
 	j := NewMockJob().(*mockJob)
+	j.Test = name
 	j.SetID(id)
 	return j
 }
@@ -79,7 +127,7 @@ func NewMockJob() amboy.Job {
 func (j *mockJob) Run(_ context.Context) {
 	defer j.MarkComplete()
 
-	MockJobCounters.Inc()
+	GetCounterCache().Get(j.Test).Inc()
 }
 
 type sleepJob struct {

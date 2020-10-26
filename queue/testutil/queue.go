@@ -13,6 +13,7 @@ type QueueTestCase struct {
 	Constructor             func(context.Context, string, int) (amboy.Queue, TestCloser, error)
 	MinSize                 int
 	MaxSize                 int
+	DisableParallelTests    bool
 	SingleWorker            bool
 	MultiSupported          bool
 	OrderedSupported        bool

@@ -16,7 +16,6 @@ func TestGroup(t *testing.T) {
 	bctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	t.Parallel()
-
 	t.Run("Constructor", func(t *testing.T) {
 		remoteTests := []struct {
 			name       string
@@ -52,6 +51,8 @@ func TestGroup(t *testing.T) {
 		}
 		for _, remoteTest := range remoteTests {
 			t.Run(remoteTest.name, func(t *testing.T) {
+				remoteTest := remoteTest
+				t.Parallel()
 				ctx, cancel := context.WithCancel(bctx)
 				defer cancel()
 				db, closer := GetTestDatabase(ctx, t)

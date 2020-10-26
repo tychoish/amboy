@@ -13,13 +13,12 @@ import (
 
 func TestManager(t *testing.T) {
 	t.Parallel()
-	bctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	t.Run("Single", func(t *testing.T) {
+		t.Parallel()
 		s := new(testutil.ManagerSuite)
 
-		ctx, cancel := context.WithCancel(bctx)
+		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		var (
@@ -50,9 +49,10 @@ func TestManager(t *testing.T) {
 		suite.Run(t, s)
 	})
 	t.Run("SingleGroup", func(t *testing.T) {
+		t.Parallel()
 		s := new(testutil.ManagerSuite)
 
-		ctx, cancel := context.WithCancel(bctx)
+		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		var (
@@ -85,9 +85,10 @@ func TestManager(t *testing.T) {
 		suite.Run(t, s)
 	})
 	t.Run("ByGroup", func(t *testing.T) {
+		t.Parallel()
 		s := new(testutil.ManagerSuite)
 
-		ctx, cancel := context.WithCancel(bctx)
+		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		var (

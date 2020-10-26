@@ -17,7 +17,9 @@ func RunSerializationTest(ctx context.Context, t *testing.T, test QueueTestCase)
 		t.Skip("skipped ordered testing for test simplicity")
 	}
 
-	t.Parallel()
+	if !test.DisableParallelTests {
+		t.Parallel()
+	}
 	t.Run("BasicRoundTrip", func(t *testing.T) {
 		queue, closer, err := test.Constructor(ctx, RandomID(), 2)
 		require.NoError(t, err)

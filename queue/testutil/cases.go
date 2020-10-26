@@ -302,13 +302,16 @@ func OneExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, ru
 	ctx, cancel := context.WithTimeout(bctx, 2*time.Minute)
 	defer cancel()
 
-	q, closer, err := test.Constructor(ctx, RandomID(), size.Size)
+	testID := RandomID()
+	q, closer, err := test.Constructor(ctx, testID, size.Size)
 	require.NoError(t, err)
 	require.NoError(t, runner.SetPool(q, size.Size))
 
 	defer func() { require.NoError(t, closer(ctx)) }()
 
-	MockJobCounters.Reset()
+	counter := GetCounterCache().Get(testID)
+	counter.Reset()
+
 	count := 40
 
 	if !test.OrderedSupported || test.OrderedStartsBefore {
@@ -316,7 +319,7 @@ func OneExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, ru
 	}
 
 	for i := 0; i < count; i++ {
-		j := MakeMockJob(fmt.Sprintf("%d.%d.mock.single-exec", i, job.GetNumber()))
+		j := MakeMockJob(fmt.Sprintf("%d.%d.mock.single-exec", i, job.GetNumber()), testID)
 		assert.NoError(t, q.Put(ctx, j))
 	}
 
@@ -325,7 +328,7 @@ func OneExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, ru
 	}
 
 	amboy.WaitInterval(ctx, q, 100*time.Millisecond)
-	assert.Equal(t, count, MockJobCounters.Count())
+	assert.Equal(t, count, counter.Count())
 }
 
 func MultiExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, runner PoolTestCase, size SizeTestCase) {
@@ -440,7 +443,9 @@ func ManyQueueTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 		outside = 10
 	)
 
-	MockJobCounters.Reset()
+	counter := GetCounterCache().Get(driverID)
+	counter.Reset()
+
 	wg := &sync.WaitGroup{}
 	for i := 0; i < size.Size; i++ {
 		for ii := 0; ii < outside; ii++ {
@@ -448,7 +453,7 @@ func ManyQueueTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 			go func(f, s int) {
 				defer wg.Done()
 				for iii := 0; iii < inside; iii++ {
-					j := MakeMockJob(fmt.Sprintf("%d-%d-%d-%d", f, s, iii, job.GetNumber()))
+					j := MakeMockJob(fmt.Sprintf("%d-%d-%d-%d", f, s, iii, job.GetNumber()), driverID)
 					assert.NoError(t, queues[0].Put(ctx, j))
 				}
 			}(i, ii)
@@ -464,7 +469,7 @@ func ManyQueueTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 		amboy.WaitInterval(ctx, q, 20*time.Millisecond)
 	}
 
-	assert.Equal(t, size.Size*inside*outside, MockJobCounters.Count())
+	assert.Equal(t, size.Size*inside*outside, counter.Count())
 }
 
 func ScopedLockTest(bctx context.Context, t *testing.T, test QueueTestCase, runner PoolTestCase, size SizeTestCase) {

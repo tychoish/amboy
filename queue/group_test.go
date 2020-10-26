@@ -17,8 +17,9 @@ func localConstructor(ctx context.Context) (amboy.Queue, error) {
 func TestQueueGroup(t *testing.T) {
 	bctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
+	t.Parallel()
 	t.Run("Constructor", func(t *testing.T) {
+		t.Parallel()
 		for _, test := range testutil.DefaultGroupConstructorCases(localConstructor) {
 			t.Run(test.Name, func(t *testing.T) {
 				t.Run("Local", func(t *testing.T) {

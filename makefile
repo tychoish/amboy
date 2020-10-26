@@ -126,16 +126,17 @@ testArgs += -short
 endif
 #    implementation for package coverage and test running,mongodb to produce
 #    and save test output.
+# nonobvious thing: 
 $(buildDir)/:
 	@mkdir -p $@
 $(buildDir)/output.%.test:.FORCE
 	@mkdir -p $(buildDir)/
-	$(goEnv) $(gobin) test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) | tee $@
+	$(goEnv) $(gobin) test $(testArgs) $(if $(findstring mdbq,$@),-test.parallel=1,) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) | tee $@
 	@!( grep -s -q "^FAIL" $@ && grep -s -q "^WARNING: DATA RACE" $@)
 	@(grep -s -q "^PASS" $@ || grep -s -q "no test files" $@)
 $(buildDir)/output.%.coverage:.FORCE
 	@mkdir -p $(buildDir)/
-	$(goEnv) $(gobin) test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) -coverprofile $@ | tee $(buildDir)/output.$*.test
+	$(goEnv) $(gobin) test $(testArgs) $(if $(findstring mdbq,$@),-p 1,) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) -coverprofile $@ | tee $(buildDir)/output.$*.test
 	@-[ -f $@ ] && $(gobin) tool cover -func=$@ | sed 's%$(projectPath)/%%' | column -t
 $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
 	$(goEnv) $(gobin) tool cover -html=$< -o $@
@@ -186,3 +187,6 @@ phony += clean
 # configure phony targets
 .FORCE:
 .PHONY:$(phony)
+mdebw:
+	@echo sdfd $(if md,$(findstring md,$@),-parallel=1)
+
