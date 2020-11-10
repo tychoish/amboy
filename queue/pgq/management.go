@@ -55,6 +55,7 @@ func (m *sqlManager) JobStatus(ctx context.Context, filter management.StatusFilt
 	} else if m.opts.ByGroups {
 		query = strings.Replace(query, "{{project_group}}", ",\n   queue_group", 1)
 		group = "type, queue_group"
+		where = append(where, "queue_group != ''")
 	} else {
 		query = strings.Replace(query, "{{project_group}}", "", 1)
 	}
@@ -119,6 +120,8 @@ func (m *sqlManager) JobIDsByState(ctx context.Context, jobType string, filter m
 	var where []string
 	if m.opts.SingleGroup {
 		where = append(where, "queue_group = :queue_group")
+	} else if m.opts.ByGroups {
+		where = append(where, "queue_group != ''")
 	}
 
 	switch filter {
@@ -190,6 +193,7 @@ func (m *sqlManager) RecentTiming(ctx context.Context, window time.Duration, fil
 	} else if m.opts.ByGroups {
 		group = "type, queue_group"
 		query = strings.Replace(query, "{{project_group}}", "queue_group,", 1)
+		where = append(where, "queue_group != ''")
 	} else {
 		group = "type"
 		query = strings.Replace(query, "{{project_group}}", "", 1)
@@ -267,9 +271,14 @@ func (m *sqlManager) doRecentErrors(ctx context.Context, jobType string, window 
 
 	var clauses []string
 
+	if m.opts.ByGroups {
+		clauses = append(clauses, "  AND queue_group != ''")
+	}
+
 	if jobType != "" {
 		clauses = append(clauses, "  AND type = :job_type")
 	}
+
 	query := recentJobErrorsTemplate
 	if m.opts.SingleGroup {
 		clauses = append(clauses, "  AND queue_group = :queue_group")
@@ -367,6 +376,11 @@ func (m *sqlManager) doCompleteJobs(ctx context.Context, filter management.Statu
 	if m.opts.Options.GroupName != "" {
 		clauses = append(clauses, "queue_group = :group_name")
 	}
+
+	if m.opts.ByGroups {
+		clauses = append(clauses, "queue_group != ''")
+	}
+
 	if typeName != "" {
 		clauses = append(clauses, "type = :type_name")
 	}
@@ -456,6 +470,10 @@ func (m *sqlManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f m
 	where := []string{}
 	if m.opts.SingleGroup {
 		where = append(where, "queue_group = :queue_group")
+	}
+
+	if m.opts.ByGroups {
+		where = append(where, "queue_group != ''")
 	}
 
 	switch f {
