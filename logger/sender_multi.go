@@ -62,10 +62,16 @@ func NewQueueMultiSender(ctx context.Context, workers, capacity int, senders ...
 }
 
 func (s *multiQueueSender) Send(m message.Composer) {
+	if !s.Level().Loggable(m.Priority()) {
+		return
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	s.ErrorHandler()(s.queue.Put(s.ctx, NewMultiSendMessageJob(m, s.senders)), m)
+	if err := s.queue.Put(s.ctx, NewMultiSendMessageJob(m, s.senders)); err != nil {
+		s.ErrorHandler()(err, m)
+	}
 }
 
 func (s *multiQueueSender) Flush(ctx context.Context) error {
