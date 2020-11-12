@@ -9,6 +9,7 @@ import (
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/queue"
 	"github.com/deciduosity/grip"
+	"github.com/deciduosity/grip/level"
 	"github.com/deciduosity/grip/message"
 	"github.com/deciduosity/grip/recovery"
 	"github.com/jmoiron/sqlx"
@@ -45,6 +46,12 @@ type GroupOptions struct {
 	// the background without
 	BackgroundCreateFrequency time.Duration
 
+	// The BackgroundOperation values control how often and at
+	// what level to log at.  These default to 5 successive errors
+	// and the level of "Warning" if unset.
+	BackgroundOperationErrorCountThreshold int
+	BackgroundOperationErrorLogLevel       level.Priority
+
 	// TTL is how old the oldest task in the queue must be for the collection to be pruned.
 	TTL time.Duration
 }
@@ -59,6 +66,16 @@ func (opts *GroupOptions) validate() error {
 		"ttl and prune frequency must both be 0 or both be not 0")
 	catcher.NewWhen(opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil,
 		"must specify either a default worker pool size or a WorkerPoolSize function")
+
+	if opts.BackgroundOperationErrorLogLevel == 0 {
+		opts.BackgroundOperationErrorLogLevel = level.Warning
+	}
+
+	if opts.BackgroundOperationErrorCountThreshold < 0 {
+		opts.BackgroundOperationErrorCountThreshold = 1
+	} else if opts.BackgroundOperationErrorCountThreshold == 0 {
+		opts.BackgroundOperationErrorCountThreshold = 5
+	}
 
 	return catcher.Resolve()
 }
@@ -110,12 +127,22 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 			defer recovery.LogStackTraceAndContinue("panic in remote queue group ticker")
 			ticker := time.NewTicker(gopts.PruneFrequency)
 			defer ticker.Stop()
+			errCount := 0
 			for {
 				select {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					grip.Warning(message.WrapError(group.Prune(ctx), "problem pruning remote queue group database"))
+					err := group.Prune(ctx)
+					if err != nil {
+						errCount++
+					} else {
+						errCount = 0
+					}
+
+					grip.LogWhen(errCount > gopts.BackgroundOperationErrorCountThreshold,
+						gopts.BackgroundOperationErrorLogLevel,
+						message.WrapError(err, "problem pruning remote queues"))
 				}
 			}
 		}()
@@ -125,13 +152,23 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 		go func() {
 			defer recovery.LogStackTraceAndContinue("panic in remote queue group ticker")
 			ticker := time.NewTicker(gopts.BackgroundCreateFrequency)
+			errCount := 0
 			defer ticker.Stop()
 			for {
 				select {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					grip.Warning(message.WrapError(group.startQueues(ctx), "problem starting external queues"))
+					err := group.startQueues(ctx)
+					if err != nil {
+						errCount++
+					} else {
+						errCount = 0
+					}
+
+					grip.LogWhen(errCount > gopts.BackgroundOperationErrorCountThreshold,
+						gopts.BackgroundOperationErrorLogLevel,
+						message.WrapError(err, "problem starting external queues"))
 				}
 			}
 		}()
