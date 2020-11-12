@@ -115,7 +115,7 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					grip.Error(message.WrapError(group.Prune(ctx), "problem pruning remote queue group database"))
+					grip.Warning(message.WrapError(group.Prune(ctx), "problem pruning remote queue group database"))
 				}
 			}
 		}()
@@ -131,7 +131,7 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					grip.Error(message.WrapError(group.startQueues(ctx), "problem starting external queues"))
+					grip.Warning(message.WrapError(group.startQueues(ctx), "problem starting external queues"))
 				}
 			}
 		}()
