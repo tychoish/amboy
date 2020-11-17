@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/deciduosity/amboy"
@@ -107,10 +108,6 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 		return nil, errors.WithStack(err)
 	}
 
-	if _, err := db.Exec(bootstrapDB); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
 	opts.UseGroups = true
 
 	group := &sqlGroup{
@@ -118,6 +115,10 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 		db:        db,
 		opts:      gopts,
 		cache:     queue.NewGroupCache(gopts.TTL),
+	}
+
+	if _, err := db.Exec(group.processQueryString(bootstrapDB)); err != nil {
+		return nil, errors.WithStack(err)
 	}
 
 	ctx, group.canceler = context.WithCancel(ctx)
@@ -196,10 +197,14 @@ func (g *sqlGroup) startQueues(ctx context.Context) error {
 	return catcher.Resolve()
 }
 
+func (g *sqlGroup) processQueryString(query string) string {
+	return strings.ReplaceAll(query, "{schemaName}", g.queueOpts.SchemaName)
+}
+
 func (g *sqlGroup) getQueues(ctx context.Context) ([]string, error) {
 	var groups []string
 
-	if err := g.db.SelectContext(ctx, &groups, getActiveGroups, time.Now().Add(-g.opts.TTL)); err != nil {
+	if err := g.db.SelectContext(ctx, &groups, g.processQueryString(getActiveGroups), time.Now().Add(-g.opts.TTL)); err != nil {
 		if err == sql.ErrNoRows {
 			return []string{}, nil
 		}

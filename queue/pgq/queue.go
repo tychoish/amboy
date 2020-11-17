@@ -114,7 +114,7 @@ func NewQueue(db *sqlx.DB, opts Options) (amboy.Queue, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	if _, err := db.Exec(bootstrapDB); err != nil {
+	if _, err := db.Exec(q.processQueryString(bootstrapDB)); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
@@ -155,6 +155,10 @@ func isPgDuplicateError(err error) bool {
 	}
 
 	return false
+}
+
+func (q *sqlQueue) processQueryString(query string) string {
+	return strings.ReplaceAll(query, "{schemaName}", q.opts.SchemaName)
 }
 
 func (q *sqlQueue) prepareForDB(j *registry.JobInterchange) error {
@@ -226,7 +230,7 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	defer tx.Rollback()
 
 	_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
-		"INSERT INTO jobs (id, type, queue_group, version, priority)",
+		fmt.Sprintf("INSERT INTO %s.jobs (id, type, queue_group, version, priority)", q.opts.SchemaName),
 		"VALUES (:id, :type, :queue_group, :version, :priority)"),
 		payload)
 	if err != nil {
@@ -238,7 +242,7 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	}
 
 	_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
-		"INSERT INTO job_body (id, job)",
+		fmt.Sprintf("INSERT INTO %s.job_body (id, job)", q.opts.SchemaName),
 		"VALUES (:id, :job)"),
 		payload)
 	if err != nil {
@@ -246,7 +250,7 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	}
 
 	_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
-		"INSERT INTO job_status (id, owner, completed, in_progress, mod_ts, mod_count, err_count)",
+		fmt.Sprintf("INSERT INTO %s.job_status (id, owner, completed, in_progress, mod_ts, mod_count, err_count)", q.opts.SchemaName),
 		"VALUES (:id, :owner, :completed, :in_progress, :mod_ts, :mod_count, :err_count)"),
 		payload.Status)
 	if err != nil {
@@ -255,7 +259,7 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 
 	for _, e := range payload.Status.Errors {
 		_, err := tx.NamedExecContext(ctx, fmt.Sprintln(
-			"INSERT INTO job_errors (id, edge)",
+			fmt.Sprintf("INSERT INTO %s.job_errors (id, edge)", q.opts.SchemaName),
 			"VALUES (:id, :error)"),
 			struct {
 				ID    string `db:"id"`
@@ -267,7 +271,7 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	}
 
 	_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
-		"INSERT INTO job_time (id, created, started, ended, wait_until, dispatch_by, max_time)",
+		fmt.Sprintf("INSERT INTO %s.job_time (id, created, started, ended, wait_until, dispatch_by, max_time)", q.opts.SchemaName),
 		"VALUES (:id, :created, :started, :ended, :wait_until, :dispatch_by, :max_time)"),
 		payload.TimeInfo)
 	if err != nil {
@@ -275,7 +279,7 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	}
 
 	_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
-		"INSERT INTO dependency (id, dep_type, dep_version, dependency)",
+		fmt.Sprintf("INSERT INTO %s.dependency (id, dep_type, dep_version, dependency)", q.opts.SchemaName),
 		"VALUES (:id, :dep_type, :dep_version, :dependency)"),
 		payload.Dependency)
 	if err != nil {
@@ -284,7 +288,7 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 
 	for _, edge := range payload.Dependency.Edges {
 		_, err := tx.NamedExecContext(ctx, fmt.Sprintln(
-			"INSERT INTO dependency_edges (id, edge)",
+			fmt.Sprintf("INSERT INTO %s.dependency_edges (id, edge)", q.opts.SchemaName),
 			"VALUES (:id, :edge)"),
 			struct {
 				ID   string `db:"id"`
@@ -321,15 +325,15 @@ func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.
 	}{}
 
 	id = q.getIDFromName(id)
-	if err := tx.GetContext(ctx, &payload, getJobByID, id); err != nil {
+	if err := tx.GetContext(ctx, &payload, q.processQueryString(getJobByID), id); err != nil {
 		return nil, false
 	}
 
-	if err := tx.SelectContext(ctx, &payload.JobStatusInfo.Errors, getErrorsForJob, id); err != nil {
+	if err := tx.SelectContext(ctx, &payload.JobStatusInfo.Errors, q.processQueryString(getErrorsForJob), id); err != nil {
 		return nil, false
 	}
 
-	if err := tx.SelectContext(ctx, &payload.DependencyInterchange.Edges, getEdgesForJob, id); err != nil {
+	if err := tx.SelectContext(ctx, &payload.DependencyInterchange.Edges, q.processQueryString(getEdgesForJob), id); err != nil {
 		return nil, false
 	}
 
@@ -487,7 +491,7 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 	job.Status.ID = job.Name
 	job.Status.Owner = q.id
 
-	stmt, err := tx.PrepareNamedContext(ctx, checkCanUpdate)
+	stmt, err := tx.PrepareNamedContext(ctx, q.processQueryString(checkCanUpdate))
 	if err != nil {
 		return errors.Wrapf(err, "problem reading count for lock query for %s", job.Name)
 	}
@@ -506,13 +510,13 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 		return errors.Errorf("do not have lock for job='%s' num=%d", job.Name, count)
 	}
 
-	if _, err = tx.ExecContext(ctx, removeJobScopes, job.Name); err != nil {
+	if _, err = tx.ExecContext(ctx, q.processQueryString(removeJobScopes), job.Name); err != nil {
 		return errors.Wrap(err, "problem clearing scopes")
 	}
 
 	for _, s := range job.Scopes {
 		_, err := tx.NamedExecContext(ctx, fmt.Sprintln(
-			"INSERT INTO job_scopes (id, scope)",
+			fmt.Sprintf("INSERT INTO %s.job_scopes (id, scope)", q.opts.SchemaName),
 			"VALUES (:id, :scope)"),
 			struct {
 				ID    string `db:"id"`
@@ -523,24 +527,24 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 		}
 	}
 
-	if _, err = tx.NamedExecContext(ctx, updateJob, job); err != nil {
+	if _, err = tx.NamedExecContext(ctx, q.processQueryString(updateJob), job); err != nil {
 		return errors.Wrap(err, "problem updating core job data")
 	}
 
-	if _, err = tx.NamedExecContext(ctx, updateJobBody, job); err != nil {
+	if _, err = tx.NamedExecContext(ctx, q.processQueryString(updateJobBody), job); err != nil {
 		return errors.Wrap(err, "problem updating job body payload")
 	}
 
-	if _, err = tx.NamedExecContext(ctx, updateJobStatus, job.Status); err != nil {
+	if _, err = tx.NamedExecContext(ctx, q.processQueryString(updateJobStatus), job.Status); err != nil {
 		return errors.Wrap(err, "problem updating job status")
 	}
 
-	if _, err = tx.NamedExecContext(ctx, updateJobTimeInfo, job.TimeInfo); err != nil {
+	if _, err = tx.NamedExecContext(ctx, q.processQueryString(updateJobTimeInfo), job.TimeInfo); err != nil {
 		return errors.Wrap(err, "problem updating job timing info")
 	}
 
 	count = 0
-	if err = tx.GetContext(ctx, &count, "SELECT COUNT(*) FROM job_errors WHERE id = $1", job.Name); err != nil {
+	if err = tx.GetContext(ctx, &count, fmt.Sprintf("SELECT COUNT(*) FROM %s.job_errors WHERE id = $1", q.opts.SchemaName), job.Name); err != nil {
 		return errors.Wrap(err, "problem counting errors")
 	}
 	if len(job.Status.Errors) > count {
@@ -553,7 +557,7 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 
 		for _, e := range job.Status.Errors[idx:] {
 			_, err := tx.NamedExecContext(ctx, fmt.Sprintln(
-				"INSERT INTO job_errors (id, error)",
+				fmt.Sprintf("INSERT INTO %s.job_errors (id, error)", q.opts.SchemaName),
 				"VALUES (:id, :error)"),
 				struct {
 					ID    string `db:"id"`
@@ -578,7 +582,7 @@ func (q *sqlQueue) Jobs(ctx context.Context) <-chan amboy.Job {
 		defer close(output)
 		defer recovery.LogStackTraceAndContinue("jobs iterator", "amboy.queue.pgq", q.ID())
 
-		rows, err := q.db.QueryContext(ctx, getAllJobIDs)
+		rows, err := q.db.QueryContext(ctx, q.processQueryString(getAllJobIDs))
 		if err != nil {
 			grip.Error(message.WrapError(err, message.Fields{
 				"queue":    q.id,
@@ -642,7 +646,7 @@ func (q *sqlQueue) Jobs(ctx context.Context) <-chan amboy.Job {
 func (q *sqlQueue) getNextQuery() string {
 	var query string
 	if !q.opts.CheckWaitUntil && !q.opts.CheckDispatchBy {
-		query = getNextJobsBasic
+		query = q.processQueryString(getNextJobsBasic)
 	} else {
 		timing := []string{}
 
@@ -653,7 +657,7 @@ func (q *sqlQueue) getNextQuery() string {
 			timing = append(timing, "  AND (time_info.dispatch_by > :now OR time_info.dispatch_by = :zero_time)")
 		}
 
-		query = fmt.Sprintln(getNextJobsTimingTemplate, strings.Join(timing, ""))
+		query = fmt.Sprintln(q.processQueryString(getNextJobsTimingTemplate), strings.Join(timing, ""))
 	}
 
 	if q.opts.Priority {
@@ -753,7 +757,7 @@ func (q *sqlQueue) Next(ctx context.Context) amboy.Job {
 				}
 
 				if job.TimeInfo().IsStale() {
-					_, err := q.db.ExecContext(ctx, "DELETE FROM jobs WHERE id = $1", job.ID())
+					_, err := q.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s.jobs WHERE id = $1", q.opts.SchemaName), job.ID())
 					grip.Notice(message.WrapError(err, message.Fields{
 						"id":        q.id,
 						"service":   "amboy.queue.pgq",
@@ -808,7 +812,7 @@ func (q *sqlQueue) scopesInUse(ctx context.Context, scopes []string) bool {
 		return false
 	}
 
-	query, args, err := sqlx.In("SELECT COUNT(*) FROM job_scopes WHERE scope IN (?);", convertStringsToInterfaces(scopes))
+	query, args, err := sqlx.In(fmt.Sprintf("SELECT COUNT(*) FROM %s.job_scopes WHERE scope IN (?);", q.opts.SchemaName), convertStringsToInterfaces(scopes))
 	if err != nil {
 		return false
 	}
@@ -837,7 +841,7 @@ func (q *sqlQueue) Stats(ctx context.Context) amboy.QueueStats {
 	stats := amboy.QueueStats{}
 
 	grip.Warning(message.WrapError(
-		q.db.GetContext(ctx, &stats.Total, countTotalJobs, q.opts.GroupName),
+		q.db.GetContext(ctx, &stats.Total, q.processQueryString(countTotalJobs), q.opts.GroupName),
 		message.Fields{
 			"queue":    q.id,
 			"service":  "amboy.queue.pg",
@@ -846,7 +850,7 @@ func (q *sqlQueue) Stats(ctx context.Context) amboy.QueueStats {
 			"message":  "problem getting total jobs",
 		}))
 	grip.Warning(message.WrapError(
-		q.db.GetContext(ctx, &stats.Pending, countPendingJobs, q.opts.GroupName),
+		q.db.GetContext(ctx, &stats.Pending, q.processQueryString(countPendingJobs), q.opts.GroupName),
 		message.Fields{
 			"queue":    q.id,
 			"service":  "amboy.queue.pg",
@@ -855,7 +859,7 @@ func (q *sqlQueue) Stats(ctx context.Context) amboy.QueueStats {
 			"message":  "problem getting pending jobs",
 		}))
 	grip.Warning(message.WrapError(
-		q.db.GetContext(ctx, &stats.Running, countInProgJobs, q.opts.GroupName),
+		q.db.GetContext(ctx, &stats.Running, q.processQueryString(countInProgJobs), q.opts.GroupName),
 		message.Fields{
 			"queue":    q.id,
 			"service":  "amboy.queue.pg",
@@ -898,7 +902,7 @@ func (q *sqlQueue) SetRunner(r amboy.Runner) error {
 }
 
 func (q *sqlQueue) Delete(ctx context.Context, id string) error {
-	res, err := q.db.ExecContext(ctx, "DELETE FROM jobs WHERE id = $1", id)
+	res, err := q.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s.jobs WHERE id = $1", q.opts.SchemaName), id)
 	if err != nil {
 		return errors.WithStack(err)
 	}

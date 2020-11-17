@@ -37,7 +37,12 @@ func (o *ManagerOptions) Validate() error {
 // NewManager constructs a manager instance that interacts with the
 // job data.
 func NewManager(db *sqlx.DB, opts ManagerOptions) management.Manager {
+
 	return &sqlManager{db: db, opts: opts}
+}
+
+func (m *sqlManager) processQueryString(query string) string {
+	return strings.ReplaceAll(query, "{schemaName}", m.opts.Options.SchemaName)
 }
 
 func (m *sqlManager) JobStatus(ctx context.Context, filter management.StatusFilter) (*management.JobStatusReport, error) {
@@ -47,7 +52,7 @@ func (m *sqlManager) JobStatus(ctx context.Context, filter management.StatusFilt
 
 	var where []string
 	group := "type"
-	query := groupJobStatusTemplate
+	query := m.processQueryString(groupJobStatusTemplate)
 	if m.opts.SingleGroup {
 		where = append(where, "queue_group = :queue_group")
 		group = "type, queue_group"
@@ -145,7 +150,7 @@ func (m *sqlManager) JobIDsByState(ctx context.Context, jobType string, filter m
 		return nil, errors.New("invalid job status filter")
 	}
 
-	query := fmt.Sprintln(findJobIDsByStateTemplate, "  AND ", strings.Join(where, "\n   AND "))
+	query := fmt.Sprintln(m.processQueryString(findJobIDsByStateTemplate), "  AND ", strings.Join(where, "\n   AND "))
 	stmt, err := m.db.PrepareNamedContext(ctx, query)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem preparing query")
@@ -184,7 +189,7 @@ func (m *sqlManager) RecentTiming(ctx context.Context, window time.Duration, fil
 	var where []string
 	var group string
 
-	query := recentTimingTemplate
+	query := m.processQueryString(recentTimingTemplate)
 
 	if m.opts.SingleGroup {
 		where = append(where, "queue_group = :queue_group")
@@ -279,7 +284,7 @@ func (m *sqlManager) doRecentErrors(ctx context.Context, jobType string, window 
 		clauses = append(clauses, "  AND type = :job_type")
 	}
 
-	query := recentJobErrorsTemplate
+	query := m.processQueryString(recentJobErrorsTemplate)
 	if m.opts.SingleGroup {
 		clauses = append(clauses, "  AND queue_group = :queue_group")
 		clauses = append(clauses, "GROUP BY type, queue_group")
@@ -343,11 +348,11 @@ func (m *sqlManager) CompleteJob(ctx context.Context, id string) error {
 	}
 	defer tx.Rollback()
 
-	if _, err = tx.ExecContext(ctx, completeSinglePendingJob, id); err != nil {
+	if _, err = tx.ExecContext(ctx, m.processQueryString(completeSinglePendingJob), id); err != nil {
 		return errors.Wrap(err, "problem clearing scopes")
 	}
 
-	if _, err = tx.ExecContext(ctx, removeJobScopes, id); err != nil {
+	if _, err = tx.ExecContext(ctx, m.processQueryString(removeJobScopes), id); err != nil {
 		return errors.Wrap(err, "problem clearing scopes")
 	}
 
@@ -422,7 +427,7 @@ func (m *sqlManager) doCompleteJobs(ctx context.Context, filter management.Statu
 	}
 	defer tx.Rollback()
 
-	query := fmt.Sprintln(findJobsToCompleteTemplate, " ", strings.Join(clauses, "\n   AND "))
+	query := fmt.Sprintln(m.processQueryString(findJobsToCompleteTemplate), " ", strings.Join(clauses, "\n   AND "))
 
 	stmt, err := tx.PrepareNamedContext(ctx, query)
 	if err != nil {
@@ -437,7 +442,7 @@ func (m *sqlManager) doCompleteJobs(ctx context.Context, filter management.Statu
 
 	toDeleteArgs := convertStringsToInterfaces(toDelete)
 
-	query, inargs, err := sqlx.In(completeManyPendingJobs, toDeleteArgs)
+	query, inargs, err := sqlx.In(m.processQueryString(completeManyPendingJobs), toDeleteArgs)
 	if err != nil {
 		return errors.Wrap(err, "problem building delete jobs query")
 	}
@@ -446,7 +451,7 @@ func (m *sqlManager) doCompleteJobs(ctx context.Context, filter management.Statu
 		return errors.Wrap(err, "problem clearing jobs")
 	}
 
-	query, inargs, err = sqlx.In(removeManyJobScopes, toDeleteArgs)
+	query, inargs, err = sqlx.In(m.processQueryString(removeManyJobScopes), toDeleteArgs)
 	if err != nil {
 		return errors.Wrap(err, "problem building delete jobs scopes")
 	}
@@ -505,7 +510,7 @@ func (m *sqlManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f m
 		return 0, errors.New("invalid job status filter")
 	}
 
-	query := pruneJobsQueryTemplate
+	query := m.processQueryString(pruneJobsQueryTemplate)
 
 	query = strings.Replace(query, "{{match}}",
 		strings.Join(where, "\n      AND "), 1)
