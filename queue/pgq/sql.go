@@ -63,6 +63,7 @@ edge text NOT NULL,
 FOREIGN KEY (id) REFERENCES jobs(id) ON DELETE CASCADE
 );
 
+CREATE INDEX IF NOT EXISTS queue_group ON jobs (queue_group);
 CREATE INDEX IF NOT EXISTS group_type ON jobs (queue_group, type);
 CREATE INDEX IF NOT EXISTS priority ON jobs (queue_group, priority);
 CREATE INDEX IF NOT EXISTS status_progress ON job_status (completed, in_progress);
@@ -330,10 +331,10 @@ WHERE
 const pruneJobsQueryTemplate = `
 DELETE FROM
    jobs
-WHERE 
+WHERE
    jobs.id
 IN (SELECT jobs.id
-    FROM 
+    FROM
       jobs
       INNER JOIN job_status AS status ON jobs.id=status.id
       INNER JOIN job_time AS time_info ON jobs.id=time_info.id
