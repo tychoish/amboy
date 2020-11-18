@@ -10,6 +10,8 @@ github.com/VividCortex/ewma v1.1.1/go.mod h1:2Tkkvm3sRDVXaiyucHiACn4cqf7DpdyLvmx
 github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
 github.com/andygrunwald/go-jira v1.12.0 h1:JJi2cEDmDxVtTXxC8ruLDbtOU6pA4OLeL0niyfNcoWw=
 github.com/andygrunwald/go-jira v1.12.0/go.mod h1:jYi4kFDbRPZTJdJOVJO4mpMMIwdB+rcZwSO58DzPd2I=
+github.com/andygrunwald/go-jira v1.13.0 h1:vvIImGgX32bHfoiyUwkNo+/YrPnRczNarvhLOncP6dE=
+github.com/andygrunwald/go-jira v1.13.0/go.mod h1:jYi4kFDbRPZTJdJOVJO4mpMMIwdB+rcZwSO58DzPd2I=
 github.com/aws/aws-sdk-go v1.31.3/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
 github.com/aws/aws-sdk-go v1.31.7 h1:TCA+pXKvzDMA3vVqhK21cCy5GarC8pTQb/DrVOWI3iY=
 github.com/aws/aws-sdk-go v1.31.7/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
@@ -50,6 +52,8 @@ github.com/deciduosity/grip v0.0.0-20200904025049-9d4d4cfca8ac h1:UplLhQXah3TQ4D
 github.com/deciduosity/grip v0.0.0-20200904025049-9d4d4cfca8ac/go.mod h1:hXIuEBX4fetrHgV+AK01wstdS35i5lJpTiV+xvUNxQo=
 github.com/deciduosity/grip v0.0.0-20201110205946-2b9edd514c63 h1:1snJAXLX73fRHJy+eZ4iyIgjyMnxdfUGkIPYYNpu1dA=
 github.com/deciduosity/grip v0.0.0-20201110205946-2b9edd514c63/go.mod h1:hXIuEBX4fetrHgV+AK01wstdS35i5lJpTiV+xvUNxQo=
+github.com/deciduosity/grip v0.0.0-20201118160624-37aa271a3fdc h1:wmT/Xc7hTctqxFJlrRGboLAgJ84GVB9IXhszF9AvY88=
+github.com/deciduosity/grip v0.0.0-20201118160624-37aa271a3fdc/go.mod h1:Qp4vcxrB9y8pu0b7l7qrpudrDVYtdlucRhYI7a3xr8w=
 github.com/deciduosity/pail v0.0.0-20200521232416-8106863854c7 h1:kZNTSulI9p570VOemJPFW8MhJ5euEdisgj9uMzmGpro=
 github.com/deciduosity/pail v0.0.0-20200521232416-8106863854c7/go.mod h1:IfeDkBEE4cJr2tLl2fiv9MA/Sb/pLKi5cpUdA3x69DQ=
 github.com/deciduosity/poplar v0.0.0-20200522022346-28353d080bd9 h1:Fhp3OP0TpDhXSveH7OvzdoBg7aKQ3CQ6NiTe2xj7xkw=

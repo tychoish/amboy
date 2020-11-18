@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.34.28
 	github.com/cheynewallace/tabby v1.1.0
 	github.com/deciduosity/gimlet v0.0.0-20200521211013-ce6f8e51110b
-	github.com/deciduosity/grip v0.0.0-20201110205946-2b9edd514c63
+	github.com/deciduosity/grip v0.0.0-20201118160624-37aa271a3fdc
 	github.com/deciduosity/poplar v0.0.0-20200522022346-28353d080bd9
 	github.com/google/uuid v1.1.1
 	github.com/jmoiron/sqlx v1.2.0
