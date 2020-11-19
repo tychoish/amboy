@@ -82,7 +82,7 @@ SELECT
    DISTINCT queue_group
 FROM
    {schemaName}.jobs
-   INNER JOIN job_status AS status ON jobs.id=status.id
+   INNER JOIN {schemaName}.job_status AS status ON jobs.id=status.id
 WHERE
    (status.completed = false OR (status.completed = true AND status.mod_ts >= $1))
    AND queue_group != ''`
@@ -193,13 +193,13 @@ WHERE
 
 const removeManyJobScopes = `
 DELETE FROM
-   job_scopes
+   {schemaName}.job_scopes
 WHERE
    id IN (?)`
 
 const findJobsToCompleteTemplate = `
 SELECT
-   jobs.id
+   {schemaName}.jobs.id
 FROM
    {schemaName}.jobs
    INNER JOIN {schemaName}.job_status AS status ON jobs.id=status.id
@@ -294,8 +294,8 @@ const findJobIDsByStateTemplate = `
 SELECT
    jobs.id
 FROM
-   jobs
-   INNER JOIN job_status AS status ON jobs.id=status.id
+   {schemaName}.jobs
+   INNER JOIN {schemaName}.job_status AS status ON jobs.id=status.id
 WHERE
    type = :job_type
 `
@@ -319,9 +319,9 @@ SELECT
    AVG(status.err_count) as average{{agg_errors}}
 FROM
    {schemaName}.jobs
-   INNER JOIN job_status AS status ON jobs.id=status.id
-   INNER JOIN job_time AS time_info ON jobs.id=time_info.id
-   INNER JOIN job_errors as job_errors ON jobs.id=job_errors.id
+   INNER JOIN {schemaName}.job_status AS status ON jobs.id=status.id
+   INNER JOIN {schemaName}.job_time AS time_info ON jobs.id=time_info.id
+   INNER JOIN {schemaName}.job_errors as job_errors ON jobs.id=job_errors.id
 WHERE
    status.completed = true
    AND status.err_count > 0
