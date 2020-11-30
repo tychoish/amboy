@@ -44,6 +44,7 @@ type Options struct {
 	Priority        bool
 	CheckWaitUntil  bool
 	CheckDispatchBy bool
+	SkipBootstrap   bool
 	PoolSize        int
 	// LockTimeout overrides the default job lock timeout if set.
 	WaitInterval time.Duration
@@ -76,6 +77,31 @@ func (opts *Options) Validate() error {
 	return nil
 }
 
+// PrepareDatabase creates the schema, tables, and indexes in the
+// given schema to support operational separation of database/queue
+// configuration and construction queue objects.
+func PrepareDatabase(ctx context.Context, db *sqlx.DB, schemaName string) error {
+	if _, err := db.ExecContext(ctx, fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", schemaName)); err != nil {
+		return errors.Wrapf(err, "creating schema '%s'", schemaName)
+	}
+
+	if _, err := db.ExecContext(ctx, strings.ReplaceAll(bootstrapDB, "{schemaName}", schemaName)); err != nil {
+		return errors.Wrapf(err, "bootstrapping tables and indexes schema '%s'", schemaName)
+	}
+
+	return nil
+}
+
+// CleanDatabase removes all database tables related to the "jobs"
+// table in the specified schema.
+func CleanDatabase(ctx context.Context, db *sqlx.DB, schemaName string) error {
+	if _, err := db.ExecContext(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s.jobs CASCADE;", schemaName)); err != nil {
+		return errors.Wrapf(err, "dropping job tables in '%s'", schemaName)
+	}
+
+	return nil
+}
+
 // NewQueue produces a new SQL-database backed queue. Broadly similar
 // to the MongoDB implementation, this queue is available only in
 // "unordered" varient (e.g. dependencies are not considered in
@@ -95,7 +121,7 @@ func (opts *Options) Validate() error {
 // stored internally as an int32 of milliseconds (maximum ~500 hours),
 // rather than go's native 64bit integer of nanoseconds, attempting to
 // set longer maxtimes results in an error.
-func NewQueue(db *sqlx.DB, opts Options) (amboy.Queue, error) {
+func NewQueue(ctx context.Context, db *sqlx.DB, opts Options) (amboy.Queue, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -110,12 +136,10 @@ func NewQueue(db *sqlx.DB, opts Options) (amboy.Queue, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	if _, err := db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", opts.SchemaName)); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	if _, err := db.Exec(q.processQueryString(bootstrapDB)); err != nil {
-		return nil, errors.WithStack(err)
+	if !opts.SkipBootstrap {
+		if err := PrepareDatabase(context.TODO(), db, opts.SchemaName); err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	q.dispatcher = queue.NewDispatcher(q)

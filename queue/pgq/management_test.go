@@ -38,7 +38,7 @@ func TestManager(t *testing.T) {
 		s.Setup = func() {
 			db, closer = GetTestDatabase(ctx, t)
 			var err error
-			s.Queue, err = NewQueue(db, opts.Options)
+			s.Queue, err = NewQueue(ctx, db, opts.Options)
 			require.NoError(t, err)
 		}
 
@@ -75,7 +75,7 @@ func TestManager(t *testing.T) {
 		s.Setup = func() {
 			db, closer = GetTestDatabase(ctx, t)
 			var err error
-			s.Queue, err = NewQueue(db, opts.Options)
+			s.Queue, err = NewQueue(ctx, db, opts.Options)
 			require.NoError(t, err)
 		}
 
@@ -112,7 +112,7 @@ func TestManager(t *testing.T) {
 		s.Setup = func() {
 			db, closer = GetTestDatabase(ctx, t)
 			var err error
-			s.Queue, err = NewQueue(db, opts.Options)
+			s.Queue, err = NewQueue(ctx, db, opts.Options)
 			require.NoError(t, err)
 		}
 

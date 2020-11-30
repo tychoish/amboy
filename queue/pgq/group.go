@@ -3,7 +3,6 @@ package pgq
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
 	"time"
 
@@ -104,10 +103,6 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 		return nil, errors.Wrap(err, "invalid queue options")
 	}
 
-	if _, err := db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", opts.SchemaName)); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
 	opts.UseGroups = true
 
 	group := &sqlGroup{
@@ -117,8 +112,10 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 		cache:     queue.NewGroupCache(gopts.TTL),
 	}
 
-	if _, err := db.Exec(group.processQueryString(bootstrapDB)); err != nil {
-		return nil, errors.WithStack(err)
+	if !opts.SkipBootstrap {
+		if err := PrepareDatabase(ctx, db, opts.SchemaName); err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	ctx, group.canceler = context.WithCancel(ctx)
@@ -227,7 +224,7 @@ func (g *sqlGroup) Get(ctx context.Context, id string) (amboy.Queue, error) {
 	var err error
 	opts.GroupName = id
 
-	q, err = NewQueue(g.db, opts)
+	q, err = NewQueue(ctx, g.db, opts)
 	if err != nil {
 		return nil, errors.Wrapf(err, "problem creating new queue for '%s'", id)
 	}

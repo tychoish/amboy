@@ -37,7 +37,6 @@ func (o *ManagerOptions) Validate() error {
 // NewManager constructs a manager instance that interacts with the
 // job data.
 func NewManager(db *sqlx.DB, opts ManagerOptions) management.Manager {
-
 	return &sqlManager{db: db, opts: opts}
 }
 

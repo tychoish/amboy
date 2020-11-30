@@ -85,7 +85,7 @@ func TestQueue(t *testing.T) {
 		db, close := GetTestDatabase(ctx, t)
 		defer close()
 
-		q, err := NewQueue(db, Options{})
+		q, err := NewQueue(ctx, db, Options{})
 		require.NoError(t, err)
 		j := job.NewShellJob("ls", "")
 		j.UpdateTimeInfo(amboy.JobTimeInfo{
@@ -112,7 +112,7 @@ func TestQueueSmoke(t *testing.T) {
 				if err != nil {
 					return nil, nil, err
 				}
-				q, err := NewQueue(db, Options{
+				q, err := NewQueue(ctx, db, Options{
 					Name:     name,
 					PoolSize: size,
 				})
@@ -120,7 +120,13 @@ func TestQueueSmoke(t *testing.T) {
 					return nil, nil, err
 				}
 
-				return q, func(ctx context.Context) error { q.Runner().Close(ctx); return closer() }, nil
+				return q, func(ctx context.Context) error {
+					q.Runner().Close(ctx)
+					catcher := grip.NewBasicCatcher()
+					catcher.Add(CleanDatabase(ctx, db, "amboy"))
+					catcher.Check(closer)
+					return catcher.Resolve()
+				}, nil
 			},
 			SingleWorker:   false,
 			IsRemote:       true,
@@ -134,7 +140,7 @@ func TestQueueSmoke(t *testing.T) {
 				if err != nil {
 					return nil, nil, err
 				}
-				q, err := NewQueue(db, Options{
+				q, err := NewQueue(ctx, db, Options{
 					Name:            name,
 					PoolSize:        size,
 					CheckWaitUntil:  true,
@@ -160,7 +166,7 @@ func TestQueueSmoke(t *testing.T) {
 					return nil, nil, err
 				}
 
-				q, err := NewQueue(db, Options{
+				q, err := NewQueue(ctx, db, Options{
 					Name:      name,
 					PoolSize:  size,
 					UseGroups: true,
