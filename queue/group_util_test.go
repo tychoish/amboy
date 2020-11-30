@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/deciduosity/amboy/queue/testutil"
+	"github.com/cdr/amboy/queue/testutil"
 	"github.com/stretchr/testify/require"
 )
 

@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/dependency"
-	"github.com/deciduosity/amboy/job"
-	"github.com/deciduosity/amboy/registry"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/dependency"
+	"github.com/cdr/amboy/job"
+	"github.com/cdr/amboy/registry"
 	"github.com/stretchr/testify/suite"
 )
 

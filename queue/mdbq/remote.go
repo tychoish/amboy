@@ -3,8 +3,8 @@ package mdbq
 import (
 	"context"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/grip"
+	"github.com/cdr/amboy"
+	"github.com/cdr/grip"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 )

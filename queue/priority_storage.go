@@ -5,7 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/deciduosity/amboy"
+	"github.com/cdr/amboy"
 )
 
 // priorityStorage is a local storage system for Jobs in priority

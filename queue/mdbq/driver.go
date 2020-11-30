@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/queue"
-	"github.com/deciduosity/amboy/registry"
-	"github.com/deciduosity/grip"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/queue"
+	"github.com/cdr/amboy/registry"
+	"github.com/cdr/grip"
 	"go.mongodb.org/mongo-driver/bson"
 )
 

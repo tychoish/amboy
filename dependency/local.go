@@ -3,7 +3,7 @@ package dependency
 import (
 	"os"
 
-	"github.com/deciduosity/grip"
+	"github.com/cdr/grip"
 )
 
 // LocalFile describes a dependency between a task and local

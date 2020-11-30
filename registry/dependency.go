@@ -1,6 +1,6 @@
 package registry
 
-import "github.com/deciduosity/amboy/dependency"
+import "github.com/cdr/amboy/dependency"
 
 // AddDependencyType registers a new dependency.Manager factories.
 func AddDependencyType(name string, f dependency.ManagerFactory) {

@@ -20,11 +20,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/pool"
-	"github.com/deciduosity/grip"
-	"github.com/deciduosity/grip/message"
-	"github.com/deciduosity/grip/recovery"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/pool"
+	"github.com/cdr/grip"
+	"github.com/cdr/grip/message"
+	"github.com/cdr/grip/recovery"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )

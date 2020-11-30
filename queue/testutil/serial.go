@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/dependency"
-	"github.com/deciduosity/amboy/job"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/dependency"
+	"github.com/cdr/amboy/job"
 	"github.com/stretchr/testify/require"
 )
 

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/grip"
+	"github.com/cdr/amboy"
+	"github.com/cdr/grip"
 	"github.com/pkg/errors"
 )
 

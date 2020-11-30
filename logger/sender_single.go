@@ -4,10 +4,10 @@ import (
 	"context"
 	"sync"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/queue"
-	"github.com/deciduosity/grip/message"
-	"github.com/deciduosity/grip/send"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/queue"
+	"github.com/cdr/grip/message"
+	"github.com/cdr/grip/send"
 )
 
 type queueSender struct {

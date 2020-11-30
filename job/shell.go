@@ -6,9 +6,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/dependency"
-	"github.com/deciduosity/grip"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/dependency"
+	"github.com/cdr/grip"
 )
 
 // ShellJob is an amboy.Job implementation that runs shell commands in

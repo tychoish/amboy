@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/deciduosity/amboy/management"
-	"github.com/deciduosity/amboy/queue/testutil"
+	"github.com/cdr/amboy/management"
+	"github.com/cdr/amboy/queue/testutil"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

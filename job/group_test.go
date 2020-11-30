@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/deciduosity/amboy/dependency"
-	"github.com/deciduosity/amboy/registry"
+	"github.com/cdr/amboy/dependency"
+	"github.com/cdr/amboy/registry"
 	"github.com/stretchr/testify/suite"
 )
 

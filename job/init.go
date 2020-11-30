@@ -1,9 +1,9 @@
 package job
 
 import (
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/registry"
-	"github.com/deciduosity/grip"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/registry"
+	"github.com/cdr/grip"
 )
 
 // RegisterDefaultJobs registers all default job types in the amboy

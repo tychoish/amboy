@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/job"
-	"github.com/deciduosity/amboy/pool"
-	"github.com/deciduosity/amboy/queue/testutil"
-	"github.com/deciduosity/grip"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/job"
+	"github.com/cdr/amboy/pool"
+	"github.com/cdr/amboy/queue/testutil"
+	"github.com/cdr/grip"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )

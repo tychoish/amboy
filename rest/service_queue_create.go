@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/deciduosity/amboy/registry"
-	"github.com/deciduosity/gimlet"
-	"github.com/deciduosity/grip"
+	"github.com/cdr/amboy/registry"
+	"github.com/cdr/gimlet"
+	"github.com/cdr/grip"
 )
 
 type createResponse struct {

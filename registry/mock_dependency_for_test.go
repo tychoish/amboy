@@ -1,6 +1,6 @@
 package registry
 
-import "github.com/deciduosity/amboy/dependency"
+import "github.com/cdr/amboy/dependency"
 
 // this is is a mock dependency implementation that's here
 

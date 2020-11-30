@@ -3,8 +3,8 @@ package rest
 import (
 	"net/http"
 
-	"github.com/deciduosity/gimlet"
-	"github.com/deciduosity/amboy"
+	"github.com/cdr/gimlet"
+	"github.com/cdr/amboy"
 	"github.com/pkg/errors"
 )
 

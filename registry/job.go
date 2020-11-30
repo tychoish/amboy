@@ -1,6 +1,6 @@
 package registry
 
-import "github.com/deciduosity/amboy"
+import "github.com/cdr/amboy"
 
 // JobFactory is an alias for a function that returns a Job
 // interface. All Job implementation should have a factory function

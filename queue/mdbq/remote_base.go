@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/queue"
-	"github.com/deciduosity/grip"
-	"github.com/deciduosity/grip/message"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/queue"
+	"github.com/cdr/grip"
+	"github.com/cdr/grip/message"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )

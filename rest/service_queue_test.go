@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/job"
-	"github.com/deciduosity/amboy/registry"
-	"github.com/deciduosity/grip"
-	"github.com/deciduosity/grip/level"
-	"github.com/deciduosity/grip/send"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/job"
+	"github.com/cdr/amboy/registry"
+	"github.com/cdr/grip"
+	"github.com/cdr/grip/level"
+	"github.com/cdr/grip/send"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )

@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/deciduosity/amboy/management"
-	"github.com/deciduosity/gimlet"
+	"github.com/cdr/amboy/management"
+	"github.com/cdr/gimlet"
 	"github.com/pkg/errors"
 )
 

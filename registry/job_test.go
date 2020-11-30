@@ -5,9 +5,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/grip"
-	"github.com/deciduosity/grip/level"
+	"github.com/cdr/amboy"
+	"github.com/cdr/grip"
+	"github.com/cdr/grip/level"
 	"github.com/stretchr/testify/suite"
 )
 

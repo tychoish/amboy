@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/queue/testutil"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/queue/testutil"
 )
 
 const defaultLocalQueueCapcity = 10000

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/registry"
-	"github.com/deciduosity/gimlet"
-	"github.com/deciduosity/grip"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/registry"
+	"github.com/cdr/gimlet"
+	"github.com/cdr/grip"
 	"github.com/pkg/errors"
 )
 

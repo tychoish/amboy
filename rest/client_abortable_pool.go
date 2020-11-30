@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/deciduosity/gimlet"
+	"github.com/cdr/gimlet"
 	"github.com/pkg/errors"
 )
 

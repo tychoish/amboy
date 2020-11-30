@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/dependency"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/dependency"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )

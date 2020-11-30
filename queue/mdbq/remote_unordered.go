@@ -3,10 +3,10 @@ package mdbq
 import (
 	"context"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/pool"
-	"github.com/deciduosity/amboy/queue"
-	"github.com/deciduosity/grip"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/pool"
+	"github.com/cdr/amboy/queue"
+	"github.com/cdr/grip"
 )
 
 // RemoteUnordered are queues that use a Driver as backend for job

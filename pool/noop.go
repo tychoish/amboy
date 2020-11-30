@@ -3,7 +3,7 @@ package pool
 import (
 	"context"
 
-	"github.com/deciduosity/amboy"
+	"github.com/cdr/amboy"
 	"github.com/pkg/errors"
 )
 

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/pool"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/pool"
 	"github.com/google/uuid"
 )
 

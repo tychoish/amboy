@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/deciduosity/gimlet"
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/grip"
+	"github.com/cdr/gimlet"
+	"github.com/cdr/amboy"
+	"github.com/cdr/grip"
 )
 
 type status struct {

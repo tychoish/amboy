@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/deciduosity/gimlet"
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/queue"
-	"github.com/deciduosity/amboy/registry"
-	"github.com/deciduosity/grip"
+	"github.com/cdr/gimlet"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/queue"
+	"github.com/cdr/amboy/registry"
+	"github.com/cdr/grip"
 	"github.com/pkg/errors"
 )
 
