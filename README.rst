@@ -2,8 +2,8 @@
 ``amboy`` -- Task and Worker Pool Infrastructure |PkgGoDev|
 ===========================================================
 
-.. |PkgGoDev| image:: https://pkg.go.dev/badge/deciduosity/amboy
-              :target: https://pkg.go.dev/github.com/deciduosity/amboy
+.. |PkgGoDev| image:: https://pkg.go.dev/badge/cdr/amboy
+	      :target: https://pkg.go.dev/github.com/cdr/amboy
 
 Overview
 --------
@@ -30,7 +30,7 @@ complete. Current queue implementations include:
 
 - an unordered queue that ignores dependency information in tasks. For
   most basic cases these queues are ideal. (`LocalUnordered
-  <https://godoc.org/github.com/deciduosity/amboy/queue#LocalUnordered>`_
+  <https://godoc.org/github.com/cdr/amboy/queue#LocalUnordered>`_
   as implementation detail this queue dispatches tasks in a FIFO order.)
 
 - a limited size queue that keep a fixed number of completed jobs in
@@ -45,7 +45,7 @@ complete. Current queue implementations include:
 Queue Groups
 ~~~~~~~~~~~~
 
-The `QueueGroup <https://godoc.org/github.com/deciduosity/amboy#QueueGroup>`_
+The `QueueGroup <https://godoc.org/github.com/cdr/amboy#QueueGroup>`_
 interface provides a mechanism to manage collections of queues. There are remote
 and local versions of the queue group possible, but these groups make it
 possible to create new queues at runtime, and improve the isolation of queues
@@ -57,7 +57,7 @@ Runners
 Runners are the execution component of the worker pool, and are
 embedded within the queues, and can be injected at run time before
 starting the queue pool. The `LocalWorkers
-<https://godoc.org/github.com/deciduosity/amboy/pool#LocalWorkers>`_
+<https://godoc.org/github.com/cdr/amboy/pool#LocalWorkers>`_
 implementation executes tasks in a fixed-size worker pool, which is
 the default of most queue implementations.
 
@@ -69,12 +69,12 @@ Dependencies
 ~~~~~~~~~~~~
 
 The `DependencyManager
-<https://godoc.org/github.com/deciduosity/amboy/dependency#Manager>`_
+<https://godoc.org/github.com/cdr/amboy/dependency#Manager>`_
 interface makes it possible for tasks to express relationships to each
 other and to their environment so that Job operations can noop or
 block if their requirements are not satisfied. The data about
 relationships between jobs can inform task ordering as in the `LocalOrdered
-<https://godoc.org/github.com/deciduosity/amboy/queue#LocalOrdered>`_
+<https://godoc.org/github.com/cdr/amboy/queue#LocalOrdered>`_
 queue.
 
 The handling of dependency information is the responsibility of the
@@ -84,9 +84,9 @@ Management
 ~~~~~~~~~~
 
 The `management package
-<https://godoc.org/github.com/deciduosity/amboy/management>`_ centers around a
+<https://godoc.org/github.com/cdr/amboy/management>`_ centers around a
 `management interface
-<https://godoc.org/github.com/deciduosity/amboy/management#Manager>`_ that provides
+<https://godoc.org/github.com/cdr/amboy/management#Manager>`_ that provides
 methods for reporting and safely interacting with the state of jobs.
 
 REST Interface
@@ -98,16 +98,16 @@ build clients and services, although any client that can construct
 JSON formated Job object can use the REST API.
 
 Additionally the REST package provides remote implementations of the `management
-interface <https://godoc.org/github.com/deciduosity/amboy/rest#ManagementService>`_
+interface <https://godoc.org/github.com/cdr/amboy/rest#ManagementService>`_
 which makes it possible to manage and report on the jobs in an existing queue,
 and the `abortable pool
-<https://godoc.org/github.com/deciduosity/amboy/rest#AbortablePoolManagementService>`_
+<https://godoc.org/github.com/cdr/amboy/rest#AbortablePoolManagementService>`_
 interface, that makes it possible to abort running jobs. These management tools
 can help administrators of larger amboy systems gain insights into the current
 behavior of the system, and promote safe and gentle operational interventions.
 
 See the documentation of the `REST package
-<https://godoc.org/github.com/deciduosity/amboy/rest>`_
+<https://godoc.org/github.com/cdr/amboy/rest>`_
 
 Logger
 ~~~~~~
@@ -125,7 +125,7 @@ Base Job
 ~~~~~~~~
 
 Embed the `job.Base
-<https://godoc.org/github.com/deciduosity/amboy/job/#Base>`_
+<https://godoc.org/github.com/cdr/amboy/job/#Base>`_
 type in your amboy.Job implementations. This provides a number of
 helpers for basic job defintion in addition to implementations of all
 general methods in the interface. With the Base, you only need to
@@ -146,20 +146,20 @@ synchronous operation for short running queues, and use a limited size
 queue or remote-backed queue as part of a long running service.
 
 Please submit pull requests or `issues
-<https://github.com/deciduosity/amboy>`_ with additional examples of amboy
+<https://github.com/cdr/amboy>`_ with additional examples of amboy
 use.
 
 API and Documentation
 ---------------------
 
 See the `godoc API documentation
-<http://godoc.org/github.com/deciduosity/amboy>` for more information
+<http://godoc.org/github.com/cdr/amboy>` for more information
 about amboy interfaces and internals.
 
 Development
 -----------
 
-Amboy is available for use under the terms of the Apache License (v2). 
+Amboy is available for use under the terms of the Apache License (v2).
 
 Issues
 ~~~~~~
@@ -169,11 +169,6 @@ please open an issue on the GitHub project!
 
 Getting Started
 ~~~~~~~~~~~~~~~
-
-Currently amboy vendors all of its dependencies, as a result of an upstream
-requirement to build on go1.9; however, eventually the project will move to use
-modules. For the time being, have a ``GOPATH`` set, and ensure that you check
-out the repository into ``$GOPATH/src/github/deciduosity/amboy``.
 
 All project automation is managed by a makefile, with all output captured in the
 `build` directory. Consider the following operations: ::
@@ -191,31 +186,26 @@ iterative development workflows: ::
 
   RUN_TEST=<TestName>   # specify a test name or regex to run a subset of tests
   RUN_COUNT=<num>       # run a test more than once to isolate an intermittent failure
-  RACE_DETECTOR=true    # run specified tests with the race detector enabled. 
+  RACE_DETECTOR=true    # run specified tests with the race detector enabled.
 
 Future Work
 ~~~~~~~~~~~
 
 These features are speculative and there's not estimated time for
-completion, but are provided here 
+completion, but are provided here
 
-- API Change: Remove or change the ``Results()`` and ``JobStats()`` methods on
+- API Change: Remove or change the ``Jobs()`` and ``JobStats()`` methods on
   the queue so that they don't return channels. Use either iterators or
   provide other mechanisms for supporting the higher level functionality that
-  these methods support. 
+  these methods support.
 
 - API Change: Replace the ``Runner()`` method on the queue interface with a
   ``Close()`` method.
-  
+
 - Feature: Add a queue implementation that job data jobs in a local,
   on-disk store, potentially using `badger
   <https://github.com/dgraph-io/badger>`_ for the backing store so jobs can
   persist between process starts without depending on MongoDB.
-  
-- Refactor: Reduce dependencies of the Queue package, potentially by dividing
-  the tests, mongodb-based remote queue into separate packages for easier
-  re/use. 
 
 - Refactor: Simplify the MongoDB-based queues, to avoid the (now internal)
   driver interface.
-
