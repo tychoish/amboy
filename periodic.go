@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/cdr/amboy/timing"
 	"github.com/cdr/grip"
 	"github.com/cdr/grip/message"
 	"github.com/cdr/grip/recovery"
@@ -23,12 +24,13 @@ type QueueOperation func(context.Context, Queue) error
 // The theshold, if ResepectThreshold is set, causes the periodic
 // scheduler to noop if there are more than that many pending jobs.
 type QueueOperationConfig struct {
-	ContinueOnError             bool `bson:"continue_on_error" json:"continue_on_error" yaml:"continue_on_error"`
-	LogErrors                   bool `bson:"log_errors" json:"log_errors" yaml:"log_errors"`
-	DebugLogging                bool `bson:"debug_logging" json:"debug_logging" yaml:"debug_logging"`
-	RespectThreshold            bool `bson:"respect_threshold" json:"respect_threshold" yaml:"respect_threshold"`
-	EnableDuplicateJobReporting bool `bson:"enable_duplicate_reporting" json:"enable_duplicate_reporting" yaml:"enable_duplicate_reporting"`
-	Threshold                   int  `bson:"threshold" json:"threshold" yaml:"threshold"`
+	ContinueOnError             bool          `bson:"continue_on_error" json:"continue_on_error" yaml:"continue_on_error"`
+	LogErrors                   bool          `bson:"log_errors" json:"log_errors" yaml:"log_errors"`
+	DebugLogging                bool          `bson:"debug_logging" json:"debug_logging" yaml:"debug_logging"`
+	RespectThreshold            bool          `bson:"respect_threshold" json:"respect_threshold" yaml:"respect_threshold"`
+	EnableDuplicateJobReporting bool          `bson:"enable_duplicate_reporting" json:"enable_duplicate_reporting" yaml:"enable_duplicate_reporting"`
+	Threshold                   int           `bson:"threshold" json:"threshold" yaml:"threshold"`
+	Jitter                      time.Duration `bson:"jitter" json:"jitter" yaml:"jitter"`
 }
 
 // ScheduleJobFactory produces a QueueOpertion that calls a single
@@ -130,10 +132,10 @@ func IntervalQueueOperation(ctx context.Context, q Queue, interval time.Duration
 			}
 		}()
 
-		waitUntilInterval(ctx, startAt, interval)
+		waitUntilInterval(ctx, startAt, interval+timing.JitterInterval(conf.Jitter))
 
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
+		timer := time.NewTimer(interval + timing.JitterInterval(conf.Jitter))
+		defer timer.Stop()
 
 		if ctx.Err() != nil {
 			return
@@ -155,10 +157,12 @@ func IntervalQueueOperation(ctx context.Context, q Queue, interval time.Duration
 					"conf":          conf,
 				})
 				return
-			case <-ticker.C:
+			case <-timer.C:
 				if err = scheduleOp(ctx, q, op, conf); err != nil {
 					return
 				}
+
+				timer.Reset(interval + timing.JitterInterval(conf.Jitter))
 
 				count++
 			}

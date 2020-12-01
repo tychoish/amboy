@@ -160,6 +160,16 @@ func TestTimeRoundPartSecond(t *testing.T) {
 	})
 }
 
+func TestJitter(t *testing.T) {
+	assert.Equal(t, time.Duration(0), JitterInterval(0))
+
+	for i := time.Duration(0); i < 20*time.Millisecond; i++ {
+		assert.True(t, JitterInterval(i) <= time.Duration(2*i))
+		assert.True(t, JitterInterval(i) >= i)
+	}
+
+}
+
 func getTimeWithHour(hour int) time.Time {
 	now := time.Now()
 
