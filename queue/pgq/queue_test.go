@@ -95,7 +95,12 @@ func TestQueue(t *testing.T) {
 		require.NoError(t, q.Put(ctx, j))
 		jrt, ok := q.Get(ctx, id)
 		require.True(t, ok)
-		require.Equal(t, j, jrt)
+
+		// TODO (Sean): More comprehensive equality checks
+		// (See also BasicRoundTrip test in serialization tests)
+		require.Equal(t, j.ID(), jrt.Status().ID)
+		require.Equal(t, j.JobType, jrt.Type())
+		require.True(t, j.TimeInfo().Created.Equal(jrt.TimeInfo().Created))
 	})
 }
 
