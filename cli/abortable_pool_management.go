@@ -3,8 +3,8 @@ package cli
 import (
 	"context"
 
-	"github.com/cheynewallace/tabby"
 	"github.com/cdr/amboy/rest"
+	"github.com/cheynewallace/tabby"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )

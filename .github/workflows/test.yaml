@@ -2,7 +2,7 @@ name: test
 on: [push]
 
 jobs:
-  test-pgq:
+  test-queue-pgq:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -12,9 +12,9 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - name: Postgres tests
+      - name: PostgreSQL Tests
         run: ./ci/test_pgq.sh
-  test-nodb:
+  test-queue:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -24,5 +24,26 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - name: No db tests
-        run: ./ci/test_nodb.sh
+      - name: Queue Tests
+        run: ./ci/test_queue.sh
+  test-other:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/cache@v1
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Supporting Tests
+        run: ./ci/test_other.sh
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.31.0
+

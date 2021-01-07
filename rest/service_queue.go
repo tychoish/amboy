@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/cdr/gimlet"
 	"github.com/cdr/amboy"
 	"github.com/cdr/amboy/queue"
 	"github.com/cdr/amboy/registry"
+	"github.com/cdr/gimlet"
 	"github.com/cdr/grip"
 	"github.com/pkg/errors"
 )

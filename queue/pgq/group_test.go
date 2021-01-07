@@ -8,6 +8,7 @@ import (
 	"github.com/cdr/amboy"
 	"github.com/cdr/amboy/queue"
 	"github.com/cdr/amboy/queue/testutil"
+	"github.com/cdr/grip"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -105,8 +106,10 @@ func TestGroup(t *testing.T) {
 
 				g, err := NewGroup(ctx, db, opts, groupOpts)
 				if err != nil {
-					closer()
-					return nil, nil, err
+					catcher := grip.NewBasicCatcher()
+					catcher.Add(err)
+					catcher.Check(closer)
+					return nil, nil, catcher.Resolve()
 				}
 
 				return g, func(ctx context.Context) error { return closer() }, nil

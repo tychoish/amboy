@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/cheynewallace/tabby"
 	"github.com/cdr/amboy/management"
+	"github.com/cheynewallace/tabby"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )

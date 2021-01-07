@@ -101,6 +101,10 @@ func TestSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 		t.Skip("skipping SQS tests on non-core platforms")
 	}
 
+	testID := testutil.RandomID()
+	counter := testutil.GetCounterCache().Get(testID)
+	counter.Reset()
+
 	assert := assert.New(t)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -119,7 +123,7 @@ func TestSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			for ii := 0; ii < inside; ii++ {
-				j := testutil.MakeMockJob(fmt.Sprintf("%d-%d-%d", i, ii, job.GetNumber()))
+				j := testutil.MakeMockJob(fmt.Sprintf("%d-%d-%d", i, ii, job.GetNumber()), testID)
 				assert.NoError(q.Put(ctx, j))
 			}
 		}(i)
@@ -139,8 +143,11 @@ func TestMultipleSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 		t.Skip("skipping SQS tests on non-core platforms")
 	}
 
+	testID := testutil.RandomID()
+
 	// case two
-	testutil.MockJobCounters.Reset()
+	counter := testutil.GetCounterCache().Get(testID)
+	counter.Reset()
 
 	assert := assert.New(t) // nolint
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -166,7 +173,7 @@ func TestMultipleSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			for ii := 0; ii < inside; ii++ {
-				j := testutil.MakeMockJob(fmt.Sprintf("%d-%d-%d", i, ii, job.GetNumber()))
+				j := testutil.MakeMockJob(fmt.Sprintf("%d-%d-%d", i, ii, job.GetNumber()), testID)
 				assert.NoError(q2.Put(ctx, j))
 			}
 		}(i)

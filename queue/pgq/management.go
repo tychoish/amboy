@@ -345,7 +345,7 @@ func (m *sqlManager) CompleteJob(ctx context.Context, id string) error {
 	if err != nil {
 		return errors.Wrap(err, "problem starting transaction")
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	if _, err = tx.ExecContext(ctx, m.processQueryString(completeSinglePendingJob), id); err != nil {
 		return errors.Wrap(err, "problem clearing scopes")
@@ -424,7 +424,7 @@ func (m *sqlManager) doCompleteJobs(ctx context.Context, filter management.Statu
 	if err != nil {
 		return errors.Wrap(err, "problem starting transaction")
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	query := fmt.Sprintln(m.processQueryString(findJobsToCompleteTemplate), " ", strings.Join(clauses, "\n   AND "))
 
@@ -432,7 +432,7 @@ func (m *sqlManager) doCompleteJobs(ctx context.Context, filter management.Statu
 	if err != nil {
 		return errors.Wrap(err, "problem preparing query")
 	}
-	if err := stmt.SelectContext(ctx, &toDelete, args); err != nil {
+	if err = stmt.SelectContext(ctx, &toDelete, args); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}

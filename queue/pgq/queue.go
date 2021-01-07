@@ -104,7 +104,7 @@ func CleanDatabase(ctx context.Context, db *sqlx.DB, schemaName string) error {
 
 // NewQueue produces a new SQL-database backed queue. Broadly similar
 // to the MongoDB implementation, this queue is available only in
-// "unordered" varient (e.g. dependencies are not considered in
+// "unordered" variant (e.g. dependencies are not considered in
 // dispatching order,) but can respect settings including: scopes,
 // priority, WaitUntil, DispatchBy.
 //
@@ -224,7 +224,7 @@ func (q *sqlQueue) prepareForDB(j *registry.JobInterchange) error {
 }
 
 func (q *sqlQueue) prepareFromDB(j *registry.JobInterchange) {
-	j.TimeInfo.MaxTime = time.Duration(j.TimeInfo.MaxTime * time.Millisecond)
+	j.TimeInfo.MaxTime = j.TimeInfo.MaxTime * time.Millisecond
 }
 
 func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
@@ -242,7 +242,7 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	if err != nil {
 		return errors.Wrap(err, "problem converting job to interchange format")
 	}
-	if err := q.prepareForDB(payload); err != nil {
+	if err = q.prepareForDB(payload); err != nil {
 		return errors.Wrap(err, "problem preparing job for database")
 	}
 	q.processJobForGroup(payload)
@@ -251,7 +251,7 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	if err != nil {
 		return errors.Wrap(err, "problem starting transaction")
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
 		fmt.Sprintf("INSERT INTO %s.jobs (id, type, queue_group, version, priority)", q.opts.SchemaName),
@@ -282,7 +282,7 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	}
 
 	for _, e := range payload.Status.Errors {
-		_, err := tx.NamedExecContext(ctx, fmt.Sprintln(
+		_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
 			fmt.Sprintf("INSERT INTO %s.job_errors (id, edge)", q.opts.SchemaName),
 			"VALUES (:id, :error)"),
 			struct {
@@ -335,17 +335,20 @@ func (q *sqlQueue) Get(ctx context.Context, id string) (amboy.Job, bool) {
 	if err != nil {
 		return nil, false
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	return q.getJobTx(ctx, tx, id)
 }
 
 func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.Job, bool) {
+	// this triggers govet because all of these structs have
+	// duplicate job id and type fields, which is expected (and
+	// needed,) to support the join.
 	payload := struct {
-		registry.JobInterchange
-		registry.DependencyInterchange
-		amboy.JobStatusInfo
-		amboy.JobTimeInfo
+		registry.JobInterchange        // nolint: govet
+		registry.DependencyInterchange // nolint: govet
+		amboy.JobStatusInfo            // nolint: govet
+		amboy.JobTimeInfo              // nolint: govet
 	}{}
 
 	id = q.getIDFromName(id)
@@ -509,7 +512,7 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 	if err != nil {
 		return errors.Wrap(err, "problem starting transaction")
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	var count int
 	job.Status.ID = job.Name
@@ -539,7 +542,7 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 	}
 
 	for _, s := range job.Scopes {
-		_, err := tx.NamedExecContext(ctx, fmt.Sprintln(
+		_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
 			fmt.Sprintf("INSERT INTO %s.job_scopes (id, scope)", q.opts.SchemaName),
 			"VALUES (:id, :scope)"),
 			struct {
@@ -580,7 +583,7 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 		}
 
 		for _, e := range job.Status.Errors[idx:] {
-			_, err := tx.NamedExecContext(ctx, fmt.Sprintln(
+			_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
 				fmt.Sprintf("INSERT INTO %s.job_errors (id, error)", q.opts.SchemaName),
 				"VALUES (:id, :error)"),
 				struct {
@@ -758,7 +761,7 @@ func (q *sqlQueue) Next(ctx context.Context) amboy.Job {
 					return nil
 				}
 				var id string
-				if err := rows.Scan(&id); err != nil {
+				if err = rows.Scan(&id); err != nil {
 					grip.Debug(message.WrapError(err, message.Fields{
 						"id":        q.id,
 						"service":   "amboy.queue.pgq",
@@ -781,7 +784,7 @@ func (q *sqlQueue) Next(ctx context.Context) amboy.Job {
 				}
 
 				if job.TimeInfo().IsStale() {
-					_, err := q.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s.jobs WHERE id = $1", q.opts.SchemaName), job.ID())
+					_, err = q.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s.jobs WHERE id = $1", q.opts.SchemaName), job.ID())
 					grip.Notice(message.WrapError(err, message.Fields{
 						"id":        q.id,
 						"service":   "amboy.queue.pgq",
@@ -828,7 +831,6 @@ func (q *sqlQueue) Next(ctx context.Context) amboy.Job {
 		}
 		timer.Reset(time.Duration(misses * rand.Int63n(int64(q.opts.WaitInterval))))
 	}
-	return nil
 }
 
 func (q *sqlQueue) scopesInUse(ctx context.Context, scopes []string) bool {

@@ -77,11 +77,9 @@ func (s *fixedStorage) Pop() string {
 }
 
 func (s *fixedStorage) Delete(id string) int {
-	count := 0
 	items := *s.heap.(*fixedStorageHeap)
 	for idx := range items {
 		if items[idx].id == id {
-			count++
 			items[idx].deleted = true
 			return 1
 		}

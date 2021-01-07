@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cdr/gimlet"
 	"github.com/cdr/amboy"
+	"github.com/cdr/gimlet"
 	"github.com/cdr/grip"
 	"github.com/cdr/grip/message"
 	"github.com/pkg/errors"

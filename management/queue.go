@@ -534,7 +534,8 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 			continue
 		}
 
-		job, ok := m.queue.Get(ctx, job.ID())
+		var ok bool
+		job, ok = m.queue.Get(ctx, job.ID())
 		if !ok {
 			continue
 		}

@@ -233,7 +233,7 @@ func (g *sqlGroup) Get(ctx context.Context, id string) (amboy.Queue, error) {
 		// safe to throw away the partially constructed here,
 		// because another won and we haven't started the
 		// workers.
-		if q := g.cache.Get(id); q != nil {
+		if q = g.cache.Get(id); q != nil {
 			return q, nil
 		}
 
