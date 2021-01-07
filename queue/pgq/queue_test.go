@@ -118,8 +118,9 @@ func TestQueueSmoke(t *testing.T) {
 					return nil, nil, err
 				}
 				q, err := NewQueue(ctx, db, Options{
-					Name:     name,
-					PoolSize: size,
+					Name:         name,
+					PoolSize:     size,
+					WaitInterval: time.Second,
 				})
 				if err != nil {
 					return nil, nil, err
@@ -150,6 +151,7 @@ func TestQueueSmoke(t *testing.T) {
 					PoolSize:        size,
 					CheckWaitUntil:  true,
 					CheckDispatchBy: true,
+					WaitInterval:    time.Second,
 				})
 				if err != nil {
 					return nil, nil, err
@@ -172,10 +174,11 @@ func TestQueueSmoke(t *testing.T) {
 				}
 
 				q, err := NewQueue(ctx, db, Options{
-					Name:      name,
-					PoolSize:  size,
-					UseGroups: true,
-					GroupName: "kip",
+					Name:         name,
+					PoolSize:     size,
+					UseGroups:    true,
+					GroupName:    "kip",
+					WaitInterval: time.Second,
 				})
 				if err != nil {
 					return nil, nil, err
