@@ -143,6 +143,7 @@ func (s *JobInterchangeSuite) TestMismatchedDependencyCausesJobConversionToError
 func (s *JobInterchangeSuite) TestTimeInfoPersists() {
 	now := time.Now()
 	ti := amboy.JobTimeInfo{
+		ID:        s.job.Name,
 		Start:     now.Round(time.Millisecond),
 		End:       now.Add(time.Hour).Round(time.Millisecond),
 		WaitUntil: now.Add(-time.Minute).Round(time.Millisecond),

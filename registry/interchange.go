@@ -81,20 +81,15 @@ func (j *JobInterchange) Resolve(convertFrom Unmarshaler) (amboy.Job, error) {
 	}
 
 	job := factory()
-
-	if job.Type().Version != j.Version {
-		return nil, errors.Errorf("job '%s' (version=%d) does not match the current version (%d) for the job type '%s'",
-			j.Name, j.Version, job.Type().Version, j.Type)
+	if err = NewJobResolutionError(job.Type(), j.Version); err != nil {
+		return nil, errors.Wrapf(err, "job version problem for '%s'", j.Name)
 	}
 
-	err = convertFrom(j.Job, job)
-	if err != nil {
+	if err = convertFrom(j.Job, job); err != nil {
 		return nil, errors.Wrap(err, "converting job body")
 	}
 
 	if j.Dependency != nil {
-		// it would be reasonable to only do this when the dependency
-		// is not nil.
 		dep, err := convertToDependency(convertFrom, j.Dependency)
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -158,9 +153,8 @@ func convertToDependency(convertFrom Unmarshaler, d *DependencyInterchange) (dep
 
 	dep := factory()
 
-	if dep.Type().Version != d.Version {
-		return nil, errors.Errorf("dependency '%s' (version=%d) does not match the current version (%d) for the dependency type '%s'",
-			d.Type, d.Version, dep.Type().Version, dep.Type().Name)
+	if err = NewDependencyResolutionError(dep.Type(), d.Version); err != nil {
+		return nil, errors.WithStack(err)
 	}
 
 	// this works, because we want to use all the data from the

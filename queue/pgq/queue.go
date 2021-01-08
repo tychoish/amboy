@@ -374,6 +374,15 @@ func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.
 
 	job, err := payload.JobInterchange.Resolve(json.Unmarshal)
 	if err != nil {
+		if registry.IsVersionResolutionError(err) {
+			grip.Warning(message.WrapError(q.tryDelete(ctx, id), message.Fields{
+				"queue_id":  q.id,
+				"job_id":    id,
+				"operation": "delete stale version",
+				"info":      err,
+			}))
+		}
+
 		return nil, false
 	}
 
@@ -784,8 +793,7 @@ func (q *sqlQueue) Next(ctx context.Context) amboy.Job {
 				}
 
 				if job.TimeInfo().IsStale() {
-					_, err = q.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s.jobs WHERE id = $1", q.opts.SchemaName), job.ID())
-					grip.Notice(message.WrapError(err, message.Fields{
+					grip.Notice(message.WrapError(q.tryDelete(ctx, job.ID()), message.Fields{
 						"id":        q.id,
 						"service":   "amboy.queue.pgq",
 						"operation": "removing stale job",
@@ -928,19 +936,33 @@ func (q *sqlQueue) SetRunner(r amboy.Runner) error {
 }
 
 func (q *sqlQueue) Delete(ctx context.Context, id string) error {
-	res, err := q.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s.jobs WHERE id = $1", q.opts.SchemaName), id)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	num, err := res.RowsAffected()
+	num, err := q.deleteMaybe(ctx, id)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
 	if num == 0 {
-		return errors.Errorf("could not delete ")
+		return errors.Errorf("did not delete job %s", id)
 	}
 
 	return nil
+}
+
+func (q *sqlQueue) deleteMaybe(ctx context.Context, id string) (int, error) {
+	res, err := q.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s.jobs WHERE id = $1", q.opts.SchemaName), id)
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+
+	num, err := res.RowsAffected()
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+
+	return int(num), nil
+}
+
+func (q *sqlQueue) tryDelete(ctx context.Context, id string) error {
+	_, err := q.deleteMaybe(ctx, id)
+	return errors.WithStack(err)
 }

@@ -42,6 +42,8 @@ func NewTestJob(content string) *JobTest {
 			Name:    "test",
 			Version: 0,
 		},
+		Stat:       amboy.JobStatusInfo{ID: id},
+		TimingInfo: amboy.JobTimeInfo{ID: id},
 	}
 }
 
