@@ -105,7 +105,7 @@ $(gopath)/src/$(projectPath):$(gopath)/src/$(orgPath)
 #    tests have compile and runtime deps. This varable has everything
 #    that the tests actually need to run. (The "build" target is
 #    intentional and makes these targets rerun as expected.)
-testArgs := -test.v --test.timeout=1h
+testArgs := -test.v --test.timeout=10m
 ifneq (,$(RUN_TEST))
 testArgs += -test.run='$(RUN_TEST)'
 endif

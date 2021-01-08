@@ -63,6 +63,7 @@ func TestQueueSmoke(t *testing.T) {
 	bctx, bcancel := context.WithCancel(context.Background())
 	defer bcancel()
 
+	t.Parallel()
 	for test := range testutil.MergeQueueTestCases(bctx, DefaultQueueTestCases()) {
 		testutil.RunSmokeTest(bctx, t, test)
 	}

@@ -107,14 +107,13 @@ func RunSmokeTest(bctx context.Context, t *testing.T, test QueueTestCase) {
 							defer cancel()
 							name := RandomID()
 
-							// pass zero for number	of threads to avoid race in the	test.
-							q, closer, err := test.Constructor(ctx, name, 0)
+							q, closer, err := test.Constructor(ctx, name, size.Size)
 							require.NoError(t, err)
 							defer func() { require.NoError(t, closer(ctx)) }()
 
 							require.NoError(t, runner.SetPool(q, size.Size))
 							require.NoError(t, err)
-							j := amboy.Job(job.NewShellJob("sleep 300", ""))
+							j := amboy.Job(job.NewShellJob("sleep 20", ""))
 							j.UpdateTimeInfo(amboy.JobTimeInfo{
 								WaitUntil: time.Now().Add(8 * amboy.LockTimeout),
 							})
@@ -135,7 +134,7 @@ func RunSmokeTest(bctx context.Context, t *testing.T, test QueueTestCase) {
 								require.Error(t, q.Save(ctx, j))
 							}
 
-							for i := 0; i < 25; i++ {
+							for i := 0; i < 10; i++ {
 								var ok bool
 								j, ok = q.Get(ctx, j.ID())
 								require.True(t, ok)
