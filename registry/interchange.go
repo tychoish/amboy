@@ -19,7 +19,7 @@ type JobInterchange struct {
 	Status     amboy.JobStatusInfo    `bson:"status" json:"status" yaml:"status" db:"status"`
 	Scopes     []string               `bson:"scopes,omitempty" json:"scopes,omitempty" yaml:"scopes,omitempty" db:"scopes"`
 	TimeInfo   amboy.JobTimeInfo      `bson:"time_info" json:"time_info,omitempty" yaml:"time_info,omitempty" db:"time_info"`
-	Job        rawJob                 `json:"job" bson:"job" yaml:"job" db:"job"`
+	Job        rawJob                 `json:"job" bson:"job" yaml:"job" db:"body"`
 	Dependency *DependencyInterchange `json:"dependency,omitempty" bson:"dependency,omitempty" yaml:"dependency,omitempty" db:"depdendency"`
 }
 
@@ -118,7 +118,7 @@ type DependencyInterchange struct {
 	ID         string        `bson:"id,omitempty" json:"id,omitempty" yaml:"id,omitempty" db:"id"`
 	Type       string        `json:"type" bson:"type" yaml:"type" db:"dep_type"`
 	Version    int           `json:"version" bson:"version" yaml:"version" db:"dep_version"`
-	Edges      []string      `bson:"edges" json:"edges" yaml:"edges" db:"edges"`
+	Edges      []string      `bson:"edges" json:"edges" yaml:"edges" db:"_"`
 	Dependency rawDependency `json:"dependency" bson:"dependency" yaml:"dependency" db:"dependency"`
 }
 

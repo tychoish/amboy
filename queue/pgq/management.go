@@ -81,7 +81,7 @@ func (m *sqlManager) JobStatus(ctx context.Context, filter management.StatusFilt
 		where = append(where,
 			"in_progress = true",
 			"completed = false",
-			"mod_ts > :lock_timeout")
+			"updated_at > :lock_timeout")
 	case management.All:
 		// pass (all jobs)
 	default:
@@ -140,7 +140,7 @@ func (m *sqlManager) JobIDsByState(ctx context.Context, jobType string, filter m
 	case management.Stale:
 		where = append(where,
 			"in_progress = true",
-			"mod_ts > :lock_timeout")
+			"created_at > :lock_timeout")
 	case management.Pending:
 		where = append(where,
 			"in_progress = false",
@@ -207,21 +207,21 @@ func (m *sqlManager) RecentTiming(ctx context.Context, window time.Duration, fil
 	case management.Duration:
 		where = append(where,
 			"completed = true",
-			"ended > :window")
-		query = strings.Replace(query, "{{from_time}}", "time_info.ended", 1)
-		query = strings.Replace(query, "{{to_time}}", "time_info.started", 1)
+			"ended_at > :window")
+		query = strings.Replace(query, "{{from_time}}", "ended_at", 1)
+		query = strings.Replace(query, "{{to_time}}", "started_at", 1)
 	case management.Latency:
 		where = append(where,
 			"completed = false",
-			"created > :window")
+			"created_at > :window")
 		query = strings.Replace(query, "{{from_time}}", "now()", 1)
-		query = strings.Replace(query, "{{to_time}}", "time_info.created", 1)
+		query = strings.Replace(query, "{{to_time}}", "created_at", 1)
 	case management.Running:
 		where = append(where,
 			"completed = false",
 			"in_progress = true")
 		query = strings.Replace(query, "{{from_time}}", "now()", 1)
-		query = strings.Replace(query, "{{to_time}}", "time_info.created", 1)
+		query = strings.Replace(query, "{{to_time}}", "created_at", 1)
 	default:
 		return nil, errors.New("invalid job status filter")
 	}
@@ -300,9 +300,9 @@ func (m *sqlManager) doRecentErrors(ctx context.Context, jobType string, window 
 
 	switch filter {
 	case management.UniqueErrors:
-		query = strings.Replace(query, "{{agg_errors}}", ",\n   array_agg(DISTINCT job_errors.error) as errors", 1)
+		query = strings.Replace(query, "{{agg_errors}}", ",\n   array_agg(DISTINCT errors) as errors", 1)
 	case management.AllErrors:
-		query = strings.Replace(query, "{{agg_errors}}", ",\n   array_agg(job_errors.error) as errors", 1)
+		query = strings.Replace(query, "{{agg_errors}}", ",\n   array_agg(errors) as errors", 1)
 	case management.StatsOnly:
 		query = strings.Replace(query, "{{agg_errors}}", "", 1)
 	default:
@@ -485,26 +485,26 @@ func (m *sqlManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f m
 		where = append(where,
 			"completed = true",
 			"in_progress = false",
-			"ended < :ts")
+			"ended_at < :ts")
 	case management.InProgress:
 		where = append(where,
 			"completed = false",
 			"in_progress = true",
-			"started < :ts")
+			"started_at < :ts")
 	case management.Pending:
 		where = append(where,
 			"completed = false",
 			"in_progress = false",
-			"created < :ts")
+			"created_at < :ts")
 	case management.Stale:
 		where = append(where,
 			"in_progress = true",
 			"completed = false",
-			"mod_ts > :lock_timeout",
-			"started < :ts")
+			"updated_at > :lock_timeout",
+			"started_at < :ts")
 	case management.All:
 		where = append(where,
-			"created < :ts")
+			"created_at < :ts")
 	default:
 		return 0, errors.New("invalid job status filter")
 	}

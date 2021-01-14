@@ -253,85 +253,39 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
-		fmt.Sprintf("INSERT INTO %s.jobs (id, type, queue_group, version, priority)", q.opts.SchemaName),
-		"VALUES (:id, :type, :queue_group, :version, :priority)"),
-		payload)
+	_, err = tx.NamedExecContext(ctx, q.processQueryString(insertJob),
+		struct {
+			*registry.JobInterchange                       // nolint: govet
+			Errors                          pq.StringArray `db:"errors"` // nolint: govet
+			amboy.JobStatusInfo                            // nolint: govet
+			amboy.JobTimeInfo                              // nolint: govet
+			*registry.DependencyInterchange                // nolint: govet
+			DependencyEdges                 pq.StringArray `db:"dep_edges"` // nolint: govet
+		}{
+			JobInterchange:        payload,
+			Errors:                pq.StringArray(append([]string{}, payload.Status.Errors...)),
+			JobStatusInfo:         payload.Status,
+			JobTimeInfo:           payload.TimeInfo,
+			DependencyInterchange: payload.Dependency,
+			DependencyEdges:       pq.StringArray(append([]string{}, payload.Dependency.Edges...)),
+		})
 	if err != nil {
 		if isPgDuplicateError(err) {
 			return amboy.NewDuplicateJobErrorf("job '%s' already exists", j.ID())
 		}
 
-		return errors.Wrap(err, "problem inserting main job record")
-	}
-
-	_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
-		fmt.Sprintf("INSERT INTO %s.job_body (id, job)", q.opts.SchemaName),
-		"VALUES (:id, :job)"),
-		payload)
-	if err != nil {
-		return errors.Wrap(err, "problem inserting job body")
-	}
-
-	_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
-		fmt.Sprintf("INSERT INTO %s.job_status (id, owner, completed, in_progress, mod_ts, mod_count, err_count)", q.opts.SchemaName),
-		"VALUES (:id, :owner, :completed, :in_progress, :mod_ts, :mod_count, :err_count)"),
-		payload.Status)
-	if err != nil {
-		return errors.Wrap(err, "problem inserting job status")
-	}
-
-	for _, e := range payload.Status.Errors {
-		_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
-			fmt.Sprintf("INSERT INTO %s.job_errors (id, edge)", q.opts.SchemaName),
-			"VALUES (:id, :error)"),
-			struct {
-				ID    string `db:"id"`
-				Error string `db:"error"`
-			}{ID: payload.Name, Error: e})
-		if err != nil {
-			return errors.Wrap(err, "problem inserting error")
-		}
-	}
-
-	_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
-		fmt.Sprintf("INSERT INTO %s.job_time (id, created, started, ended, wait_until, dispatch_by, max_time)", q.opts.SchemaName),
-		"VALUES (:id, :created, :started, :ended, :wait_until, :dispatch_by, :max_time)"),
-		payload.TimeInfo)
-	if err != nil {
-		return errors.Wrap(err, "problem inserting job time info")
-	}
-
-	_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
-		fmt.Sprintf("INSERT INTO %s.dependency (id, dep_type, dep_version, dependency)", q.opts.SchemaName),
-		"VALUES (:id, :dep_type, :dep_version, :dependency)"),
-		payload.Dependency)
-	if err != nil {
-		return errors.Wrap(err, "problem inserting dependency")
-	}
-
-	for _, edge := range payload.Dependency.Edges {
-		_, err := tx.NamedExecContext(ctx, fmt.Sprintln(
-			fmt.Sprintf("INSERT INTO %s.dependency_edges (id, edge)", q.opts.SchemaName),
-			"VALUES (:id, :edge)"),
-			struct {
-				ID   string `db:"id"`
-				Edge string `db:"edge"`
-			}{ID: payload.Name, Edge: edge})
-		if err != nil {
-			return errors.Wrap(err, "problem inserting job edge")
-		}
+		return errors.Wrap(err, "insert job")
 	}
 
 	if err := tx.Commit(); err != nil {
-		return errors.Wrap(err, "problem committing job.PUT transaction")
+		return errors.Wrap(err, "commit txn")
 	}
 
 	return nil
 }
 
 func (q *sqlQueue) Get(ctx context.Context, id string) (amboy.Job, bool) {
-	tx, err := q.db.BeginTxx(ctx, &sql.TxOptions{ReadOnly: true, Isolation: sql.LevelSerializable})
+	tx, err := q.db.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return nil, false
 	}
@@ -345,10 +299,12 @@ func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.
 	// duplicate job id and type fields, which is expected (and
 	// needed,) to support the join.
 	payload := struct {
-		registry.JobInterchange        // nolint: govet
-		registry.DependencyInterchange // nolint: govet
-		amboy.JobStatusInfo            // nolint: govet
-		amboy.JobTimeInfo              // nolint: govet
+		registry.JobInterchange                       // nolint: govet
+		amboy.JobStatusInfo                           // nolint: govet
+		Errors                         pq.StringArray `db:"errors"` // nolint: govet
+		amboy.JobTimeInfo                             // nolint: govet
+		registry.DependencyInterchange                // nolint: govet
+		DependencyEdges                pq.StringArray `db:"dep_edges"` // nolint: govet
 	}{}
 
 	id = q.getIDFromName(id)
@@ -356,18 +312,12 @@ func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.
 		return nil, false
 	}
 
-	if err := tx.SelectContext(ctx, &payload.JobStatusInfo.Errors, q.processQueryString(getErrorsForJob), id); err != nil {
-		return nil, false
-	}
-
-	if err := tx.SelectContext(ctx, &payload.DependencyInterchange.Edges, q.processQueryString(getEdgesForJob), id); err != nil {
-		return nil, false
-	}
-
 	payload.JobInterchange.Name = id
 	payload.JobInterchange.Status = payload.JobStatusInfo
 	payload.JobInterchange.Dependency = &payload.DependencyInterchange
 	payload.JobInterchange.TimeInfo = payload.JobTimeInfo
+	payload.JobInterchange.Status.Errors = payload.Errors
+	payload.DependencyInterchange.Edges = payload.DependencyEdges
 
 	q.processNameForUsers(&payload.JobInterchange)
 	q.prepareFromDB(&payload.JobInterchange)
@@ -527,17 +477,12 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 	job.Status.ID = job.Name
 	job.Status.Owner = q.id
 
-	stmt, err := tx.PrepareNamedContext(ctx, q.processQueryString(checkCanUpdate))
-	if err != nil {
-		return errors.Wrapf(err, "problem reading count for lock query for %s", job.Name)
-	}
-	err = stmt.GetContext(ctx, &count, struct {
-		amboy.JobStatusInfo
-		LockTimeout time.Time `db:"lock_timeout"`
-	}{
-		JobStatusInfo: job.Status,
-		LockTimeout:   time.Now().Add(-q.opts.LockTimeout),
-	})
+	err = tx.GetContext(ctx, &count, q.processQueryString(checkCanUpdate),
+		job.Name,
+		job.Status.Owner,
+		job.Status.ModificationCount,
+		time.Now().Add(-q.opts.LockTimeout),
+	)
 	if err != nil {
 		return errors.Wrapf(err, "problem reading count for lock query for %s", job.Name)
 	}
@@ -563,46 +508,22 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 		}
 	}
 
-	if _, err = tx.NamedExecContext(ctx, q.processQueryString(updateJob), job); err != nil {
-		return errors.Wrap(err, "problem updating core job data")
-	}
-
-	if _, err = tx.NamedExecContext(ctx, q.processQueryString(updateJobBody), job); err != nil {
-		return errors.Wrap(err, "problem updating job body payload")
-	}
-
-	if _, err = tx.NamedExecContext(ctx, q.processQueryString(updateJobStatus), job.Status); err != nil {
-		return errors.Wrap(err, "problem updating job status")
-	}
-
-	if _, err = tx.NamedExecContext(ctx, q.processQueryString(updateJobTimeInfo), job.TimeInfo); err != nil {
-		return errors.Wrap(err, "problem updating job timing info")
-	}
-
-	count = 0
-	if err = tx.GetContext(ctx, &count, fmt.Sprintf("SELECT COUNT(*) FROM %s.job_errors WHERE id = $1", q.opts.SchemaName), job.Name); err != nil {
-		return errors.Wrap(err, "problem counting errors")
-	}
-	if len(job.Status.Errors) > count {
-		var idx int
-		if count <= 0 {
-			idx = 0
-		} else {
-			idx = count - 1
-		}
-
-		for _, e := range job.Status.Errors[idx:] {
-			_, err = tx.NamedExecContext(ctx, fmt.Sprintln(
-				fmt.Sprintf("INSERT INTO %s.job_errors (id, error)", q.opts.SchemaName),
-				"VALUES (:id, :error)"),
-				struct {
-					ID    string `db:"id"`
-					Error string `db:"error"`
-				}{ID: job.Name, Error: e})
-			if err != nil {
-				return errors.Wrap(err, "problem inserting error")
-			}
-		}
+	if _, err = tx.NamedExecContext(ctx, q.processQueryString(updateJob), struct {
+		*registry.JobInterchange                       // nolint: govet
+		Errors                          pq.StringArray `db:"errors"` // nolint: govet
+		amboy.JobStatusInfo                            // nolint: govet
+		amboy.JobTimeInfo                              // nolint: govet
+		*registry.DependencyInterchange                // nolint: govet
+		DependencyEdges                 pq.StringArray `db:"dep_edges"` // nolint: govet
+	}{
+		JobInterchange:        job,
+		Errors:                pq.StringArray(append([]string{}, job.Status.Errors...)),
+		JobStatusInfo:         job.Status,
+		JobTimeInfo:           job.TimeInfo,
+		DependencyInterchange: job.Dependency,
+		DependencyEdges:       pq.StringArray(append([]string{}, job.Dependency.Edges...)),
+	}); err != nil {
+		return errors.Wrap(err, "problem updating job data")
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -687,10 +608,10 @@ func (q *sqlQueue) getNextQuery() string {
 		timing := []string{}
 
 		if q.opts.CheckWaitUntil {
-			timing = append(timing, "  AND time_info.wait_until <= :now")
+			timing = append(timing, "  AND wait_until <= :now")
 		}
 		if q.opts.CheckDispatchBy {
-			timing = append(timing, "  AND (time_info.dispatch_by > :now OR time_info.dispatch_by = :zero_time)")
+			timing = append(timing, "  AND (dispatch_by > :now OR dispatch_by = :zero_time)")
 		}
 
 		query = fmt.Sprintln(q.processQueryString(getNextJobsTimingTemplate), strings.Join(timing, ""))

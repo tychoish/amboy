@@ -88,6 +88,7 @@ func RunSerializationTest(ctx context.Context, t *testing.T, test QueueTestCase)
 
 		jrt, ok := queue.Get(ctx, id)
 		require.True(t, ok)
+		require.NotNil(t, j.Error(), jrt.Error())
 		require.Equal(t, j.Error().Error(), jrt.Error().Error())
 	})
 	t.Run("WithDependencyEdges", func(t *testing.T) {

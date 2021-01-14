@@ -39,9 +39,6 @@ func MakeTestDatabase(bctx context.Context, name string) (*sqlx.DB, func() error
 		cancel()
 		return nil, nil, err
 	}
-	tdb.SetMaxOpenConns(128)
-	tdb.SetMaxIdleConns(8)
-
 	_, _ = tdb.Exec("CREATE DATABASE " + dbName)
 
 	db, err := sqlx.ConnectContext(ctx, "postgres", fmt.Sprintf("user=amboy database=%s sslmode=disable", dbName))
