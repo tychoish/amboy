@@ -200,12 +200,15 @@ func (q *sqsFIFOQueue) Next(ctx context.Context) amboy.Job {
 	return job
 }
 
-func (q *sqsFIFOQueue) Get(ctx context.Context, name string) (amboy.Job, bool) {
+func (q *sqsFIFOQueue) Get(ctx context.Context, name string) (amboy.Job, error) {
 	q.mutex.RLock()
 	defer q.mutex.RUnlock()
 
 	j, ok := q.tasks.all[name]
-	return j, ok
+	if !ok {
+		return nil, amboy.NewJobNotDefinedError(q, name)
+	}
+	return j, nil
 }
 
 func (q *sqsFIFOQueue) Info() amboy.QueueInfo {

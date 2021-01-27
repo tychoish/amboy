@@ -218,13 +218,15 @@ func (q *depGraphOrderedLocal) Jobs(ctx context.Context) <-chan amboy.Job {
 }
 
 // Get takes a name and returns a completed job.
-func (q *depGraphOrderedLocal) Get(ctx context.Context, name string) (amboy.Job, bool) {
+func (q *depGraphOrderedLocal) Get(ctx context.Context, name string) (amboy.Job, error) {
 	q.mutex.RLock()
 	defer q.mutex.RUnlock()
 
-	j, ok := q.tasks.m[name]
-
-	return j, ok
+	job, ok := q.tasks.m[name]
+	if !ok {
+		return nil, amboy.NewJobNotDefinedError(q, name)
+	}
+	return job, nil
 }
 
 // Stats returns a statistics object with data about the total number

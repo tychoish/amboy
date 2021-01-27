@@ -82,8 +82,8 @@ func (s *OrderedQueueSuite) TestPuttingAJobIntoAQueueImpactsStats() {
 	j := job.NewShellJob("true", "")
 	s.NoError(s.queue.Put(ctx, j))
 
-	jReturn, ok := s.queue.Get(ctx, j.ID())
-	s.True(ok)
+	jReturn, err := s.queue.Get(ctx, j.ID())
+	s.NoError(err)
 
 	jActual, ok := jReturn.(*job.ShellJob)
 	s.Require().True(ok)
@@ -179,13 +179,13 @@ func (s *OrderedQueueSuite) TestPassedIsCompletedButDoesNotRun() {
 
 	amboy.WaitInterval(ctx, s.queue, 10*time.Millisecond)
 
-	j1Refreshed, ok1 := s.queue.Get(ctx, j1.ID())
-	j2Refreshed, ok2 := s.queue.Get(ctx, j2.ID())
-	if s.True(ok1) {
+	j1Refreshed, err1 := s.queue.Get(ctx, j1.ID())
+	j2Refreshed, err2 := s.queue.Get(ctx, j2.ID())
+	if s.NoError(err1) {
 		stat := j1Refreshed.Status()
 		s.False(stat.Completed)
 	}
-	if s.True(ok2) {
+	if s.NoError(err2) {
 		stat := j2Refreshed.Status()
 		s.True(stat.Completed)
 	}

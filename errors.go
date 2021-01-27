@@ -56,3 +56,40 @@ func IsDuplicateJobError(err error) bool {
 	_, ok := errors.Cause(err).(*duplJobError)
 	return ok
 }
+
+type jobNotDefinedError struct {
+	ID      string `bson:"job_id" json:"job_id" yaml:"job_id"`
+	QueueID string `bson:"queue_id" json:"queue_id" yaml:"queue_id"`
+}
+
+func (e *jobNotDefinedError) Error() string {
+	return fmt.Sprintf("job %q not defined in queue %q", e.ID, e.QueueID)
+}
+
+// NewJobNotDefinedError produces an error that is detectable with
+// IsJobNotDefinedError, and can be produced by Get methods of
+// queues.
+func NewJobNotDefinedError(q Queue, id string) error {
+	return MakeJobNotDefinedError(q.ID(), id)
+}
+
+// MakeJobNotDefinedError provides a less well typed constructor for a
+// job-not-defined error.
+func MakeJobNotDefinedError(queueID, jobID string) error {
+	return &jobNotDefinedError{
+		ID:      jobID,
+		QueueID: queueID,
+	}
+
+}
+
+// IsJobNotDefinedError returns true if the error is a job-not-defined
+// error, and false otherwise.
+func IsJobNotDefinedError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	_, ok := errors.Cause(err).(*jobNotDefinedError)
+	return ok
+}

@@ -117,25 +117,25 @@ func (s *ShuffledQueueSuite) TestGetMethodRetrieves() {
 	j := job.NewShellJob("true", "")
 
 	jReturn, ok := s.queue.Get(ctx, j.ID())
-	s.False(ok)
+	s.Error(ok)
 	s.Nil(jReturn)
 
 	s.NoError(s.queue.SetRunner(pool.NewSingle()))
 	s.NoError(s.queue.Start(ctx))
 
 	jReturn, ok = s.queue.Get(ctx, j.ID())
-	s.False(ok)
+	s.Error(ok)
 	s.Nil(jReturn)
 
 	s.NoError(s.queue.Put(ctx, j))
 
 	jReturn, ok = s.queue.Get(ctx, j.ID())
-	s.True(ok)
+	s.NoError(ok)
 	s.Exactly(jReturn, j)
 	amboy.Wait(ctx, s.queue)
 
 	jReturn, ok = s.queue.Get(ctx, j.ID())
-	s.True(ok)
+	s.NoError(ok)
 	s.Exactly(jReturn, j)
 }
 

@@ -90,8 +90,8 @@ func TestQueue(t *testing.T) {
 		})
 		id := j.ID()
 		require.NoError(t, q.Put(ctx, j))
-		jrt, ok := q.Get(ctx, id)
-		require.True(t, ok)
+		jrt, err := q.Get(ctx, id)
+		require.NoError(t, err)
 
 		// TODO (Sean): More comprehensive equality checks
 		// (See also BasicRoundTrip test in serialization tests)

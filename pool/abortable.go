@@ -221,9 +221,9 @@ func (p *abortablePool) Abort(ctx context.Context, id string) error {
 	cancel()
 	delete(p.jobs, id)
 
-	job, ok := p.queue.Get(ctx, id)
-	if !ok {
-		return errors.Errorf("could not find '%s' in the queue", id)
+	job, err := p.queue.Get(ctx, id)
+	if err != nil {
+		return errors.Wrapf(err, "could not find '%s' in the queue", id)
 	}
 
 	p.queue.Complete(ctx, job)
@@ -241,8 +241,8 @@ func (p *abortablePool) AbortAll(ctx context.Context) {
 		}
 		cancel()
 		delete(p.jobs, id)
-		job, ok := p.queue.Get(ctx, id)
-		if !ok {
+		job, err := p.queue.Get(ctx, id)
+		if err != nil {
 			continue
 		}
 		p.queue.Complete(ctx, job)

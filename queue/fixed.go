@@ -112,13 +112,15 @@ func (q *limitedSizeLocal) Save(ctx context.Context, j amboy.Job) error {
 
 // Get returns a job, by name. This will include all tasks currently
 // stored in the queue.
-func (q *limitedSizeLocal) Get(ctx context.Context, name string) (amboy.Job, bool) {
+func (q *limitedSizeLocal) Get(ctx context.Context, name string) (amboy.Job, error) {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
 
 	j, ok := q.storage[name]
-
-	return j, ok
+	if !ok {
+		return nil, amboy.NewJobNotDefinedError(q, name)
+	}
+	return j, nil
 }
 
 // Next returns the next pending job, and is used by amboy.Runner
@@ -133,7 +135,7 @@ func (q *limitedSizeLocal) Next(ctx context.Context) amboy.Job {
 
 		select {
 		case job := <-q.channel:
-			if _, ok := q.Get(ctx, job.ID()); !ok {
+			if _, err := q.Get(ctx, job.ID()); err != nil {
 				// if the job's been deleted just continue
 				continue
 			}

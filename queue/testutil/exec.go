@@ -135,15 +135,14 @@ func RunSmokeTest(bctx context.Context, t *testing.T, test QueueTestCase) {
 							}
 
 							for i := 0; i < 10; i++ {
-								var ok bool
-								j, ok = q.Get(ctx, j.ID())
-								require.True(t, ok)
+								j, err = q.Get(ctx, j.ID())
+								require.NoError(t, err)
 								require.NoError(t, j.Lock(q.ID(), q.Info().LockTimeout))
 								require.NoError(t, q.Save(ctx, j))
 							}
 
-							j, ok := q.Get(ctx, j.ID())
-							require.True(t, ok)
+							j, err = q.Get(ctx, j.ID())
+							require.NoError(t, err)
 
 							require.NoError(t, j.Error())
 							q.Complete(ctx, j)

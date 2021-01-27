@@ -33,8 +33,8 @@ func RunSerializationTest(ctx context.Context, t *testing.T, test QueueTestCase)
 		})
 		id := j.ID()
 		require.NoError(t, queue.Put(ctx, j))
-		jrt, ok := queue.Get(ctx, id)
-		require.True(t, ok)
+		jrt, err := queue.Get(ctx, id)
+		require.NoError(t, err)
 
 		// TODO (Sean): More comprehensive equality checks. Pulling out
 		// individual fields for now to avoid deep equality checks on time
@@ -59,8 +59,8 @@ func RunSerializationTest(ctx context.Context, t *testing.T, test QueueTestCase)
 				})
 				id := j.ID()
 				require.NoError(t, queue.Put(ctx, j))
-				jrt, ok := queue.Get(ctx, id)
-				require.True(t, ok)
+				jrt, err := queue.Get(ctx, id)
+				require.NoError(t, err)
 
 				// TODO (Sean): More comprehensive equality checks.
 				// (See also BasicRoundTrip test)
@@ -86,8 +86,8 @@ func RunSerializationTest(ctx context.Context, t *testing.T, test QueueTestCase)
 		j.AddError(errors.New("mock error"))
 		require.NoError(t, queue.Save(ctx, j))
 
-		jrt, ok := queue.Get(ctx, id)
-		require.True(t, ok)
+		jrt, err := queue.Get(ctx, id)
+		require.NoError(t, err)
 		require.NotNil(t, j.Error(), jrt.Error())
 		require.Equal(t, j.Error().Error(), jrt.Error().Error())
 	})
@@ -109,8 +109,8 @@ func RunSerializationTest(ctx context.Context, t *testing.T, test QueueTestCase)
 
 		id := j.ID()
 		require.NoError(t, queue.Put(ctx, j))
-		jrt, ok := queue.Get(ctx, id)
-		require.True(t, ok)
+		jrt, err := queue.Get(ctx, id)
+		require.NoError(t, err)
 		require.Equal(t, j.Dependency().Edges(), jrt.Dependency().Edges())
 	})
 	t.Run("WithScopes", func(t *testing.T) {
@@ -129,14 +129,14 @@ func RunSerializationTest(ctx context.Context, t *testing.T, test QueueTestCase)
 		id := j.ID()
 		require.NoError(t, queue.Put(ctx, j))
 
-		jrt, ok := queue.Get(ctx, id)
-		require.True(t, ok)
+		jrt, err := queue.Get(ctx, id)
+		require.NoError(t, err)
 		require.Equal(t, j.Scopes(), jrt.Scopes())
 
 		amboy.WaitInterval(ctx, queue, 10*time.Millisecond)
 
-		jrt, ok = queue.Get(ctx, id)
-		require.True(t, ok)
+		jrt, err = queue.Get(ctx, id)
+		require.NoError(t, err)
 		require.NoError(t, jrt.Error())
 	})
 }

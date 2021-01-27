@@ -67,12 +67,10 @@ func (q *remoteBase) Put(ctx context.Context, j amboy.Job) error {
 	return q.driver.Put(ctx, j)
 }
 
-// Get retrieves a job from the queue's storage. The second value
-// reflects the existence of a job of that name in the queue's
-// storage.
-func (q *remoteBase) Get(ctx context.Context, name string) (amboy.Job, bool) {
+// Get retrieves a job from the queue's storage.
+func (q *remoteBase) Get(ctx context.Context, name string) (amboy.Job, error) {
 	if q.driver == nil {
-		return nil, false
+		return nil, errors.New("failed to get job, no underlying queue storage defined")
 	}
 
 	job, err := q.driver.Get(ctx, name)
@@ -82,10 +80,10 @@ func (q *remoteBase) Get(ctx context.Context, name string) (amboy.Job, bool) {
 			"type":   q.driverType,
 			"name":   name,
 		}))
-		return nil, false
+		return nil, errors.WithStack(err)
 	}
 
-	return job, true
+	return job, nil
 }
 
 func (q *remoteBase) jobServer(ctx context.Context) {

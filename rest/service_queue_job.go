@@ -38,14 +38,20 @@ func (s *QueueService) getJobStatusResponse(ctx context.Context, name string) (*
 		return resp, err
 	}
 
-	j, exists := s.queue.Get(ctx, name)
-	resp.Exists = exists
+	j, err := s.queue.Get(ctx, name)
+	resp.Exists = !amboy.IsJobNotDefinedError(err)
 
-	if !exists {
-		msg = fmt.Sprintf("could not recover job '%s'", name)
+	if !resp.Exists {
+		msg = fmt.Sprintf("could not recover job %q", name)
 		err = errors.New(msg)
 		resp.Error = msg
 
+		return resp, err
+	}
+
+	if err != nil {
+		resp.Exists = false
+		resp.Error = err.Error()
 		return resp, err
 	}
 
@@ -117,15 +123,20 @@ func parseTimeout(r *http.Request) (time.Duration, error) {
 }
 
 func (s *QueueService) waitForJob(ctx context.Context, name string) (*jobStatusResponse, int, error) {
-	job, ok := s.queue.Get(ctx, name)
-	if !ok {
-		response, err := s.getJobStatusResponse(ctx, name)
-		grip.Error(err)
-		return response, http.StatusNotFound, errors.Errorf(
-			"problem finding job: %s", name)
+	job, err := s.queue.Get(ctx, name)
+	if err != nil {
+		response, err2 := s.getJobStatusResponse(ctx, name)
+		grip.Error(err2)
+		if amboy.IsJobNotDefinedError(err) {
+			return response, http.StatusNotFound, errors.Errorf(
+				"problem finding job: %s", name)
+		}
+
+		return response, http.StatusInternalServerError, errors.Errorf(
+			"problem retrieving job: %s", name)
 	}
 
-	ok = amboy.WaitJobInterval(ctx, job, s.queue, 100*time.Millisecond)
+	ok := amboy.WaitJobInterval(ctx, job, s.queue, 100*time.Millisecond)
 
 	response, err := s.getJobStatusResponse(ctx, name)
 	if err != nil {

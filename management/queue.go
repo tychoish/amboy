@@ -442,9 +442,9 @@ func (m *queueManager) RecentJobErrors(ctx context.Context, jobType string, wind
 }
 
 func (m *queueManager) CompleteJob(ctx context.Context, name string) error {
-	j, exists := m.queue.Get(ctx, name)
-	if !exists {
-		return errors.Errorf("cannot recover job with name '%s'", name)
+	j, err := m.queue.Get(ctx, name)
+	if err != nil {
+		return errors.Wrapf(err, "cannot recover job with name '%s'", name)
 	}
 
 	status := j.Status()
@@ -507,6 +507,8 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 		return errors.New("invalid specification of completed job type")
 	}
 
+	var err error
+	catcher := grip.NewBasicCatcher()
 	for job := range m.queue.Jobs(ctx) {
 		stat := job.Status()
 
@@ -534,9 +536,9 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 			continue
 		}
 
-		var ok bool
-		job, ok = m.queue.Get(ctx, job.ID())
-		if !ok {
+		job, err = m.queue.Get(ctx, job.ID())
+		if err != nil {
+			catcher.Wrapf(err, "could not retrieve job '%s'", job.ID())
 			continue
 		}
 		status := job.Status()
@@ -545,7 +547,7 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 		m.queue.Complete(ctx, job)
 	}
 
-	return nil
+	return catcher.Resolve()
 }
 
 func (m queueManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f StatusFilter) (int, error) {

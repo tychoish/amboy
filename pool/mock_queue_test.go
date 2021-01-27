@@ -68,12 +68,15 @@ func (q *QueueTester) Save(ctx context.Context, j amboy.Job) error {
 
 func (q *QueueTester) ID() string { return fmt.Sprintf("queue.tester.%s", q.id) }
 
-func (q *QueueTester) Get(ctx context.Context, name string) (amboy.Job, bool) {
+func (q *QueueTester) Get(ctx context.Context, name string) (amboy.Job, error) {
 	q.mutex.RLock()
 	defer q.mutex.RUnlock()
 
 	job, ok := q.storage[name]
-	return job, ok
+	if !ok {
+		return nil, amboy.NewJobNotDefinedError(q, name)
+	}
+	return job, nil
 }
 
 func (q *QueueTester) Info() amboy.QueueInfo {

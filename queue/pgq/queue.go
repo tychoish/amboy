@@ -284,17 +284,17 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	return nil
 }
 
-func (q *sqlQueue) Get(ctx context.Context, id string) (amboy.Job, bool) {
+func (q *sqlQueue) Get(ctx context.Context, id string) (amboy.Job, error) {
 	tx, err := q.db.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
-		return nil, false
+		return nil, errors.Wrapf(err, "problem starting transaction to resolve job %s from %s", id, q.id)
 	}
 	defer tx.Rollback() //nolint:errcheck
 
 	return q.getJobTx(ctx, tx, id)
 }
 
-func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.Job, bool) {
+func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.Job, error) {
 	// this triggers govet because all of these structs have
 	// duplicate job id and type fields, which is expected (and
 	// needed,) to support the join.
@@ -309,7 +309,10 @@ func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.
 
 	id = q.getIDFromName(id)
 	if err := tx.GetContext(ctx, &payload, q.processQueryString(getJobByID), id); err != nil {
-		return nil, false
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, amboy.NewJobNotDefinedError(q, id)
+		}
+		return nil, errors.Wrapf(err, "problem getting job %q", id)
 	}
 
 	payload.JobInterchange.Name = id
@@ -333,10 +336,10 @@ func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.
 			}))
 		}
 
-		return nil, false
+		return nil, errors.Wrap(err, "failed to resolve job")
 	}
 
-	return job, true
+	return job, nil
 }
 
 func (q *sqlQueue) processNameForUsers(j *registry.JobInterchange) {
@@ -573,16 +576,16 @@ func (q *sqlQueue) Jobs(ctx context.Context) <-chan amboy.Job {
 				id = id[len(q.opts.GroupName)+1:]
 			}
 
-			job, ok := q.Get(ctx, id)
-			if !ok {
-				grip.Debug(message.Fields{
+			job, err := q.Get(ctx, id)
+			if err != nil {
+				grip.Debug(message.WrapError(err, message.Fields{
 					"queue":    q.id,
 					"service":  "amboy.queue.pg",
 					"is_group": q.opts.UseGroups,
 					"group":    q.opts.GroupName,
 					"message":  "problem resolving job",
 					"op":       "jobs iterator",
-				})
+				}))
 				continue
 			}
 
@@ -629,7 +632,6 @@ func (q *sqlQueue) Next(ctx context.Context) amboy.Job {
 		misses         int64
 		dispatchSkips  int64
 		dispatchMisses int64
-		ok             bool
 		job            amboy.Job
 	)
 
@@ -708,8 +710,8 @@ func (q *sqlQueue) Next(ctx context.Context) amboy.Job {
 					id = id[len(q.opts.GroupName)+1:]
 				}
 
-				job, ok = q.Get(ctx, id)
-				if !ok {
+				job, err = q.Get(ctx, id)
+				if err != nil {
 					continue CURSOR
 				}
 

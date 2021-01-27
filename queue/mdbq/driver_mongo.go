@@ -412,6 +412,10 @@ func (d *mongoDriver) Get(ctx context.Context, name string) (amboy.Job, error) {
 
 	res := d.getCollection().FindOne(ctx, bson.M{"_id": d.getIDFromName(name)})
 	if err := res.Err(); err != nil {
+		if errors.Cause(err) == mongo.ErrNoDocuments {
+			return nil, errors.WithStack(amboy.MakeJobNotDefinedError(d.name, name))
+		}
+
 		return nil, errors.Wrapf(err, "GET problem fetching '%s'", name)
 	}
 

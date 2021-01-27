@@ -62,7 +62,7 @@ func UnorderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 				assert.NoError(t, q.Put(ctx, j),
 					fmt.Sprintf("with %d workers", num))
 				_, ok := q.Get(ctx, j.ID())
-				assert.True(t, ok)
+				assert.NoError(t, ok)
 			}
 		}(i)
 	}
@@ -186,8 +186,8 @@ func WaitUntilTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 				ti := j.TimeInfo()
 				require.Zero(t, ti.WaitUntil)
 				require.NoError(t, q.Put(ctx, j), fmt.Sprintf("(a) with %d workers", num))
-				_, ok := q.Get(ctx, j.ID())
-				require.True(t, ok)
+				_, err := q.Get(ctx, j.ID())
+				require.NoError(t, err)
 
 				cmd = fmt.Sprintf("echo %s.%d.waiter", name, num)
 				j2 := job.NewShellJob(cmd, "")
@@ -197,8 +197,8 @@ func WaitUntilTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 				ti2 := j2.TimeInfo()
 				require.NotZero(t, ti2.WaitUntil)
 				require.NoError(t, q.Put(ctx, j2), fmt.Sprintf("(b) with %d workers", num))
-				_, ok = q.Get(ctx, j2.ID())
-				require.True(t, ok)
+				_, err = q.Get(ctx, j2.ID())
+				require.NoError(t, err)
 			}
 		}(i)
 	}

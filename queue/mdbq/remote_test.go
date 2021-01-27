@@ -108,9 +108,9 @@ func (s *RemoteUnorderedSuite) TestJobPutIntoQueueFetchableViaGetMethod() {
 	j := job.NewShellJob("echo foo", "")
 	name := j.ID()
 	s.NoError(s.queue.Put(ctx, j))
-	fetchedJob, ok := s.queue.Get(ctx, name)
+	fetchedJob, err := s.queue.Get(ctx, name)
 
-	if s.True(ok) {
+	if s.NoError(err) {
 		s.IsType(j.Dependency(), fetchedJob.Dependency())
 		s.Equal(j.ID(), fetchedJob.ID())
 		s.Equal(j.Type(), fetchedJob.Type())
@@ -139,15 +139,15 @@ func (s *RemoteUnorderedSuite) TestGetMethodHandlesMissingJobs() {
 	name := j.ID()
 
 	// before putting a job in the queue, it shouldn't exist.
-	fetchedJob, ok := s.queue.Get(ctx, name)
-	s.False(ok)
+	fetchedJob, err := s.queue.Get(ctx, name)
+	s.Error(err)
 	s.Nil(fetchedJob)
 
 	s.NoError(s.queue.Put(ctx, j))
 
 	// wrong name also returns error case
-	fetchedJob, ok = s.queue.Get(ctx, name+name)
-	s.False(ok)
+	fetchedJob, err = s.queue.Get(ctx, name+name)
+	s.Error(err)
 	s.Nil(fetchedJob)
 }
 
@@ -190,8 +190,8 @@ func (s *RemoteUnorderedSuite) TestPuttingAJobIntoAQueueImpactsStats() {
 	j := job.NewShellJob("true", "")
 	s.NoError(s.queue.Put(ctx, j))
 
-	_, ok := s.queue.Get(ctx, j.ID())
-	s.True(ok)
+	_, err := s.queue.Get(ctx, j.ID())
+	s.NoError(err)
 
 	stats := s.queue.Stats(ctx)
 

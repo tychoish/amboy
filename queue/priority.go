@@ -73,8 +73,12 @@ func (q *priorityLocalQueue) Save(ctx context.Context, j amboy.Job) error {
 // Get takes the name of a job and returns the job from the queue that
 // matches that ID. Use the second return value to check if a job
 // object with that ID exists in the queue.e
-func (q *priorityLocalQueue) Get(ctx context.Context, name string) (amboy.Job, bool) {
-	return q.storage.Get(name)
+func (q *priorityLocalQueue) Get(ctx context.Context, name string) (amboy.Job, error) {
+	job, ok := q.storage.Get(name)
+	if !ok {
+		return nil, amboy.NewJobNotDefinedError(q, name)
+	}
+	return job, nil
 }
 
 // Next returns a job for processing the queue. This may be a nil job

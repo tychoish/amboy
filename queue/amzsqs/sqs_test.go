@@ -57,16 +57,16 @@ func (s *SQSFifoQueueSuite) SetupTest() {
 func (s *SQSFifoQueueSuite) TestPutMethodErrorsForDuplicateJobs() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	job, ok := s.queue.Get(ctx, s.jobID)
-	s.True(ok)
+	job, err := s.queue.Get(ctx, s.jobID)
+	s.NoError(err)
 	s.Error(s.queue.Put(ctx, job))
 }
 
 func (s *SQSFifoQueueSuite) TestGetMethodReturnsRequestedJob() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	job, ok := s.queue.Get(ctx, s.jobID)
-	s.True(ok)
+	job, err := s.queue.Get(ctx, s.jobID)
+	s.NoError(err)
 	s.NotNil(job)
 	s.Equal(s.jobID, job.ID())
 }

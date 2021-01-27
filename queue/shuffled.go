@@ -184,9 +184,9 @@ func (q *shuffledLocal) Save(ctx context.Context, j amboy.Job) error {
 
 // Get returns a job based on the specified ID. Considers all pending,
 // completed, and in progress jobs.
-func (q *shuffledLocal) Get(ctx context.Context, name string) (amboy.Job, bool) {
+func (q *shuffledLocal) Get(ctx context.Context, name string) (amboy.Job, error) {
 	if !q.Info().Started {
-		return nil, false
+		return nil, errors.New("queue is not started")
 	}
 
 	ret := make(chan amboy.Job)
@@ -216,11 +216,13 @@ func (q *shuffledLocal) Get(ctx context.Context, name string) (amboy.Job, bool) 
 
 	select {
 	case <-ctx.Done():
-		return nil, false
+		return nil, errors.WithStack(ctx.Err())
 	case q.operations <- op:
 		job, ok := <-ret
-
-		return job, ok
+		if !ok {
+			return nil, amboy.NewJobNotDefinedError(q, name)
+		}
+		return job, nil
 	}
 }
 

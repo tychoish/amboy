@@ -178,7 +178,7 @@ type Queue interface {
 	// Given a job id, get that job. The second return value is a
 	// Boolean, which indicates if the named job had been
 	// registered by a Queue.
-	Get(context.Context, string) (Job, bool)
+	Get(context.Context, string) (Job, error)
 
 	// Returns the next job in the queue. These calls are
 	// blocking, but may be interrupted with a canceled context.

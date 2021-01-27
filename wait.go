@@ -85,14 +85,14 @@ func WaitIntervalNum(ctx context.Context, q Queue, interval time.Duration, num i
 // if the job does not exist (or is removed) and true when the job
 // completes.
 func WaitJob(ctx context.Context, j Job, q Queue) bool {
-	var ok bool
+	var err error
 	for {
 		if ctx.Err() != nil {
 			return false
 		}
 
-		j, ok = q.Get(ctx, j.ID())
-		if !ok {
+		j, err = q.Get(ctx, j.ID())
+		if err != nil {
 			return false
 		}
 
@@ -112,7 +112,7 @@ func WaitJob(ctx context.Context, j Job, q Queue) bool {
 // of waiting on a busy queue. The operation returns false if the job
 // is not registered in the queue, and true when the job completes.
 func WaitJobInterval(ctx context.Context, j Job, q Queue, interval time.Duration) bool {
-	var ok bool
+	var err error
 
 	timer := time.NewTimer(0)
 	defer timer.Stop()
@@ -122,8 +122,8 @@ func WaitJobInterval(ctx context.Context, j Job, q Queue, interval time.Duration
 		case <-ctx.Done():
 			return false
 		case <-timer.C:
-			j, ok = q.Get(ctx, j.ID())
-			if !ok {
+			j, err = q.Get(ctx, j.ID())
+			if err != nil {
 				return false
 			}
 

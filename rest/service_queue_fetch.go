@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/cdr/amboy"
 	"github.com/cdr/amboy/registry"
 	"github.com/cdr/gimlet"
 	"github.com/cdr/grip"
@@ -14,10 +15,15 @@ import (
 func (s *QueueService) Fetch(w http.ResponseWriter, r *http.Request) {
 	name := gimlet.GetVars(r)["name"]
 
-	job, ok := s.queue.Get(r.Context(), name)
-	if !ok {
+	job, err := s.queue.Get(r.Context(), name)
+	if err != nil {
 		grip.Infof("job named %s does not exist in the queue", name)
-		gimlet.WriteJSONResponse(w, http.StatusNotFound, nil)
+		if amboy.IsJobNotDefinedError(err) {
+			gimlet.WriteJSONResponse(w, http.StatusNotFound, nil)
+		} else {
+			gimlet.WriteJSONResponse(w, http.StatusInternalServerError, nil)
+		}
+
 		return
 	}
 
