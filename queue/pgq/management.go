@@ -212,7 +212,7 @@ func (m *sqlManager) RecentTiming(ctx context.Context, window time.Duration, fil
 		query = strings.Replace(query, "{{to_time}}", "started_at", 1)
 	case management.Latency:
 		where = append(where,
-			"completed = false",
+			"(completed = true OR in_progress = true)",
 			"created_at > :window")
 		query = strings.Replace(query, "{{from_time}}", "now()", 1)
 		query = strings.Replace(query, "{{to_time}}", "created_at", 1)

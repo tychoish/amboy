@@ -117,9 +117,9 @@ func (m *queueManager) RecentTiming(ctx context.Context, window time.Duration, f
 		for job := range m.queue.Jobs(ctx) {
 			stat := job.Status()
 			ti := job.TimeInfo()
-			if !stat.Completed && time.Since(ti.End) < window {
+			if (stat.Completed || stat.InProgress) && time.Since(ti.Created) < window {
 				jt := job.Type().Name
-				counters[jt] = append(counters[jt], time.Since(ti.Created))
+				counters[jt] = append(counters[jt], ti.Start.Sub(ti.Created))
 			}
 		}
 	case Running:

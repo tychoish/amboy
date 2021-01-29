@@ -308,14 +308,17 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 	case management.Latency:
 		now := time.Now()
 		match = bson.M{
-			"status.completed":  false,
+			"$or": []bson.M{
+				{"status.completed": false},
+				{"status.in_prog": true},
+			},
 			"time_info.created": bson.M{"$gt": now.Add(-window)},
 		}
 		group = bson.M{
 			"_id": "$type",
 			"duration": bson.M{"$avg": bson.M{
 				"$multiply": []interface{}{bson.M{
-					"$subtract": []interface{}{now, "$time_info.created"}},
+					"$subtract": []interface{}{"$time_info.start", "$time_info.created"}},
 					1000000, // convert to nanoseconds
 				}},
 			}}
