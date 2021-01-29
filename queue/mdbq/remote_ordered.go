@@ -10,6 +10,7 @@ import (
 	"github.com/cdr/amboy/queue"
 	"github.com/cdr/grip"
 	"github.com/cdr/grip/message"
+	"github.com/pkg/errors"
 )
 
 // SimpleRemoteOrdered queue implements the amboy.Queue interface and
@@ -47,12 +48,12 @@ func newSimpleRemoteOrdered(size int) remoteQueue {
 // that the next time this job is dispatched its dependencies will be
 // ready. if there is only one Edge reported, blocked will attempt to
 // dispatch the dependent job.
-func (q *remoteSimpleOrdered) Next(ctx context.Context) amboy.Job {
+func (q *remoteSimpleOrdered) Next(ctx context.Context) (amboy.Job, error) {
 	start := time.Now()
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return nil, errors.WithStack(ctx.Err())
 		case job := <-q.channel:
 			ti := amboy.JobTimeInfo{
 				Start: time.Now(),
@@ -72,7 +73,7 @@ func (q *remoteSimpleOrdered) Next(ctx context.Context) amboy.Job {
 			case dependency.Ready:
 				grip.Debugf("returning job %s from remote source, duration = %s",
 					id, time.Since(start))
-				return job
+				return job, nil
 			case dependency.Passed:
 				q.dispatcher.Release(ctx, job)
 				q.addBlocked(job.ID())

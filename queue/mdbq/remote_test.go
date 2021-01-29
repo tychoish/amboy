@@ -289,11 +289,13 @@ checkResults:
 		}
 
 		nctx, ncancel := context.WithTimeout(ctx, 100*time.Millisecond)
-		work := s.queue.Next(nctx)
+		work, err := s.queue.Next(nctx)
 		ncancel()
 		if work == nil {
+			s.Error(err)
 			continue checkResults
 		}
+		s.NoError(err)
 		observed++
 
 		_, ok := lockedJobs[work.ID()]
@@ -321,7 +323,8 @@ func (s *RemoteUnorderedSuite) TestTimeInfoPersists() {
 	s.Zero(j.TimeInfo())
 	s.NoError(s.queue.Put(ctx, j))
 	go s.queue.jobServer(ctx)
-	j2 := s.queue.Next(ctx)
+	j2, err := s.queue.Next(ctx)
+	s.require.NoError(err)
 	s.NotZero(j2.TimeInfo())
 }
 

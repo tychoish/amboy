@@ -120,12 +120,16 @@ func (q *QueueTester) SetRunner(r amboy.Runner) error {
 	return nil
 }
 
-func (q *QueueTester) Next(ctx context.Context) amboy.Job {
+func (q *QueueTester) Next(ctx context.Context) (amboy.Job, error) {
 	select {
 	case <-ctx.Done():
-		return nil
+		return nil, ctx.Err()
 	case job := <-q.toProcess:
-		return job
+		if job == nil {
+			return nil, errors.New("no job")
+
+		}
+		return job, nil
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"github.com/cdr/amboy/pool"
 	"github.com/cdr/amboy/queue"
 	"github.com/cdr/grip"
+	"github.com/pkg/errors"
 )
 
 // RemoteUnordered are queues that use a Driver as backend for job
@@ -34,15 +35,18 @@ func newRemoteUnordered(size int) remoteQueue {
 // context is canceled. The operation is blocking until an
 // undispatched, unlocked job is available. This operation takes a job
 // lock.
-func (q *remoteUnordered) Next(ctx context.Context) amboy.Job {
+func (q *remoteUnordered) Next(ctx context.Context) (amboy.Job, error) {
 	count := 0
 	for {
 		count++
 		select {
 		case <-ctx.Done():
-			return nil
+			return nil, errors.WithStack(ctx.Err())
 		case job := <-q.channel:
-			return job
+			if job == nil {
+				return nil, errors.New("no dispatchable job")
+			}
+			return job, nil
 		}
 	}
 }

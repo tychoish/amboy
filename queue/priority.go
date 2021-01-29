@@ -84,11 +84,11 @@ func (q *priorityLocalQueue) Get(ctx context.Context, name string) (amboy.Job, e
 // Next returns a job for processing the queue. This may be a nil job
 // if the context is canceled. Otherwise, this operation blocks until
 // a job is available for dispatching.
-func (q *priorityLocalQueue) Next(ctx context.Context) amboy.Job {
+func (q *priorityLocalQueue) Next(ctx context.Context) (amboy.Job, error) {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return nil, errors.WithStack(ctx.Err())
 		case job := <-q.channel:
 			ti := job.TimeInfo()
 			if ti.IsStale() {
@@ -119,7 +119,7 @@ func (q *priorityLocalQueue) Next(ctx context.Context) amboy.Job {
 			q.counters.started++
 			q.counters.Unlock()
 
-			return job
+			return job, nil
 		}
 	}
 }

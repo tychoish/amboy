@@ -84,8 +84,8 @@ func worker(bctx context.Context, id string, q amboy.Queue, wg *sync.WaitGroup) 
 		case <-bctx.Done():
 			return
 		case <-timer.C:
-			job := q.Next(bctx)
-			if job == nil {
+			job, err := q.Next(bctx)
+			if err != nil {
 				timer.Reset(jitterNilJobWait())
 				continue
 			}

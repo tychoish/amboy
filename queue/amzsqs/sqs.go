@@ -154,19 +154,21 @@ func (q *sqsFIFOQueue) Save(ctx context.Context, j amboy.Job) error {
 
 // Returns the next job in the queue. These calls are
 // blocking, but may be interrupted with a canceled context.
-func (q *sqsFIFOQueue) Next(ctx context.Context) amboy.Job {
+func (q *sqsFIFOQueue) Next(ctx context.Context) (amboy.Job, error) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
-	if ctx.Err() != nil {
-		return nil
+	if err := ctx.Err(); err != nil {
+		return nil, errors.WithStack(err)
 	}
 
 	messageOutput, err := q.sqsClient.ReceiveMessageWithContext(ctx, &sqs.ReceiveMessageInput{
 		QueueUrl: aws.String(q.sqsURL),
 	})
-	if err != nil || len(messageOutput.Messages) == 0 {
+	if err != nil {
+		return nil, errors.WithStack(err)
+	} else if len(messageOutput.Messages) == 0 {
 		grip.Debugf("No messages received in Next from %s", q.sqsURL)
-		return nil
+		return nil, errors.New("no dispatchable jobs")
 	}
 	message := messageOutput.Messages[0]
 	_, err = q.sqsClient.DeleteMessageWithContext(ctx, &sqs.DeleteMessageInput{
@@ -174,30 +176,30 @@ func (q *sqsFIFOQueue) Next(ctx context.Context) amboy.Job {
 		ReceiptHandle: message.ReceiptHandle,
 	})
 	if err != nil {
-		return nil
+		return nil, errors.WithStack(err)
 	}
 
 	var jobItem *registry.JobInterchange
 	err = json.Unmarshal([]byte(*message.Body), jobItem)
 	if err != nil {
-		return nil
+		return nil, errors.WithStack(err)
 	}
 	job, err := jobItem.Resolve(json.Unmarshal)
 	if err != nil {
-		return nil
+		return nil, errors.WithStack(err)
 	}
 
 	if err := q.dispatcher.Dispatch(ctx, job); err != nil {
 		_ = q.Put(ctx, job)
-		return nil
+		return nil, errors.WithStack(err)
 	}
 
 	if job.TimeInfo().IsStale() {
-		return nil
+		return nil, errors.New("cannot dispatch stale job")
 	}
 
 	q.numRunning++
-	return job
+	return job, nil
 }
 
 func (q *sqsFIFOQueue) Get(ctx context.Context, name string) (amboy.Job, error) {

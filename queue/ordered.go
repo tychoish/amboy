@@ -175,19 +175,23 @@ func (q *depGraphOrderedLocal) Info() amboy.QueueInfo {
 // Next returns a job from the Queue. This call is non-blocking. If
 // there are no pending jobs at the moment, then Next returns an
 // error.
-func (q *depGraphOrderedLocal) Next(ctx context.Context) amboy.Job {
+func (q *depGraphOrderedLocal) Next(ctx context.Context) (amboy.Job, error) {
 	select {
 	case <-ctx.Done():
-		return nil
+		return nil, errors.WithStack(ctx.Err())
 	case job := <-q.channel:
-		grip.Debug(message.WrapError(q.dispatcher.Dispatch(ctx, job),
-			message.Fields{
-				"job":    job.ID(),
-				"event":  "improperly dispatched job",
-				"impact": "possible duplicate execution",
-				"queue":  q.ID(),
-			}))
-		return job
+		err := q.dispatcher.Dispatch(ctx, job)
+		if err != nil {
+			grip.Debug(message.WrapError(err,
+				message.Fields{
+					"job":    job.ID(),
+					"event":  "improperly dispatched job",
+					"impact": "possible duplicate execution",
+					"queue":  q.ID(),
+				}))
+			return nil, errors.Wrap(err, "could not dispatch job")
+		}
+		return job, nil
 	}
 }
 

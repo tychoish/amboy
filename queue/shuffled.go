@@ -317,7 +317,7 @@ func (q *shuffledLocal) Info() amboy.QueueInfo {
 // Next returns a new pending job, and is used by the Runner interface
 // to fetch new jobs. This method returns a nil job object is there are
 // no pending jobs.
-func (q *shuffledLocal) Next(ctx context.Context) amboy.Job {
+func (q *shuffledLocal) Next(ctx context.Context) (amboy.Job, error) {
 	ret := make(chan amboy.Job)
 
 	op := func(
@@ -351,18 +351,18 @@ func (q *shuffledLocal) Next(ctx context.Context) amboy.Job {
 
 	select {
 	case <-ctx.Done():
-		return nil
+		return nil, errors.WithStack(ctx.Err())
 	case q.operations <- op:
 		j := <-ret
 		if j == nil {
-			return nil
+			return nil, errors.New("could not dispatch job")
 		}
 		if err := q.dispatcher.Dispatch(ctx, j); err != nil {
 			_ = q.Put(ctx, j)
-			return nil
+			return nil, errors.WithStack(err)
 		}
 
-		return j
+		return j, nil
 	}
 }
 

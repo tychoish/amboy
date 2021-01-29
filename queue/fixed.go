@@ -126,11 +126,11 @@ func (q *limitedSizeLocal) Get(ctx context.Context, name string) (amboy.Job, err
 // Next returns the next pending job, and is used by amboy.Runner
 // implementations to fetch work. This operation blocks until a job is
 // available or the context is canceled.
-func (q *limitedSizeLocal) Next(ctx context.Context) amboy.Job {
+func (q *limitedSizeLocal) Next(ctx context.Context) (amboy.Job, error) {
 	misses := 0
 	for {
 		if misses > q.capacity {
-			return nil
+			return nil, errors.New("not pending job")
 		}
 
 		select {
@@ -175,9 +175,9 @@ func (q *limitedSizeLocal) Next(ctx context.Context) amboy.Job {
 				continue
 			}
 
-			return job
+			return job, nil
 		case <-ctx.Done():
-			return nil
+			return nil, errors.WithStack(ctx.Err())
 		}
 	}
 }

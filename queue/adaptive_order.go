@@ -225,7 +225,7 @@ func (q *adaptiveLocalOrdering) Info() amboy.QueueInfo {
 	}
 }
 
-func (q *adaptiveLocalOrdering) Next(ctx context.Context) amboy.Job {
+func (q *adaptiveLocalOrdering) Next(ctx context.Context) (amboy.Job, error) {
 	ret := make(chan amboy.Job)
 	op := func(ctx context.Context, items *adaptiveOrderItems, fixed *fixedStorage) {
 		defer close(ret)
@@ -273,18 +273,18 @@ func (q *adaptiveLocalOrdering) Next(ctx context.Context) amboy.Job {
 
 	select {
 	case <-ctx.Done():
-		return nil
+		return nil, errors.WithStack(ctx.Err())
 	case q.operations <- op:
 		j := <-ret
 		if j == nil {
-			return nil
+			return nil, errors.New("pending no job")
 		}
 		if err := q.dispatcher.Dispatch(ctx, j); err != nil {
 			_ = q.Put(ctx, j)
-			return nil
+			return nil, errors.Wrapf(err, "dispatching %q", j.ID())
 		}
 
-		return j
+		return j, nil
 	}
 }
 

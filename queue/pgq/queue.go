@@ -627,7 +627,7 @@ func (q *sqlQueue) getNextQuery() string {
 	return query
 }
 
-func (q *sqlQueue) Next(ctx context.Context) amboy.Job {
+func (q *sqlQueue) Next(ctx context.Context) (amboy.Job, error) {
 	var (
 		misses         int64
 		dispatchSkips  int64
@@ -660,7 +660,7 @@ func (q *sqlQueue) Next(ctx context.Context) amboy.Job {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return nil, errors.WithStack(ctx.Err())
 		case <-timer.C:
 			misses++
 			rows, err := q.db.NamedQueryContext(ctx, query, struct {
@@ -683,14 +683,14 @@ func (q *sqlQueue) Next(ctx context.Context) amboy.Job {
 					"group":         q.opts.GroupName,
 					"duration_secs": time.Since(startAt).Seconds(),
 				}))
-				return nil
+				return nil, errors.Wrap(err, "generating next job query")
 			}
 			defer rows.Close()
 		CURSOR:
 			for rows.Next() {
 
-				if ctx.Err() != nil {
-					return nil
+				if err = ctx.Err(); err != nil {
+					return nil, errors.WithStack(err)
 				}
 				var id string
 				if err = rows.Scan(&id); err != nil {
@@ -757,7 +757,7 @@ func (q *sqlQueue) Next(ctx context.Context) amboy.Job {
 					job = nil
 					continue CURSOR
 				}
-				return job
+				return job, nil
 			}
 		}
 		timer.Reset(time.Duration(misses * rand.Int63n(int64(q.opts.WaitInterval))))

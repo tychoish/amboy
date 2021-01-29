@@ -181,8 +181,9 @@ type Queue interface {
 	Get(context.Context, string) (Job, error)
 
 	// Returns the next job in the queue. These calls are
-	// blocking, but may be interrupted with a canceled context.
-	Next(context.Context) Job
+	// blocking, but may be interrupted with a canceled
+	// context. Next must return a non-nil job if error is nil.
+	Next(context.Context) (Job, error)
 
 	// Info returns information related to management of the Queue.
 	Info() QueueInfo

@@ -129,8 +129,8 @@ func (p *simpleRateLimited) worker(bctx context.Context) {
 		case <-bctx.Done():
 			return
 		case <-timer.C:
-			job := p.queue.Next(bctx)
-			if job == nil {
+			job, err := p.queue.Next(bctx)
+			if err != nil {
 				timer.Reset(jitterNilJobWait())
 				continue
 			}
