@@ -253,11 +253,13 @@ func (q *limitedSizeLocal) Stats(ctx context.Context) amboy.QueueStats {
 }
 
 // Complete marks a job complete in the queue.
-func (q *limitedSizeLocal) Complete(ctx context.Context, j amboy.Job) {
-	if ctx.Err() != nil {
-		return
+func (q *limitedSizeLocal) Complete(ctx context.Context, j amboy.Job) error {
+	if err := ctx.Err(); err != nil {
+		return errors.WithStack(err)
 	}
-	q.dispatcher.Complete(ctx, j)
+	if err := q.dispatcher.Complete(ctx, j); err != nil {
+		return errors.WithStack(err)
+	}
 
 	q.mu.Lock()
 	defer q.mu.Unlock()
@@ -278,8 +280,7 @@ func (q *limitedSizeLocal) Complete(ctx context.Context, j amboy.Job) {
 		}
 	}
 
-	grip.Alert(message.WrapError(
-		q.scopes.Release(j.ID(), j.Scopes()),
+	grip.Warning(message.WrapError(q.scopes.Release(j.ID(), j.Scopes()),
 		message.Fields{
 			"id":     j.ID(),
 			"scopes": j.Scopes(),
@@ -288,6 +289,7 @@ func (q *limitedSizeLocal) Complete(ctx context.Context, j amboy.Job) {
 		}))
 
 	q.toDelete <- j.ID()
+	return nil
 }
 
 // Start starts the runner and initializes the pending task

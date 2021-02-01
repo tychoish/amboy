@@ -225,28 +225,32 @@ func (q *sqsFIFOQueue) Info() amboy.QueueInfo {
 
 // Used to mark a Job complete and remove it from the pending
 // work of the queue.
-func (q *sqsFIFOQueue) Complete(ctx context.Context, job amboy.Job) {
-	if ctx.Err() != nil {
-		return
+func (q *sqsFIFOQueue) Complete(ctx context.Context, job amboy.Job) error {
+	if err := ctx.Err(); err != nil {
+		return errors.WithStack(err)
 	}
 	name := job.ID()
-	q.dispatcher.Complete(ctx, job)
+	if err := q.dispatcher.Complete(ctx, job); err != nil {
+		return errors.WithStack(err)
+	}
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
-	if ctx.Err() != nil {
+	if err := ctx.Err(); err != nil {
 		grip.Notice(message.Fields{
 			"message":   "Did not complete job because context cancelled",
 			"id":        name,
 			"operation": "Complete",
 		})
-		return
+		return errors.WithStack(err)
 	}
+
 	q.tasks.completed[name] = true
 	savedJob := q.tasks.all[name]
 	if savedJob != nil {
 		savedJob.SetStatus(job.Status())
 		savedJob.UpdateTimeInfo(job.TimeInfo())
 	}
+	return nil
 }
 
 // Returns a channel that produces completed Job objects.

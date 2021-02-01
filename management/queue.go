@@ -451,8 +451,7 @@ func (m *queueManager) CompleteJob(ctx context.Context, name string) error {
 	status.ModificationCount += 2
 	j.SetStatus(status)
 
-	m.queue.Complete(ctx, j)
-	return nil
+	return errors.WithStack(m.queue.Complete(ctx, j))
 }
 
 func (m *queueManager) CompleteJobsByType(ctx context.Context, f StatusFilter, jobType string) error {
@@ -464,6 +463,7 @@ func (m *queueManager) CompleteJobsByType(ctx context.Context, f StatusFilter, j
 		return errors.New("invalid specification of completed job type")
 	}
 
+	catcher := grip.NewBasicCatcher()
 	for job := range m.queue.Jobs(ctx) {
 		if job.Type().Name != jobType {
 			continue
@@ -493,10 +493,10 @@ func (m *queueManager) CompleteJobsByType(ctx context.Context, f StatusFilter, j
 		status := job.Status()
 		status.ModificationCount += 2
 		job.SetStatus(status)
-		m.queue.Complete(ctx, job)
+		catcher.Add(m.queue.Complete(ctx, job))
 	}
 
-	return nil
+	return catcher.Resolve()
 }
 
 func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
@@ -544,7 +544,7 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 		status := job.Status()
 		status.ModificationCount += 2
 		job.SetStatus(status)
-		m.queue.Complete(ctx, job)
+		catcher.Add(m.queue.Complete(ctx, job))
 	}
 
 	return catcher.Resolve()

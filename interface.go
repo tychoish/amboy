@@ -190,7 +190,7 @@ type Queue interface {
 
 	// Used to mark a Job complete and remove it from the pending
 	// work of the queue.
-	Complete(context.Context, Job)
+	Complete(context.Context, Job) error
 
 	// Saves the state of a current job to the underlying storage,
 	// generally in support of locking and incremental

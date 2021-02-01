@@ -89,11 +89,12 @@ func (q *QueueTester) Info() amboy.QueueInfo {
 	}
 }
 
-func (q *QueueTester) Complete(ctx context.Context, j amboy.Job) {
+func (q *QueueTester) Complete(ctx context.Context, j amboy.Job) error {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
 	q.numComplete++
+	return nil
 }
 
 func (q *QueueTester) Stats(ctx context.Context) amboy.QueueStats {

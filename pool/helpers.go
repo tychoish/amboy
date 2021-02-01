@@ -25,7 +25,7 @@ func jitterNilJobWait() time.Duration {
 
 func executeJob(ctx context.Context, id string, job amboy.Job, q amboy.Queue) {
 	job.Run(ctx)
-	q.Complete(ctx, job)
+	cerr := q.Complete(ctx, job)
 	ti := job.TimeInfo()
 	r := message.Fields{
 		"job":           job.ID(),
@@ -42,8 +42,11 @@ func executeJob(ctx context.Context, id string, job amboy.Job, q amboy.Queue) {
 	if err != nil {
 		r["error"] = err.Error()
 	}
+	if cerr != nil {
+		r["complete_error"] = cerr.Error()
+	}
 
-	if err != nil {
+	if err != nil || cerr != nil {
 		grip.Error(r)
 	} else {
 		grip.Debug(r)
@@ -66,7 +69,14 @@ func worker(bctx context.Context, id string, q amboy.Queue, wg *sync.WaitGroup) 
 		if err != nil {
 			if job != nil {
 				job.AddError(err)
-				q.Complete(bctx, job)
+				// we ignore this next error because
+				// it's during panic recovery and it
+				// doesn't make sense to add Complete
+				// errors, which are really
+				// queue-level errors to a local copy
+				// of a job that we're about to throw
+				// out.
+				_ = q.Complete(bctx, job)
 			}
 			// start a replacement worker.
 			go worker(bctx, id, q, wg)

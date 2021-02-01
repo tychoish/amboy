@@ -134,7 +134,7 @@ func (p *abortablePool) worker(bctx context.Context) {
 		if err != nil {
 			if job != nil {
 				job.AddError(err)
-				p.queue.Complete(bctx, job)
+				_ = p.queue.Complete(bctx, job)
 			}
 
 			// start a replacement worker
@@ -226,9 +226,7 @@ func (p *abortablePool) Abort(ctx context.Context, id string) error {
 		return errors.Wrapf(err, "could not find '%s' in the queue", id)
 	}
 
-	p.queue.Complete(ctx, job)
-
-	return nil
+	return errors.WithStack(p.queue.Complete(ctx, job))
 }
 
 func (p *abortablePool) AbortAll(ctx context.Context) {
@@ -245,6 +243,6 @@ func (p *abortablePool) AbortAll(ctx context.Context) {
 		if err != nil {
 			continue
 		}
-		p.queue.Complete(ctx, job)
+		_ = p.queue.Complete(ctx, job)
 	}
 }

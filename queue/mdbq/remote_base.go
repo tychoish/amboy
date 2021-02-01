@@ -126,12 +126,14 @@ func (q *remoteBase) Save(ctx context.Context, j amboy.Job) error {
 
 // Complete takes a context and, asynchronously, marks the job
 // complete, in the queue.
-func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) {
-	if ctx.Err() != nil {
-		return
+func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) error {
+	if err := ctx.Err(); err != nil {
+		return errors.WithStack(err)
 	}
 
-	q.dispatcher.Complete(ctx, j)
+	if err := q.dispatcher.Complete(ctx, j); err != nil {
+		return errors.WithStack(err)
+	}
 
 	const retryInterval = time.Second
 	timer := time.NewTimer(0)
@@ -146,7 +148,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) {
 		count++
 		select {
 		case <-ctx.Done():
-			return
+			return errors.WithStack(ctx.Err())
 		case <-timer.C:
 			stat := j.Status()
 			stat.Completed = true
@@ -169,6 +171,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) {
 						"driver_id":   q.driver.ID(),
 						"message":     "job took too long to mark complete",
 					}))
+					return errors.Wrapf(err, "encountered timeout marking %q complete ", id)
 				} else if count > 10 {
 					grip.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
@@ -178,6 +181,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) {
 						"retry_count": count,
 						"message":     "after 10 retries, aborting marking job complete",
 					}))
+					return errors.Wrapf(err, "failed to mark %q complete 10 times", id)
 				} else if isMongoDupKey(err) {
 					grip.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
@@ -187,6 +191,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) {
 						"retry_count": count,
 						"message":     "attempting to complete job without lock",
 					}))
+					return errors.Wrapf(err, "failed to mark %q without holding the lock", id)
 				} else {
 					timer.Reset(retryInterval)
 					continue
@@ -200,7 +205,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) {
 			delete(q.blocked, id)
 			delete(q.dispatched, id)
 
-			return
+			return nil
 		}
 
 	}

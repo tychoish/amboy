@@ -288,12 +288,14 @@ func (q *adaptiveLocalOrdering) Next(ctx context.Context) (amboy.Job, error) {
 	}
 }
 
-func (q *adaptiveLocalOrdering) Complete(ctx context.Context, j amboy.Job) {
-	if ctx.Err() != nil {
-		return
+func (q *adaptiveLocalOrdering) Complete(ctx context.Context, j amboy.Job) error {
+	if err := ctx.Err(); err != nil {
+		return errors.WithStack(err)
 	}
 	wait := make(chan struct{})
-	q.dispatcher.Complete(ctx, j)
+	if err := q.dispatcher.Complete(ctx, j); err != nil {
+		return errors.WithStack(err)
+	}
 	op := func(ctx context.Context, items *adaptiveOrderItems, fixed *fixedStorage) {
 		id := j.ID()
 		items.completed = append(items.completed, id)
@@ -311,8 +313,10 @@ func (q *adaptiveLocalOrdering) Complete(ctx context.Context, j amboy.Job) {
 
 	select {
 	case <-ctx.Done():
+		return errors.WithStack(ctx.Err())
 	case q.operations <- op:
 		<-wait
+		return nil
 	}
 }
 

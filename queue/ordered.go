@@ -338,7 +338,7 @@ func (q *depGraphOrderedLocal) jobDispatch(ctx context.Context, orderedJobs []gr
 		q.mutex.Unlock()
 
 		if job.Dependency().State() == dependency.Passed {
-			q.Complete(ctx, job)
+			_ = q.Complete(ctx, job)
 			continue
 		}
 		if job.Dependency().State() == dependency.Ready {
@@ -385,7 +385,7 @@ func (q *depGraphOrderedLocal) jobDispatch(ctx context.Context, orderedJobs []gr
 				// all dependencies have passed, we can try to dispatch the job.
 
 				if job.Dependency().State() == dependency.Passed {
-					q.Complete(ctx, job)
+					_ = q.Complete(ctx, job)
 				} else if job.Dependency().State() == dependency.Ready {
 					q.channel <- job
 				}
@@ -399,13 +399,16 @@ func (q *depGraphOrderedLocal) jobDispatch(ctx context.Context, orderedJobs []gr
 }
 
 // Complete marks a job as complete in the context of this queue instance.
-func (q *depGraphOrderedLocal) Complete(ctx context.Context, j amboy.Job) {
-	if ctx.Err() != nil {
-		return
+func (q *depGraphOrderedLocal) Complete(ctx context.Context, j amboy.Job) error {
+	if err := ctx.Err(); err != nil {
+		return errors.WithStack(err)
 	}
 	grip.Debugf("marking job (%s) as complete", j.ID())
-	q.dispatcher.Complete(ctx, j)
+	if err := q.dispatcher.Complete(ctx, j); err != nil {
+		return errors.WithStack(err)
+	}
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 	q.tasks.completed[j.ID()] = true
+	return nil
 }

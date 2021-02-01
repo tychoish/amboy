@@ -18,7 +18,7 @@ import (
 type Dispatcher interface {
 	Dispatch(context.Context, amboy.Job) error
 	Release(context.Context, amboy.Job)
-	Complete(context.Context, amboy.Job)
+	Complete(context.Context, amboy.Job) error
 }
 
 type dispatcherImpl struct {
@@ -128,12 +128,12 @@ func (d *dispatcherImpl) Release(ctx context.Context, job amboy.Job) {
 	}
 }
 
-func (d *dispatcherImpl) Complete(ctx context.Context, job amboy.Job) {
+func (d *dispatcherImpl) Complete(ctx context.Context, job amboy.Job) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 	info, ok := d.cache[job.ID()]
 	if !ok {
-		return
+		return nil
 	}
 	delete(d.cache, job.ID())
 
@@ -147,4 +147,5 @@ func (d *dispatcherImpl) Complete(ctx context.Context, job amboy.Job) {
 
 	info.jobCancel()
 	info.stopPing()
+	return nil
 }

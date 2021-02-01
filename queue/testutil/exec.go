@@ -145,7 +145,7 @@ func RunSmokeTest(bctx context.Context, t *testing.T, test QueueTestCase) {
 							require.NoError(t, err)
 
 							require.NoError(t, j.Error())
-							q.Complete(ctx, j)
+							require.NoError(t, q.Complete(ctx, j))
 							require.NoError(t, j.Error())
 						})
 

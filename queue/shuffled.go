@@ -369,12 +369,15 @@ func (q *shuffledLocal) Next(ctx context.Context) (amboy.Job, error) {
 // Complete marks a job as complete in the internal representation. If
 // the context is canceled after calling Complete but before it
 // executes, no change occurs.
-func (q *shuffledLocal) Complete(ctx context.Context, j amboy.Job) {
-	if ctx.Err() != nil {
-		return
+func (q *shuffledLocal) Complete(ctx context.Context, j amboy.Job) error {
+	if err := ctx.Err(); err != nil {
+		return errors.WithStack(err)
 	}
 
-	q.dispatcher.Complete(ctx, j)
+	if err := q.dispatcher.Complete(ctx, j); err != nil {
+		return errors.WithStack(err)
+	}
+
 	op := func(
 		pending map[string]amboy.Job,
 		completed map[string]amboy.Job,
@@ -393,8 +396,7 @@ func (q *shuffledLocal) Complete(ctx context.Context, j amboy.Job) {
 			}
 		}
 
-		grip.Warning(message.WrapError(
-			q.scopes.Release(j.ID(), j.Scopes()),
+		grip.Warning(message.WrapError(q.scopes.Release(j.ID(), j.Scopes()),
 			message.Fields{
 				"id":     j.ID(),
 				"scopes": j.Scopes(),
@@ -405,7 +407,9 @@ func (q *shuffledLocal) Complete(ctx context.Context, j amboy.Job) {
 
 	select {
 	case <-ctx.Done():
+		return errors.WithStack(ctx.Err())
 	case q.operations <- op:
+		return nil
 	}
 }
 

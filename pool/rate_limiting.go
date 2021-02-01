@@ -112,7 +112,7 @@ func (p *simpleRateLimited) worker(bctx context.Context) {
 		if err != nil {
 			if job != nil {
 				job.AddError(err)
-				p.queue.Complete(bctx, job)
+				_ = p.queue.Complete(bctx, job)
 			}
 			// start a replacement worker.
 			go p.worker(bctx)

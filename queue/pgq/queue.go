@@ -387,8 +387,11 @@ func (q *sqlQueue) Save(ctx context.Context, j amboy.Job) error {
 	return errors.WithStack(q.doUpdate(ctx, job))
 }
 
-func (q *sqlQueue) Complete(ctx context.Context, j amboy.Job) {
-	q.dispatcher.Complete(ctx, j)
+func (q *sqlQueue) Complete(ctx context.Context, j amboy.Job) error {
+	if err := q.dispatcher.Complete(ctx, j); err != nil {
+		return errors.WithStack(err)
+
+	}
 
 	stat := j.Status()
 	stat.ErrorCount = len(stat.Errors)
@@ -403,7 +406,7 @@ func (q *sqlQueue) Complete(ctx context.Context, j amboy.Job) {
 
 	job, err := registry.MakeJobInterchange(j, json.Marshal)
 	if err != nil {
-		return
+		return errors.WithStack(err)
 	}
 	job.Scopes = nil
 
@@ -420,7 +423,7 @@ RETRY:
 		count++
 		select {
 		case <-ctx.Done():
-			return
+			return errors.WithStack(ctx.Err())
 		case <-timer.C:
 			if err := q.doUpdate(ctx, job); err != nil {
 				if time.Since(startAt) > time.Minute+q.opts.LockTimeout {
@@ -432,6 +435,7 @@ RETRY:
 						"queue_id":    q.id,
 						"message":     "job took too long to mark complete",
 					}))
+					return errors.Wrapf(err, "encountered timeout marking %q complete ", id)
 				} else if count > 10 {
 					grip.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
@@ -441,6 +445,7 @@ RETRY:
 						"queue_id":    q.id,
 						"message":     "after 10 retries, aborting marking job complete",
 					}))
+					return errors.Wrapf(err, "failed to mark %q complete 10 times", id)
 				} else if isPgDuplicateError(err) {
 					grip.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
@@ -450,15 +455,13 @@ RETRY:
 						"queue_id":    q.id,
 						"message":     "attempting to mark job complete without lock",
 					}))
+					return errors.Errorf("problem marking job %q complete without the lock", id)
 				} else {
 					timer.Reset(retryInterval)
 					continue RETRY
 				}
-				j.AddError(err)
-				return
 			}
-			return
-
+			return nil
 		}
 	}
 }
