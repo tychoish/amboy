@@ -20,6 +20,7 @@ type remoteMongoQueueGroupSingle struct {
 	opts     MongoDBQueueGroupOptions
 	dbOpts   MongoDBOptions
 	cache    queue.GroupCache
+	started  bool // reflects background prune/create threads active
 }
 
 // NewMongoDBSingleQueueGroup constructs a new remote queue group. If ttl is 0, the queues will not be
@@ -40,19 +41,25 @@ func NewMongoDBSingleQueueGroup(ctx context.Context, opts MongoDBQueueGroupOptio
 	mdbopts.UseGroups = true
 	mdbopts.GroupName = opts.Prefix
 
-	ctx, cancel := context.WithCancel(ctx)
 	g := &remoteMongoQueueGroupSingle{
-		canceler: cancel,
-		client:   client,
-		dbOpts:   mdbopts,
-		opts:     opts,
-		cache:    queue.NewGroupCache(opts.TTL),
+		client: client,
+		dbOpts: mdbopts,
+		opts:   opts,
+		cache:  queue.NewGroupCache(opts.TTL),
 	}
 
-	if opts.PruneFrequency > 0 && opts.TTL > 0 {
+	return g, nil
+}
+
+func (g *remoteMongoQueueGroupSingle) Start(ctx context.Context) error {
+	if g.started {
+		return errors.WithStack(g.startQueues(ctx))
+	}
+
+	if g.opts.PruneFrequency > 0 && g.opts.TTL > 0 {
 		go func() {
 			defer recovery.LogStackTraceAndContinue("panic in remote queue group ticker")
-			ticker := time.NewTicker(opts.PruneFrequency)
+			ticker := time.NewTicker(g.opts.PruneFrequency)
 			defer ticker.Stop()
 			for {
 				select {
@@ -65,10 +72,10 @@ func NewMongoDBSingleQueueGroup(ctx context.Context, opts MongoDBQueueGroupOptio
 		}()
 	}
 
-	if opts.BackgroundCreateFrequency > 0 {
+	if g.opts.BackgroundCreateFrequency > 0 {
 		go func() {
 			defer recovery.LogStackTraceAndContinue("panic in remote queue group ticker")
-			ticker := time.NewTicker(opts.BackgroundCreateFrequency)
+			ticker := time.NewTicker(g.opts.BackgroundCreateFrequency)
 			defer ticker.Stop()
 			for {
 				select {
@@ -81,11 +88,13 @@ func NewMongoDBSingleQueueGroup(ctx context.Context, opts MongoDBQueueGroupOptio
 		}()
 	}
 
+	g.started = true
+
 	if err := g.startQueues(ctx); err != nil {
-		return nil, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 
-	return g, nil
+	return nil
 }
 
 func (g *remoteMongoQueueGroupSingle) getQueues(ctx context.Context) ([]string, error) {
@@ -207,6 +216,8 @@ func (g *remoteMongoQueueGroupSingle) Prune(ctx context.Context) error {
 }
 
 func (g *remoteMongoQueueGroupSingle) Close(ctx context.Context) error {
-	defer g.canceler()
+	if g.canceler != nil {
+		defer g.canceler()
+	}
 	return g.cache.Close(ctx)
 }

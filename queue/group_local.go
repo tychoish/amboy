@@ -40,12 +40,22 @@ func NewLocalQueueGroup(ctx context.Context, opts LocalQueueGroupOptions) (amboy
 		opts:  opts,
 		cache: NewGroupCache(opts.TTL),
 	}
+	return g, nil
+}
+
+func (g *localQueueGroup) Len() int { return g.cache.Len() }
+
+func (g *localQueueGroup) Queues(_ context.Context) []string {
+	return g.cache.Names()
+}
+
+func (g *localQueueGroup) Start(ctx context.Context) error {
 	ctx, g.canceler = context.WithCancel(ctx)
 
-	if opts.TTL > 0 {
+	if g.opts.TTL > 0 {
 		go func() {
 			defer recovery.LogStackTraceAndContinue("panic in local queue group ticker")
-			ticker := time.NewTicker(opts.TTL)
+			ticker := time.NewTicker(g.opts.TTL)
 			defer ticker.Stop()
 			for {
 				select {
@@ -55,19 +65,14 @@ func NewLocalQueueGroup(ctx context.Context, opts LocalQueueGroupOptions) (amboy
 					grip.Error(message.WrapError(g.Prune(ctx),
 						message.Fields{
 							"group": "local queue group background pruning",
-							"ttl":   opts.TTL,
+							"ttl":   g.opts.TTL,
 						}))
 				}
 			}
 		}()
 	}
-	return g, nil
-}
 
-func (g *localQueueGroup) Len() int { return g.cache.Len() }
-
-func (g *localQueueGroup) Queues(_ context.Context) []string {
-	return g.cache.Names()
+	return nil
 }
 
 // Get a queue with the given index. Get sets the last accessed time to now. Note that this means

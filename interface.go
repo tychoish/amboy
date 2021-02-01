@@ -230,13 +230,26 @@ type QueueInfo struct {
 // string. Users can use these queues if there are many different types
 // of work or if the types of work are only knowable at runtime.
 type QueueGroup interface {
-	// Get a queue with the given index.
+	// Get a queue with the given index. Most implementations will
+	// create a queue if it doesn't exist in a Get operation.
 	Get(context.Context, string) (Queue, error)
 
-	// Put a queue at the given index.
+	// Put a queue at the given index. Because most
+	// implementations create new queues in their Get operation,
+	// the Put operation for groups of queues that don't rely on
+	// the default queue construction in Get.
 	Put(context.Context, string, Queue) error
 
-	// Prune old queues.
+	// Start all queues with pending work, and for QueueGroup
+	// implementations that have background workers to prune idle
+	// queues or create queues with pending work (for queues with
+	// distributed backends.)
+	Start(context.Context) error
+
+	// Prune old queues. Most queue implementations automatically
+	// prune queues that are inactive based on some TTL. For most
+	// implementations, users will never need to call this
+	// directly.
 	Prune(context.Context) error
 
 	// Close the queues.

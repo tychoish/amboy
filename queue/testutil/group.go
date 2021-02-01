@@ -84,6 +84,7 @@ func RunGroupIntegrationTest(bctx context.Context, t *testing.T, group GroupInte
 
 			g, closer, err := group.Constructor(ctx, 0)
 			require.NoError(t, err)
+			require.NoError(t, g.Start(ctx))
 			defer func() { require.NoError(t, closer(ctx)) }()
 			require.NotNil(t, g)
 			defer g.Close(ctx)
@@ -148,6 +149,7 @@ func RunGroupIntegrationTest(bctx context.Context, t *testing.T, group GroupInte
 
 			g, closer, err := group.Constructor(ctx, 0)
 			require.NoError(t, err)
+			require.NoError(t, g.Start(ctx))
 			defer func() { require.NoError(t, closer(ctx)) }()
 			require.NotNil(t, g)
 
@@ -235,6 +237,7 @@ func RunGroupIntegrationTest(bctx context.Context, t *testing.T, group GroupInte
 
 			g, closer, err := group.Constructor(ctx, (1*time.Second)+(500*time.Millisecond))
 			require.NoError(t, err)
+			require.NoError(t, g.Start(ctx))
 			defer func() { require.NoError(t, closer(ctx)) }()
 			require.NotNil(t, g)
 			defer g.Close(ctx)
@@ -283,6 +286,7 @@ func RunGroupIntegrationTest(bctx context.Context, t *testing.T, group GroupInte
 
 			g, closer, err := group.Constructor(ctx, 3*time.Second)
 			require.NoError(t, err)
+			require.NoError(t, g.Start(ctx))
 			defer func() { require.NoError(t, closer(ctx)) }()
 			require.NotNil(t, g)
 			defer g.Close(ctx)
@@ -336,6 +340,7 @@ func RunGroupIntegrationTest(bctx context.Context, t *testing.T, group GroupInte
 			defer cancel()
 
 			g, closer, err := group.Constructor(ctx, 0)
+			require.NoError(t, g.Start(ctx))
 			defer func() { require.NoError(t, closer(ctx)) }()
 			require.NoError(t, err)
 			require.NotNil(t, g)

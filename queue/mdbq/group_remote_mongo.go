@@ -27,6 +27,7 @@ type remoteMongoQueueGroup struct {
 	dbOpts   MongoDBOptions
 	queues   map[string]amboy.Queue
 	ttlMap   map[string]time.Time
+	started  bool // reflects background prune/create threads active
 }
 
 // MongoDBQueueGroupOptions describe options passed to NewRemoteQueueGroup.
@@ -134,59 +135,73 @@ func NewMongoDBQueueGroup(ctx context.Context, opts MongoDBQueueGroupOptions, cl
 		return nil, errors.New("no mongodb uri specified")
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
 	g := &remoteMongoQueueGroup{
-		canceler: cancel,
-		client:   client,
-		dbOpts:   mdbopts,
-		opts:     opts,
-		queues:   map[string]amboy.Queue{},
-		ttlMap:   map[string]time.Time{},
-	}
-
-	if opts.PruneFrequency > 0 && opts.TTL > 0 {
-		if err := g.Prune(ctx); err != nil {
-			return nil, errors.Wrap(err, "problem pruning queue")
-		}
-	}
-
-	if opts.PruneFrequency > 0 && opts.TTL > 0 {
-		go func() {
-			defer recovery.LogStackTraceAndContinue("panic in remote queue group ticker")
-			ticker := time.NewTicker(opts.PruneFrequency)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-ticker.C:
-					grip.Error(message.WrapError(g.Prune(ctx), "problem pruning remote queue group database"))
-				}
-			}
-		}()
-	}
-
-	if opts.BackgroundCreateFrequency > 0 {
-		go func() {
-			defer recovery.LogStackTraceAndContinue("panic in remote queue group ticker")
-			ticker := time.NewTicker(opts.PruneFrequency)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-ticker.C:
-					grip.Error(message.WrapError(g.startQueues(ctx), "problem starting queues"))
-				}
-			}
-		}()
-	}
-
-	if err := g.startQueues(ctx); err != nil {
-		return nil, errors.WithStack(err)
+		client: client,
+		dbOpts: mdbopts,
+		opts:   opts,
+		queues: map[string]amboy.Queue{},
+		ttlMap: map[string]time.Time{},
 	}
 
 	return g, nil
+}
+func (g *remoteMongoQueueGroup) Start(ctx context.Context) error {
+	err := func() error {
+		g.mu.Lock()
+		defer g.mu.Unlock()
+
+		if g.started {
+			return nil
+		}
+
+		if g.opts.PruneFrequency > 0 && g.opts.TTL > 0 {
+			if err := g.Prune(ctx); err != nil {
+				return errors.Wrap(err, "problem pruning queue")
+			}
+		}
+
+		if g.opts.PruneFrequency > 0 && g.opts.TTL > 0 {
+			go func() {
+				defer recovery.LogStackTraceAndContinue("panic in remote queue group ticker")
+				ticker := time.NewTicker(g.opts.PruneFrequency)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-ticker.C:
+						grip.Error(message.WrapError(g.Prune(ctx), "problem pruning remote queue group database"))
+					}
+				}
+			}()
+		}
+
+		if g.opts.BackgroundCreateFrequency > 0 {
+			go func() {
+				defer recovery.LogStackTraceAndContinue("panic in remote queue group ticker")
+				ticker := time.NewTicker(g.opts.PruneFrequency)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-ticker.C:
+						grip.Error(message.WrapError(g.startQueues(ctx), "problem starting queues"))
+					}
+				}
+			}()
+		}
+		return nil
+	}()
+
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := g.startQueues(ctx); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
 }
 
 func (g *remoteMongoQueueGroup) startQueues(ctx context.Context) error {
@@ -432,7 +447,9 @@ outer:
 func (g *remoteMongoQueueGroup) Close(ctx context.Context) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	g.canceler()
+	if g.canceler != nil {
+		g.canceler()
+	}
 	waitCh := make(chan struct{})
 	wg := &sync.WaitGroup{}
 	go func() {

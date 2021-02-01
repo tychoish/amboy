@@ -22,6 +22,7 @@ type sqlGroup struct {
 	queueOpts Options
 	cache     queue.GroupCache
 	canceler  context.CancelFunc
+	started   bool // reflects background prune/create threads active
 }
 
 // GroupOptions controls the behavior of the amboy.QueueGroup
@@ -118,12 +119,19 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 		}
 	}
 
-	ctx, group.canceler = context.WithCancel(ctx)
+	return group, nil
+}
 
-	if gopts.PruneFrequency > 0 && gopts.TTL > 0 {
+func (g *sqlGroup) Start(ctx context.Context) error {
+	if g.started {
+		return errors.WithStack(g.startQueues(ctx))
+	}
+	ctx, g.canceler = context.WithCancel(ctx)
+
+	if g.opts.PruneFrequency > 0 && g.opts.TTL > 0 {
 		go func() {
 			defer recovery.LogStackTraceAndContinue("panic in remote queue group ticker")
-			ticker := time.NewTicker(gopts.PruneFrequency)
+			ticker := time.NewTicker(g.opts.PruneFrequency)
 			defer ticker.Stop()
 			errCount := 0
 			for {
@@ -131,25 +139,25 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					err := group.Prune(ctx)
+					err := g.Prune(ctx)
 					if err != nil {
 						errCount++
 					} else {
 						errCount = 0
 					}
 
-					grip.LogWhen(errCount > gopts.BackgroundOperationErrorCountThreshold,
-						gopts.BackgroundOperationErrorLogLevel,
+					grip.LogWhen(errCount > g.opts.BackgroundOperationErrorCountThreshold,
+						g.opts.BackgroundOperationErrorLogLevel,
 						message.WrapError(err, "problem pruning remote queues"))
 				}
 			}
 		}()
 	}
 
-	if gopts.BackgroundCreateFrequency > 0 {
+	if g.opts.BackgroundCreateFrequency > 0 {
 		go func() {
 			defer recovery.LogStackTraceAndContinue("panic in remote queue group ticker")
-			ticker := time.NewTicker(gopts.BackgroundCreateFrequency)
+			ticker := time.NewTicker(g.opts.BackgroundCreateFrequency)
 			errCount := 0
 			defer ticker.Stop()
 			for {
@@ -157,26 +165,27 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					err := group.startQueues(ctx)
+					err := g.startQueues(ctx)
 					if err != nil {
 						errCount++
 					} else {
 						errCount = 0
 					}
 
-					grip.LogWhen(errCount > gopts.BackgroundOperationErrorCountThreshold,
-						gopts.BackgroundOperationErrorLogLevel,
+					grip.LogWhen(errCount > g.opts.BackgroundOperationErrorCountThreshold,
+						g.opts.BackgroundOperationErrorLogLevel,
 						message.WrapError(err, "problem starting external queues"))
 				}
 			}
 		}()
 	}
 
-	if err := group.startQueues(ctx); err != nil {
-		return nil, errors.WithStack(err)
-	}
+	g.started = true
 
-	return group, nil
+	if err := g.startQueues(ctx); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
 }
 
 func (g *sqlGroup) startQueues(ctx context.Context) error {
