@@ -10,6 +10,8 @@ import (
 	"github.com/cdr/amboy/job"
 	"github.com/cdr/amboy/pool"
 	"github.com/cdr/amboy/queue/testutil"
+	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -78,7 +80,7 @@ func (s *RemoteUnorderedSuite) SetupTest() {
 	s.driver = s.driverConstructor()
 	s.canceler = canceler
 	s.NoError(s.driver.Open(ctx))
-	s.queue = newRemoteUnordered(2).(*remoteUnordered)
+	s.queue = newRemoteUnordered(2, logging.MakeGrip(grip.GetSender())).(*remoteUnordered)
 }
 
 func (s *RemoteUnorderedSuite) TearDownTest() {
@@ -155,7 +157,8 @@ func (s *RemoteUnorderedSuite) TestInternalRunnerCanBeChangedBeforeStartingTheQu
 	s.NoError(s.queue.SetDriver(s.driver))
 
 	originalRunner := s.queue.Runner()
-	newRunner := pool.NewLocalWorkers(3, s.queue)
+
+	newRunner := pool.NewLocalWorkers(&pool.WorkerOptions{NumWorkers: 3, Queue: s.queue})
 	s.NotEqual(originalRunner, newRunner)
 
 	s.NoError(s.queue.SetRunner(newRunner))
@@ -173,7 +176,7 @@ func (s *RemoteUnorderedSuite) TestInternalRunnerCannotBeChangedAfterStartingAQu
 	s.NoError(s.queue.Start(ctx))
 	s.True(s.queue.Info().Started)
 
-	newRunner := pool.NewLocalWorkers(2, s.queue)
+	newRunner := pool.NewLocalWorkers(&pool.WorkerOptions{NumWorkers: 2, Queue: s.queue})
 	s.Error(s.queue.SetRunner(newRunner))
 	s.NotEqual(runner, newRunner)
 }

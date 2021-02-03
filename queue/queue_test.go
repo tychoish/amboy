@@ -22,7 +22,7 @@ func DefaultQueueTestCases() []testutil.QueueTestCase {
 			MinSize:                 2,
 			MaxSize:                 16,
 			Constructor: func(ctx context.Context, _ string, size int) (amboy.Queue, testutil.TestCloser, error) {
-				return NewAdaptiveOrderedLocalQueue(size, defaultLocalQueueCapcity), func(ctx context.Context) error { return nil }, nil
+				return NewAdaptiveOrderedLocalQueue(&FixedSizeQueueOptions{Workers: size, Capacity: defaultLocalQueueCapcity}), func(ctx context.Context) error { return nil }, nil
 			},
 		},
 		{
@@ -38,7 +38,7 @@ func DefaultQueueTestCases() []testutil.QueueTestCase {
 		{
 			Name: "Priority",
 			Constructor: func(ctx context.Context, _ string, size int) (amboy.Queue, testutil.TestCloser, error) {
-				return NewLocalPriorityQueue(size, defaultLocalQueueCapcity), func(ctx context.Context) error { return nil }, nil
+				return NewLocalPriorityQueue(&FixedSizeQueueOptions{Workers: size, Capacity: defaultLocalQueueCapcity}), func(ctx context.Context) error { return nil }, nil
 			},
 		},
 		{
@@ -46,14 +46,14 @@ func DefaultQueueTestCases() []testutil.QueueTestCase {
 			WaitUntilSupported:      true,
 			DispatchBeforeSupported: true,
 			Constructor: func(ctx context.Context, _ string, size int) (amboy.Queue, testutil.TestCloser, error) {
-				return NewLocalLimitedSize(size, 1024*size), func(ctx context.Context) error { return nil }, nil
+				return NewLocalLimitedSize(&FixedSizeQueueOptions{Workers: size, Capacity: 1024 * size}), func(ctx context.Context) error { return nil }, nil
 			},
 		},
 		{
 			Name:         "Shuffled",
 			SingleWorker: true,
 			Constructor: func(ctx context.Context, _ string, size int) (amboy.Queue, testutil.TestCloser, error) {
-				return NewShuffledLocal(size, defaultLocalQueueCapcity), func(ctx context.Context) error { return nil }, nil
+				return NewShuffledLocal(&FixedSizeQueueOptions{Workers: size, Capacity: defaultLocalQueueCapcity}), func(ctx context.Context) error { return nil }, nil
 			},
 		},
 	}

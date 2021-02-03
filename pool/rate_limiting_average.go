@@ -22,14 +22,14 @@ import (
 //
 // Returns an error if the size or target numbers are less than one
 // and if the period is less than a millisecond.
-func NewMovingAverageRateLimitedWorkers(size, targetNum int, period time.Duration, q amboy.Queue) (amboy.AbortableRunner, error) {
+func NewMovingAverageRateLimitedWorkers(targetNum int, period time.Duration, opts *WorkerOptions) (amboy.AbortableRunner, error) {
 	errs := []string{}
 
 	if targetNum <= 0 {
 		errs = append(errs, "cannot specify a target number of tasks less than 1")
 	}
 
-	if size <= 0 {
+	if opts.NumWorkers <= 0 {
 		errs = append(errs, "cannot specify a pool size less than 1")
 	}
 
@@ -37,7 +37,7 @@ func NewMovingAverageRateLimitedWorkers(size, targetNum int, period time.Duratio
 		errs = append(errs, "cannot specify a scheduling period interval less than a millisecond.")
 	}
 
-	if q == nil {
+	if opts.Queue == nil {
 		errs = append(errs, "cannot specify a nil queue")
 	}
 
@@ -45,12 +45,14 @@ func NewMovingAverageRateLimitedWorkers(size, targetNum int, period time.Duratio
 		return nil, errors.New(strings.Join(errs, "; "))
 	}
 
+	opts.setDefaults()
 	p := &ewmaRateLimiting{
 		period: period,
 		target: targetNum,
-		size:   size,
-		queue:  q,
+		size:   opts.NumWorkers,
+		queue:  opts.Queue,
 		ewma:   ewma.NewMovingAverage(period.Minutes()),
+		log:    opts.Logger,
 		jobs:   make(map[string]context.CancelFunc),
 	}
 
@@ -59,6 +61,7 @@ func NewMovingAverageRateLimitedWorkers(size, targetNum int, period time.Duratio
 
 type ewmaRateLimiting struct {
 	period   time.Duration
+	log      grip.Journaler
 	target   int
 	ewma     ewma.MovingAverage
 	size     int
@@ -154,7 +157,7 @@ func (p *ewmaRateLimiting) worker(bctx context.Context) {
 
 	defer p.wg.Done()
 	defer func() {
-		err = recovery.HandlePanicWithError(recover(), nil, "worker process encountered error")
+		err = recovery.SendMessageWithPanicError(recover(), nil, p.log, "worker process encountered error")
 		if err != nil {
 			if job != nil {
 				job.AddError(err)
@@ -211,7 +214,7 @@ func (p *ewmaRateLimiting) runJob(ctx context.Context, j amboy.Job) time.Duratio
 		delete(p.jobs, j.ID())
 	}()
 
-	executeJob(ctx, "rate-limited-average", j, p.queue)
+	executeJob(ctx, p.log, "rate-limited-average", j, p.queue)
 	ti.End = time.Now()
 
 	return ti.Duration()
@@ -244,7 +247,7 @@ func (p *ewmaRateLimiting) Close(ctx context.Context) {
 
 	p.canceler()
 	p.canceler = nil
-	grip.Debug("pool's context canceled, waiting for running jobs to complete")
+	p.log.Debug("pool's context canceled, waiting for running jobs to complete")
 
 	// because of the timer+2 contexts in the worker
 	// implementation, we can end up returning earlier and because
@@ -254,7 +257,7 @@ func (p *ewmaRateLimiting) Close(ctx context.Context) {
 	defer func() { _ = recover() }()
 	wait := make(chan struct{})
 	go func() {
-		defer recovery.LogStackTraceAndContinue("waiting for close")
+		defer recovery.SendStackTraceAndContinue(p.log, "waiting for close")
 		defer close(wait)
 		p.wg.Wait()
 	}()

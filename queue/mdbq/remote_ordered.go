@@ -29,11 +29,12 @@ type remoteSimpleOrdered struct {
 
 // newSimpleRemoteOrdered returns a queue with a configured local
 // runner with the specified number of workers.
-func newSimpleRemoteOrdered(size int) remoteQueue {
+func newSimpleRemoteOrdered(size int, logger grip.Journaler) remoteQueue {
 	q := &remoteSimpleOrdered{remoteBase: newRemoteBase()}
-	q.dispatcher = queue.NewDispatcher(q)
-	grip.Error(q.SetRunner(pool.NewLocalWorkers(size, q)))
-	grip.Infof("creating new remote job queue with %d workers", size)
+	q.log = logger
+	q.dispatcher = queue.NewDispatcher(q, q.log)
+	q.log.Error(q.SetRunner(pool.NewLocalWorkers(&pool.WorkerOptions{NumWorkers: size, Queue: q, Logger: logger})))
+	q.log.Infof("creating new remote job queue with %d workers", size)
 
 	return q
 }
@@ -71,7 +72,7 @@ func (q *remoteSimpleOrdered) Next(ctx context.Context) (amboy.Job, error) {
 			id := job.ID()
 			switch dep.State() {
 			case dependency.Ready:
-				grip.Debugf("returning job %s from remote source, duration = %s",
+				q.log.Debugf("returning job %s from remote source, duration = %s",
 					id, time.Since(start))
 				return job, nil
 			case dependency.Passed:
@@ -79,7 +80,7 @@ func (q *remoteSimpleOrdered) Next(ctx context.Context) (amboy.Job, error) {
 				q.addBlocked(job.ID())
 				continue
 			case dependency.Unresolved:
-				grip.Warning(message.MakeFieldsMessage("detected a dependency error",
+				q.log.Warning(message.MakeFieldsMessage("detected a dependency error",
 					message.Fields{
 						"job":   id,
 						"edges": dep.Edges(),
@@ -90,7 +91,7 @@ func (q *remoteSimpleOrdered) Next(ctx context.Context) (amboy.Job, error) {
 				continue
 			case dependency.Blocked:
 				edges := dep.Edges()
-				grip.Debug(message.Fields{
+				q.log.Debug(message.Fields{
 					"job":       id,
 					"edges":     edges,
 					"dep":       dep.Type(),
@@ -119,7 +120,7 @@ func (q *remoteSimpleOrdered) Next(ctx context.Context) (amboy.Job, error) {
 				continue
 			default:
 				q.dispatcher.Release(ctx, job)
-				grip.Warning(message.MakeFieldsMessage("detected invalid dependency",
+				q.log.Warning(message.MakeFieldsMessage("detected invalid dependency",
 					message.Fields{
 						"job":   id,
 						"edges": dep.Edges(),

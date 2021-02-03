@@ -20,6 +20,7 @@ type sqlGroup struct {
 	db        *sqlx.DB
 	opts      GroupOptions
 	queueOpts Options
+	log       grip.Journaler
 	cache     queue.GroupCache
 	canceler  context.CancelFunc
 	started   bool // reflects background prune/create threads active
@@ -110,6 +111,7 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 		queueOpts: opts,
 		db:        db,
 		opts:      gopts,
+		log:       opts.Logger,
 		cache:     queue.NewGroupCache(gopts.TTL),
 	}
 
@@ -146,7 +148,7 @@ func (g *sqlGroup) Start(ctx context.Context) error {
 						errCount = 0
 					}
 
-					grip.LogWhen(errCount > g.opts.BackgroundOperationErrorCountThreshold,
+					g.log.LogWhen(errCount > g.opts.BackgroundOperationErrorCountThreshold,
 						g.opts.BackgroundOperationErrorLogLevel,
 						message.WrapError(err, "problem pruning remote queues"))
 				}
@@ -172,7 +174,7 @@ func (g *sqlGroup) Start(ctx context.Context) error {
 						errCount = 0
 					}
 
-					grip.LogWhen(errCount > g.opts.BackgroundOperationErrorCountThreshold,
+					g.log.LogWhen(errCount > g.opts.BackgroundOperationErrorCountThreshold,
 						g.opts.BackgroundOperationErrorLogLevel,
 						message.WrapError(err, "problem starting external queues"))
 				}

@@ -8,6 +8,8 @@ import (
 
 	"github.com/cdr/amboy/job"
 	"github.com/cdr/amboy/pool"
+	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -36,7 +38,7 @@ func (s *LimitedSizeQueueSuite) SetupSuite() {
 }
 
 func (s *LimitedSizeQueueSuite) SetupTest() {
-	s.queue = NewLocalLimitedSize(s.numWorkers, s.numCapacity).(*limitedSizeLocal)
+	s.queue = NewLocalLimitedSize(&FixedSizeQueueOptions{Workers: s.numWorkers, Capacity: s.numCapacity}).(*limitedSizeLocal)
 }
 
 func (s *LimitedSizeQueueSuite) TestBufferForPendingWorkEqualToCapacityForResults() {
@@ -86,7 +88,7 @@ func (s *LimitedSizeQueueSuite) TestCallingStartMultipleTimesDoesNotImpactState(
 }
 
 func (s *LimitedSizeQueueSuite) TestCannotSetRunnerAfterQueueIsOpened() {
-	secondRunner := pool.NewSingle()
+	secondRunner := pool.NewSingle(logging.MakeGrip(grip.GetSender()))
 	runner := s.queue.runner
 
 	s.False(s.queue.Info().Started)

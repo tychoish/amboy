@@ -9,6 +9,7 @@ import (
 	"github.com/cdr/amboy"
 	"github.com/cdr/grip"
 	"github.com/cdr/grip/level"
+	"github.com/cdr/grip/logging"
 	"github.com/cdr/grip/send"
 	"github.com/stretchr/testify/assert"
 )
@@ -35,14 +36,16 @@ func makeTestQueue(pool amboy.Runner) amboy.Queue {
 }
 
 func TestRunnerImplementations(t *testing.T) {
+	logger := logging.MakeGrip(grip.GetSender())
 	pools := map[string]func() amboy.Runner{
-		"Local":  func() amboy.Runner { return new(localWorkers) },
-		"Single": func() amboy.Runner { return new(single) },
-		"Noop":   func() amboy.Runner { return new(noopPool) },
+		"Local":  func() amboy.Runner { return &localWorkers{log: logger} },
+		"Single": func() amboy.Runner { return &single{log: logger} },
+		"Noop":   func() amboy.Runner { return &noopPool{} },
 		"RateLimitedSimple": func() amboy.Runner {
 			return &simpleRateLimited{
 				size:     1,
 				interval: time.Second,
+				log:      logger,
 			}
 		},
 		"RateLimitedAverage": func() amboy.Runner {
@@ -51,12 +54,14 @@ func TestRunnerImplementations(t *testing.T) {
 				period: time.Second,
 				target: 5,
 				ewma:   ewma.NewMovingAverage(),
+				log:    logger,
 			}
 		},
 		"Abortable": func() amboy.Runner {
 			return &abortablePool{
 				size: 1,
 				jobs: make(map[string]context.CancelFunc),
+				log:  logger,
 			}
 		},
 	}

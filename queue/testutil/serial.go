@@ -20,6 +20,7 @@ func RunSerializationTest(ctx context.Context, t *testing.T, test QueueTestCase)
 	if !test.DisableParallelTests {
 		t.Parallel()
 	}
+
 	t.Run("BasicRoundTrip", func(t *testing.T) {
 		queue, closer, err := test.Constructor(ctx, RandomID(), 2)
 		require.NoError(t, err)
@@ -89,6 +90,7 @@ func RunSerializationTest(ctx context.Context, t *testing.T, test QueueTestCase)
 		jrt, err := queue.Get(ctx, id)
 		require.NoError(t, err)
 		require.NotNil(t, j.Error(), jrt.Error())
+		require.NotNil(t, jrt.Error())
 		require.Equal(t, j.Error().Error(), jrt.Error().Error())
 	})
 	t.Run("WithDependencyEdges", func(t *testing.T) {

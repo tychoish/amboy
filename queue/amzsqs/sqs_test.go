@@ -13,6 +13,7 @@ import (
 	"github.com/cdr/amboy/pool"
 	"github.com/cdr/amboy/queue/testutil"
 	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -34,10 +35,12 @@ func (s *SQSFifoQueueSuite) SetupTest() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	logger := logging.MakeGrip(grip.GetSender())
+
 	var err error
-	s.queue, err = NewFifoQueue(randomString(4), 4)
+	s.queue, err = NewFifoQueue(&Options{Name: randomString(4), NumWorkers: 4, Logger: logger})
 	s.NoError(err)
-	r := pool.NewSingle()
+	r := pool.NewSingle(logger)
 	s.NoError(r.SetQueue(s.queue))
 	s.NoError(s.queue.SetRunner(r))
 	s.Equal(r, s.queue.Runner())
@@ -73,7 +76,8 @@ func (s *SQSFifoQueueSuite) TestGetMethodReturnsRequestedJob() {
 
 func (s *SQSFifoQueueSuite) TestCannotSetRunnerWhenQueueStarted() {
 	s.True(s.queue.Info().Started)
-	s.Error(s.queue.SetRunner(pool.NewSingle()))
+
+	s.Error(s.queue.SetRunner(pool.NewSingle(logging.MakeGrip(grip.GetSender()))))
 }
 
 func (s *SQSFifoQueueSuite) TestCompleteMethodChangesStatsAndResults() {
@@ -108,7 +112,7 @@ func TestSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 	assert := assert.New(t)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	q, err := NewFifoQueue(randomString(8), 4)
+	q, err := NewFifoQueue(&Options{Name: randomString(8), NumWorkers: 4, Logger: logging.MakeGrip(grip.GetSender())})
 	assert.NoError(err)
 	assert.NoError(q.Start(ctx))
 	wg := &sync.WaitGroup{}
@@ -154,11 +158,11 @@ func TestMultipleSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 
 	defer cancel()
 	name := randomString(8)
-	q, err := NewFifoQueue(name, 4)
+	q, err := NewFifoQueue(&Options{Name: name, NumWorkers: 4, Logger: logging.MakeGrip(grip.GetSender())})
 	assert.NoError(err)
 	assert.NoError(q.Start(ctx))
 
-	q2, err := NewFifoQueue(name, 4)
+	q2, err := NewFifoQueue(&Options{Name: name, NumWorkers: 4, Logger: logging.MakeGrip(grip.GetSender())})
 	assert.NoError(err)
 	assert.NoError(q2.Start(ctx))
 

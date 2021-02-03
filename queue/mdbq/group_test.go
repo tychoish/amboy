@@ -18,7 +18,7 @@ import (
 )
 
 func localConstructor(ctx context.Context) (amboy.Queue, error) {
-	return queue.NewLocalLimitedSize(2, 128), nil
+	return queue.NewLocalLimitedSize(&queue.FixedSizeQueueOptions{Workers: 2, Capacity: 128}), nil
 }
 
 func TestQueueGroup(t *testing.T) {

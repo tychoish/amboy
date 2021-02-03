@@ -11,6 +11,7 @@ import (
 	"github.com/cdr/amboy/job"
 	"github.com/cdr/amboy/registry"
 	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -69,7 +70,7 @@ func (s *SimpleRemoteOrderedSuite) SetupTest() {
 	s.Require().NoError(err)
 	s.canceler = canceler
 	s.NoError(s.driver.Open(ctx))
-	queue := newSimpleRemoteOrdered(2)
+	queue := newSimpleRemoteOrdered(2, logging.MakeGrip(grip.GetSender()))
 	s.NoError(queue.SetDriver(s.driver))
 	s.queue = queue
 }

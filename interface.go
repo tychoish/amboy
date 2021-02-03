@@ -237,7 +237,8 @@ type QueueGroup interface {
 	// Put a queue at the given index. Because most
 	// implementations create new queues in their Get operation,
 	// the Put operation for groups of queues that don't rely on
-	// the default queue construction in Get.
+	// the default queue construction in Get, and need not be used
+	// directly.
 	Put(context.Context, string, Queue) error
 
 	// Start all queues with pending work, and for QueueGroup

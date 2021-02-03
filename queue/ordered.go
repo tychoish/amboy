@@ -28,6 +28,7 @@ import (
 	"github.com/cdr/amboy/dependency"
 	"github.com/cdr/amboy/pool"
 	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/cdr/grip/message"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -49,6 +50,7 @@ type depGraphOrderedLocal struct {
 	id         string
 	channel    chan amboy.Job
 	dispatcher Dispatcher
+	log        grip.Journaler
 	tasks      struct {
 		m         map[string]amboy.Job
 		ids       map[string]int64
@@ -80,9 +82,9 @@ func NewLocalOrdered(workers int) amboy.Queue {
 	q.tasks.completed = make(map[string]bool)
 	q.tasks.graph = simple.NewDirectedGraph()
 	q.id = fmt.Sprintf("queue.local.ordered.graph.%s", uuid.New().String())
-	r := pool.NewLocalWorkers(workers, q)
-	q.runner = r
-	q.dispatcher = NewDispatcher(q)
+	q.runner = pool.NewLocalWorkers(&pool.WorkerOptions{Logger: q.log, NumWorkers: workers, Queue: q})
+	q.log = logging.MakeGrip(grip.GetSender())
+	q.dispatcher = NewDispatcher(q, q.log)
 	return q
 }
 
@@ -182,7 +184,7 @@ func (q *depGraphOrderedLocal) Next(ctx context.Context) (amboy.Job, error) {
 	case job := <-q.channel:
 		err := q.dispatcher.Dispatch(ctx, job)
 		if err != nil {
-			grip.Debug(message.WrapError(err,
+			q.log.Debug(message.WrapError(err,
 				message.Fields{
 					"job":    job.ID(),
 					"event":  "improperly dispatched job",
@@ -403,7 +405,7 @@ func (q *depGraphOrderedLocal) Complete(ctx context.Context, j amboy.Job) error 
 	if err := ctx.Err(); err != nil {
 		return errors.WithStack(err)
 	}
-	grip.Debugf("marking job (%s) as complete", j.ID())
+	q.log.Debugf("marking job (%s) as complete", j.ID())
 	if err := q.dispatcher.Complete(ctx, j); err != nil {
 		return errors.WithStack(err)
 	}

@@ -114,7 +114,7 @@ func (s *QueueService) OpenWithOptions(ctx context.Context, opts QueueServiceOpt
 	ctx, cancel := context.WithCancel(ctx)
 	s.closer = cancel
 
-	s.queue = queue.NewLocalLimitedSize(opts.NumWorkers, opts.QueueSize)
+	s.queue = queue.NewLocalLimitedSize(&queue.FixedSizeQueueOptions{Workers: 2, Capacity: 128})
 	grip.Alert(s.queue.Start(ctx))
 
 	return nil

@@ -13,7 +13,7 @@ func TestGroupCache(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	queue := NewLocalLimitedSize(2, 128)
+	queue := NewLocalLimitedSize(&FixedSizeQueueOptions{Workers: 2, Capacity: 128})
 	require.NotNil(t, queue)
 
 	for _, impl := range []struct {
@@ -98,7 +98,7 @@ func TestGroupCache(t *testing.T) {
 				{
 					name: "RemoveQueueWithWork",
 					test: func(t *testing.T, cache GroupCache) {
-						q := NewLocalLimitedSize(1, 128)
+						q := NewLocalLimitedSize(&FixedSizeQueueOptions{Workers: 1, Capacity: 128})
 						require.NoError(t, q.Start(ctx))
 						require.NoError(t, q.Put(ctx, testutil.NewSleepJob(time.Minute)))
 

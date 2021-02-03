@@ -11,6 +11,7 @@ import (
 	"github.com/cdr/amboy"
 	"github.com/cdr/amboy/pool"
 	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/cdr/grip/message"
 	"github.com/cdr/grip/recovery"
 	"github.com/pkg/errors"
@@ -23,6 +24,7 @@ type remoteMongoQueueGroup struct {
 	canceler context.CancelFunc
 	client   *mongo.Client
 	mu       sync.RWMutex
+	log      grip.Journaler
 	opts     MongoDBQueueGroupOptions
 	dbOpts   MongoDBOptions
 	queues   map[string]amboy.Queue
@@ -58,6 +60,10 @@ type MongoDBQueueGroupOptions struct {
 
 	// TTL is how old the oldest task in the queue must be for the collection to be pruned.
 	TTL time.Duration
+
+	// Logger allows callers to pass specific loggers to the
+	// group. If not specified the global logger is used.
+	Logger grip.Journaler
 }
 
 func (opts *MongoDBQueueGroupOptions) constructor(ctx context.Context, name string) remoteQueue {
@@ -71,14 +77,14 @@ func (opts *MongoDBQueueGroupOptions) constructor(ctx context.Context, name stri
 
 	var q remoteQueue
 	if opts.Ordered {
-		q = newSimpleRemoteOrdered(workers)
+		q = newSimpleRemoteOrdered(workers, opts.Logger)
 	} else {
-		q = newRemoteUnordered(workers)
+		q = newRemoteUnordered(workers, opts.Logger)
 	}
 
 	if opts.Abortable {
-		p := pool.NewAbortablePool(workers, q)
-		grip.Debug(q.SetRunner(p))
+		p := pool.NewAbortablePool(&pool.WorkerOptions{NumWorkers: workers, Queue: q, Logger: opts.Logger})
+		opts.Logger.Debug(q.SetRunner(p))
 	}
 
 	return q
@@ -86,27 +92,20 @@ func (opts *MongoDBQueueGroupOptions) constructor(ctx context.Context, name stri
 
 func (opts MongoDBQueueGroupOptions) validate() error {
 	catcher := grip.NewBasicCatcher()
-	if opts.TTL < 0 {
-		catcher.New("ttl must be greater than or equal to 0")
+	catcher.NewWhen(opts.Prefix == "", "prefix must be set")
+	catcher.NewWhen(opts.TTL < 0, "ttl must be greater than or equal to 0")
+	catcher.NewWhen(opts.TTL > 0 && opts.TTL < time.Second, "ttl cannot be less than 1 second, unless it is 0")
+	catcher.NewWhen(opts.PruneFrequency < 0, "prune frequency must be greater than or equal to 0")
+	catcher.NewWhen(opts.PruneFrequency > 0 && opts.TTL < time.Second, "prune frequency cannot be less than 1 second, unless it is 0")
+	catcher.NewWhen((opts.TTL == 0 && opts.PruneFrequency != 0) || (opts.TTL != 0 && opts.PruneFrequency == 0),
+		"ttl and prune frequency must both be 0 or both be not 0")
+	catcher.NewWhen(opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil,
+		"must specify either a default worker pool size or a WorkerPoolSize function")
+
+	if opts.Logger == nil {
+		opts.Logger = logging.MakeGrip(grip.GetSender())
 	}
-	if opts.TTL > 0 && opts.TTL < time.Second {
-		catcher.New("ttl cannot be less than 1 second, unless it is 0")
-	}
-	if opts.PruneFrequency < 0 {
-		catcher.New("prune frequency must be greater than or equal to 0")
-	}
-	if opts.PruneFrequency > 0 && opts.TTL < time.Second {
-		catcher.New("prune frequency cannot be less than 1 second, unless it is 0")
-	}
-	if (opts.TTL == 0 && opts.PruneFrequency != 0) || (opts.TTL != 0 && opts.PruneFrequency == 0) {
-		catcher.New("ttl and prune frequency must both be 0 or both be not 0")
-	}
-	if opts.Prefix == "" {
-		catcher.New("prefix must be set")
-	}
-	if opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil {
-		catcher.New("must specify either a default worker pool size or a WorkerPoolSize function")
-	}
+
 	return catcher.Resolve()
 }
 
@@ -139,6 +138,7 @@ func NewMongoDBQueueGroup(ctx context.Context, opts MongoDBQueueGroupOptions, cl
 		client: client,
 		dbOpts: mdbopts,
 		opts:   opts,
+		log:    opts.Logger,
 		queues: map[string]amboy.Queue{},
 		ttlMap: map[string]time.Time{},
 	}
@@ -170,7 +170,7 @@ func (g *remoteMongoQueueGroup) Start(ctx context.Context) error {
 					case <-ctx.Done():
 						return
 					case <-ticker.C:
-						grip.Error(message.WrapError(g.Prune(ctx), "problem pruning remote queue group database"))
+						g.log.Error(message.WrapError(g.Prune(ctx), "problem pruning remote queue group database"))
 					}
 				}
 			}()
@@ -186,7 +186,7 @@ func (g *remoteMongoQueueGroup) Start(ctx context.Context) error {
 					case <-ctx.Done():
 						return
 					case <-ticker.C:
-						grip.Error(message.WrapError(g.startQueues(ctx), "problem starting queues"))
+						g.log.Error(message.WrapError(g.startQueues(ctx), "problem starting queues"))
 					}
 				}
 			}()

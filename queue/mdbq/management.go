@@ -17,6 +17,7 @@ import (
 type dbQueueManager struct {
 	client     *mongo.Client
 	collection *mongo.Collection
+	log        grip.Journaler
 	opts       DBQueueManagerOptions
 }
 
@@ -48,6 +49,7 @@ func (o *DBQueueManagerOptions) Validate() error {
 	catcher.NewWhen(o.SingleGroup && o.ByGroups, "cannot specify conflicting group options")
 	catcher.NewWhen(o.Name == "", "must specify queue name")
 	catcher.Wrap(o.Options.Validate(), "invalid mongo options")
+
 	return catcher.Resolve()
 }
 
@@ -95,6 +97,7 @@ func MakeDBQueueManager(ctx context.Context, opts DBQueueManagerOptions, client 
 	db := &dbQueueManager{
 		opts:       opts,
 		client:     client,
+		log:        opts.Options.logger,
 		collection: client.Database(opts.Options.DB).Collection(opts.collName()),
 	}
 
@@ -614,7 +617,7 @@ func (db *dbQueueManager) completeJobs(ctx context.Context, query bson.M, f mana
 	}
 
 	res, err := db.collection.UpdateMany(ctx, query, db.getUpdateStatement())
-	grip.Info(message.Fields{
+	db.log.Info(message.Fields{
 		"op":         "mark-jobs-complete",
 		"collection": db.collection.Name(),
 		"filter":     f,

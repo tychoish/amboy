@@ -17,6 +17,7 @@ import (
 	"github.com/cdr/amboy/queue"
 	"github.com/cdr/amboy/registry"
 	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/cdr/grip/message"
 	"github.com/cdr/grip/recovery"
 	"github.com/google/uuid"
@@ -33,6 +34,7 @@ type sqlQueue struct {
 	mutex      sync.RWMutex
 	runner     amboy.Runner
 	dispatcher queue.Dispatcher
+	log        grip.Journaler
 }
 
 // Options describe the
@@ -49,6 +51,7 @@ type Options struct {
 	// LockTimeout overrides the default job lock timeout if set.
 	WaitInterval time.Duration
 	LockTimeout  time.Duration
+	Logger       grip.Journaler
 }
 
 // Validate ensures that all options are reasonable, and will override
@@ -72,6 +75,10 @@ func (opts *Options) Validate() error {
 
 	if opts.SchemaName == "" {
 		opts.SchemaName = "amboy"
+	}
+
+	if opts.Logger == nil {
+		opts.Logger = logging.MakeGrip(grip.GetSender())
 	}
 
 	return nil
@@ -130,9 +137,14 @@ func NewQueue(ctx context.Context, db *sqlx.DB, opts Options) (amboy.Queue, erro
 		opts: opts,
 		db:   db,
 		id:   fmt.Sprintf("%s.%s", opts.Name, uuid.New().String()),
+		log:  opts.Logger,
 	}
 
-	if err := q.SetRunner(pool.NewLocalWorkers(opts.PoolSize, q)); err != nil {
+	if err := q.SetRunner(pool.NewLocalWorkers(&pool.WorkerOptions{
+		Logger:     q.log,
+		NumWorkers: opts.PoolSize,
+		Queue:      q,
+	})); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
@@ -142,7 +154,7 @@ func NewQueue(ctx context.Context, db *sqlx.DB, opts Options) (amboy.Queue, erro
 		}
 	}
 
-	q.dispatcher = queue.NewDispatcher(q)
+	q.dispatcher = queue.NewDispatcher(q, q.log)
 
 	return q, nil
 }
@@ -165,6 +177,7 @@ func (q *sqlQueue) Start(ctx context.Context) error {
 	if err := q.runner.Start(ctx); err != nil {
 		return errors.Wrap(err, "problem starting runner in remote queue")
 	}
+
 	q.started = true
 
 	return nil
@@ -201,7 +214,7 @@ func (q *sqlQueue) prepareForDB(j *registry.JobInterchange) error {
 
 	if j.Priority > math.MaxInt32 {
 		j.Priority = math.MaxInt32
-		grip.Warning(message.Fields{
+		q.log.Warning(message.Fields{
 			"job_id":   j.Name,
 			"priority": j.Priority,
 			"mesage":   "priority is over maxint32",
@@ -211,7 +224,7 @@ func (q *sqlQueue) prepareForDB(j *registry.JobInterchange) error {
 
 	if j.Status.ErrorCount > math.MaxInt32 {
 		j.Status.ErrorCount = math.MaxInt32
-		grip.Warning(message.Fields{
+		q.log.Warning(message.Fields{
 			"job_id":      j.Name,
 			"error_count": j.Status.ErrorCount,
 			"num_errors":  len(j.Status.Errors),
@@ -328,7 +341,7 @@ func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.
 	job, err := payload.JobInterchange.Resolve(json.Unmarshal)
 	if err != nil {
 		if registry.IsVersionResolutionError(err) {
-			grip.Warning(message.WrapError(q.tryDelete(ctx, id), message.Fields{
+			q.log.Warning(message.WrapError(q.tryDelete(ctx, id), message.Fields{
 				"queue_id":  q.id,
 				"job_id":    id,
 				"operation": "delete stale version",
@@ -427,7 +440,7 @@ RETRY:
 		case <-timer.C:
 			if err := q.doUpdate(ctx, job); err != nil {
 				if time.Since(startAt) > time.Minute+q.opts.LockTimeout {
-					grip.Warning(message.WrapError(err, message.Fields{
+					q.log.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
 						"service":     "amboy.queue.pgq",
 						"job_type":    j.Type().Name,
@@ -437,7 +450,7 @@ RETRY:
 					}))
 					return errors.Wrapf(err, "encountered timeout marking %q complete ", id)
 				} else if count > 10 {
-					grip.Warning(message.WrapError(err, message.Fields{
+					q.log.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
 						"service":     "amboy.queue.pgq",
 						"job_type":    j.Type().Name,
@@ -447,7 +460,7 @@ RETRY:
 					}))
 					return errors.Wrapf(err, "failed to mark %q complete 10 times", id)
 				} else if isPgDuplicateError(err) {
-					grip.Warning(message.WrapError(err, message.Fields{
+					q.log.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
 						"service":     "amboy.queue.pgq",
 						"job_type":    j.Type().Name,
@@ -547,7 +560,7 @@ func (q *sqlQueue) Jobs(ctx context.Context) <-chan amboy.Job {
 
 		rows, err := q.db.QueryContext(ctx, q.processQueryString(getAllJobIDs))
 		if err != nil {
-			grip.Error(message.WrapError(err, message.Fields{
+			q.log.Error(message.WrapError(err, message.Fields{
 				"queue":    q.id,
 				"service":  "amboy.queue.pg",
 				"is_group": q.opts.UseGroups,
@@ -563,7 +576,7 @@ func (q *sqlQueue) Jobs(ctx context.Context) <-chan amboy.Job {
 			var id string
 
 			if err := rows.Scan(&id); err != nil {
-				grip.Debug(message.WrapError(err, message.Fields{
+				q.log.Debug(message.WrapError(err, message.Fields{
 					"queue":    q.id,
 					"service":  "amboy.queue.pg",
 					"is_group": q.opts.UseGroups,
@@ -581,7 +594,7 @@ func (q *sqlQueue) Jobs(ctx context.Context) <-chan amboy.Job {
 
 			job, err := q.Get(ctx, id)
 			if err != nil {
-				grip.Debug(message.WrapError(err, message.Fields{
+				q.log.Debug(message.WrapError(err, message.Fields{
 					"queue":    q.id,
 					"service":  "amboy.queue.pg",
 					"is_group": q.opts.UseGroups,
@@ -594,7 +607,7 @@ func (q *sqlQueue) Jobs(ctx context.Context) <-chan amboy.Job {
 
 			output <- job
 		}
-		grip.Debug(message.WrapError(rows.Close(), message.Fields{
+		q.log.Debug(message.WrapError(rows.Close(), message.Fields{
 			"queue":    q.id,
 			"service":  "amboy.queue.pg",
 			"is_group": q.opts.UseGroups,
@@ -640,7 +653,7 @@ func (q *sqlQueue) Next(ctx context.Context) (amboy.Job, error) {
 
 	startAt := time.Now()
 	defer func() {
-		grip.DebugWhen(time.Since(startAt) > time.Second,
+		q.log.DebugWhen(time.Since(startAt) > time.Second,
 			message.Fields{
 				"duration_secs": time.Since(startAt).Seconds(),
 				"service":       "amboy.queue.pgq",
@@ -677,7 +690,7 @@ func (q *sqlQueue) Next(ctx context.Context) (amboy.Job, error) {
 				LockExpires: time.Now().Add(-q.opts.LockTimeout),
 			})
 			if err != nil {
-				grip.Warning(message.WrapError(err, message.Fields{
+				q.log.Warning(message.WrapError(err, message.Fields{
 					"id":            q.id,
 					"service":       "amboy.queue.pgq",
 					"operation":     "retrieving next job",
@@ -697,7 +710,7 @@ func (q *sqlQueue) Next(ctx context.Context) (amboy.Job, error) {
 				}
 				var id string
 				if err = rows.Scan(&id); err != nil {
-					grip.Debug(message.WrapError(err, message.Fields{
+					q.log.Debug(message.WrapError(err, message.Fields{
 						"id":        q.id,
 						"service":   "amboy.queue.pgq",
 						"operation": "retrieving next job",
@@ -719,7 +732,7 @@ func (q *sqlQueue) Next(ctx context.Context) (amboy.Job, error) {
 				}
 
 				if job.TimeInfo().IsStale() {
-					grip.Notice(message.WrapError(q.tryDelete(ctx, job.ID()), message.Fields{
+					q.log.Notice(message.WrapError(q.tryDelete(ctx, job.ID()), message.Fields{
 						"id":        q.id,
 						"service":   "amboy.queue.pgq",
 						"operation": "removing stale job",
@@ -743,7 +756,7 @@ func (q *sqlQueue) Next(ctx context.Context) (amboy.Job, error) {
 				}
 
 				if err = q.dispatcher.Dispatch(ctx, job); err != nil {
-					grip.DebugWhen(amboy.IsDispatchable(job.Status(), q.opts.LockTimeout),
+					q.log.DebugWhen(amboy.IsDispatchable(job.Status(), q.opts.LockTimeout),
 						message.WrapError(err, message.Fields{
 							"id":            q.id,
 							"service":       "amboy.queue.pgq",
@@ -800,7 +813,7 @@ func convertStringsToInterfaces(in []string) []interface{} {
 func (q *sqlQueue) Stats(ctx context.Context) amboy.QueueStats {
 	stats := amboy.QueueStats{}
 
-	grip.Warning(message.WrapError(
+	q.log.Warning(message.WrapError(
 		q.db.GetContext(ctx, &stats.Total, q.processQueryString(countTotalJobs), q.opts.GroupName),
 		message.Fields{
 			"queue":    q.id,
@@ -809,7 +822,7 @@ func (q *sqlQueue) Stats(ctx context.Context) amboy.QueueStats {
 			"group":    q.opts.GroupName,
 			"message":  "problem getting total jobs",
 		}))
-	grip.Warning(message.WrapError(
+	q.log.Warning(message.WrapError(
 		q.db.GetContext(ctx, &stats.Pending, q.processQueryString(countPendingJobs), q.opts.GroupName),
 		message.Fields{
 			"queue":    q.id,
@@ -818,7 +831,7 @@ func (q *sqlQueue) Stats(ctx context.Context) amboy.QueueStats {
 			"group":    q.opts.GroupName,
 			"message":  "problem getting pending jobs",
 		}))
-	grip.Warning(message.WrapError(
+	q.log.Warning(message.WrapError(
 		q.db.GetContext(ctx, &stats.Running, q.processQueryString(countInProgJobs), q.opts.GroupName),
 		message.Fields{
 			"queue":    q.id,

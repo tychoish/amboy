@@ -17,7 +17,7 @@ func TestQueueSmoke(t *testing.T) {
 		MaxSize: 4,
 		Skip:    true,
 		Constructor: func(ctx context.Context, _ string, size int) (amboy.Queue, testutil.TestCloser, error) {
-			q, err := NewFifoQueue(randomString(4), size)
+			q, err := NewFifoQueue(&Options{Name: randomString(4), NumWorkers: size})
 			closer := func(ctx context.Context) error { return nil }
 			return q, closer, err
 		},

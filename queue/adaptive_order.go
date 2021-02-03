@@ -23,6 +23,7 @@ type adaptiveLocalOrdering struct {
 	id         string
 	dispatcher Dispatcher
 	runner     amboy.Runner
+	log        grip.Journaler
 }
 
 // NewAdaptiveOrderedLocalQueue provides a queue implementation that
@@ -35,11 +36,13 @@ type adaptiveLocalOrdering struct {
 //
 // Like other ordered in memory queues, this implementation does not
 // support scoped locks.
-func NewAdaptiveOrderedLocalQueue(workers, capacity int) amboy.Queue {
+func NewAdaptiveOrderedLocalQueue(opts *FixedSizeQueueOptions) amboy.Queue {
+	opts.setDefaults()
 	q := &adaptiveLocalOrdering{}
-	r := pool.NewLocalWorkers(workers, q)
-	q.dispatcher = NewDispatcher(q)
-	q.capacity = capacity
+	q.log = opts.Logger
+	r := pool.NewLocalWorkers(&pool.WorkerOptions{Logger: q.log, NumWorkers: opts.Workers, Queue: q})
+	q.dispatcher = NewDispatcher(q, q.log)
+	q.capacity = opts.Capacity
 	q.runner = r
 	q.id = fmt.Sprintf("queue.local.ordered.adaptive.%s", uuid.New().String())
 	return q
@@ -55,8 +58,8 @@ func (q *adaptiveLocalOrdering) Start(ctx context.Context) error {
 	q.starter.Do(func() {
 		q.operations = make(chan func(context.Context, *adaptiveOrderItems, *fixedStorage))
 		go q.reactor(ctx)
-		grip.Error(q.runner.Start(ctx))
-		grip.Info("started adaptive ordering job rector")
+		q.log.Error(q.runner.Start(ctx))
+		q.log.Info("started adaptive ordering job rector")
 	})
 
 	return nil

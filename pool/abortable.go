@@ -18,6 +18,7 @@ type abortablePool struct {
 	mu       sync.RWMutex
 	canceler context.CancelFunc
 	queue    amboy.Queue
+	log      grip.Journaler
 	jobs     map[string]context.CancelFunc
 }
 
@@ -25,19 +26,14 @@ type abortablePool struct {
 // that provides access to cancel running jobs. The cancellation
 // functions work by creating context cancelation function and then
 // canceling the contexts passed to the jobs specifically.
-func NewAbortablePool(size int, q amboy.Queue) amboy.AbortableRunner {
-	p := &abortablePool{
-		queue: q,
-		size:  size,
+func NewAbortablePool(opts *WorkerOptions) amboy.AbortableRunner {
+	opts.setDefaults()
+	return &abortablePool{
+		queue: opts.Queue,
+		size:  opts.NumWorkers,
+		log:   opts.Logger,
 		jobs:  map[string]context.CancelFunc{},
 	}
-
-	if p.size <= 0 {
-		grip.Infof("setting minimal pool size is 1, overriding setting of '%d'", p.size)
-		p.size = 1
-	}
-
-	return p
 }
 
 func (p *abortablePool) Started() bool {
@@ -80,7 +76,7 @@ func (p *abortablePool) Close(ctx context.Context) {
 
 	wait := make(chan struct{})
 	go func() {
-		defer recovery.LogStackTraceAndContinue("waiting for close")
+		defer recovery.SendStackTraceAndContinue(p.log, "waiting for close")
 		defer close(wait)
 		p.wg.Wait()
 	}()
@@ -109,7 +105,7 @@ func (p *abortablePool) Start(ctx context.Context) error {
 
 	for w := 1; w <= p.size; w++ {
 		go p.worker(workerCtx)
-		grip.Debugf("started worker %d of %d waiting for jobs", w, p.size)
+		p.log.Debugf("started worker %d of %d waiting for jobs", w, p.size)
 	}
 
 	return nil
@@ -130,7 +126,7 @@ func (p *abortablePool) worker(bctx context.Context) {
 	defer p.wg.Done()
 	defer func() {
 		// if we hit a panic we want to add an error to the job;
-		err = recovery.HandlePanicWithError(recover(), nil, "worker process encountered error")
+		err = recovery.SendMessageWithPanicError(recover(), nil, p.log, "worker process encountered error")
 		if err != nil {
 			if job != nil {
 				job.AddError(err)
@@ -186,7 +182,7 @@ func (p *abortablePool) runJob(ctx context.Context, job amboy.Job) {
 		delete(p.jobs, job.ID())
 	}()
 
-	executeJob(ctx, "abortable", job, p.queue)
+	executeJob(ctx, p.log, "abortable", job, p.queue)
 }
 
 func (p *abortablePool) IsRunning(id string) bool {

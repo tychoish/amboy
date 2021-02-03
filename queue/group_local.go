@@ -6,6 +6,7 @@ import (
 
 	"github.com/cdr/amboy"
 	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/cdr/grip/message"
 	"github.com/cdr/grip/recovery"
 	"github.com/pkg/errors"
@@ -16,12 +17,14 @@ type localQueueGroup struct {
 	canceler context.CancelFunc
 	opts     LocalQueueGroupOptions
 	cache    GroupCache
+	log      grip.Journaler
 }
 
 // LocalQueueGroupOptions describe options passed to NewLocalQueueGroup.
 type LocalQueueGroupOptions struct {
 	Constructor func(ctx context.Context) (amboy.Queue, error)
 	TTL         time.Duration
+	Logger      grip.Journaler
 }
 
 // NewLocalQueueGroup constructs a new local queue group. If ttl is 0, the queues will not be
@@ -39,6 +42,10 @@ func NewLocalQueueGroup(ctx context.Context, opts LocalQueueGroupOptions) (amboy
 	g := &localQueueGroup{
 		opts:  opts,
 		cache: NewGroupCache(opts.TTL),
+		log:   opts.Logger,
+	}
+	if g.log == nil {
+		g.log = logging.MakeGrip(grip.GetSender())
 	}
 	return g, nil
 }
@@ -62,7 +69,7 @@ func (g *localQueueGroup) Start(ctx context.Context) error {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					grip.Error(message.WrapError(g.Prune(ctx),
+					g.log.Error(message.WrapError(g.Prune(ctx),
 						message.Fields{
 							"group": "local queue group background pruning",
 							"ttl":   g.opts.TTL,

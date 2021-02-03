@@ -98,14 +98,14 @@ func (s *AbortablePoolSuite) TestImplementationCompliance() {
 	s.Implements((*amboy.Runner)(nil), s.pool)
 	s.Implements((*amboy.AbortableRunner)(nil), s.pool)
 
-	constructed := NewAbortablePool(2, s.queue)
+	constructed := NewAbortablePool(&WorkerOptions{NumWorkers: 2, Queue: s.queue})
 	s.NotNil(constructed)
 	s.Implements((*amboy.Runner)(nil), constructed)
 	s.Implements((*amboy.AbortableRunner)(nil), constructed)
 }
 
 func (s *AbortablePoolSuite) TestConstructorUnflappability() {
-	constructed := NewAbortablePool(-1, nil)
+	constructed := NewAbortablePool(&WorkerOptions{NumWorkers: -1, Queue: nil})
 	s.NotNil(constructed)
 }
 

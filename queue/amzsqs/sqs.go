@@ -19,6 +19,7 @@ import (
 	"github.com/cdr/amboy/queue"
 	"github.com/cdr/amboy/registry"
 	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/cdr/grip/message"
 	"github.com/cdr/grip/recovery"
 	"github.com/google/uuid"
@@ -32,7 +33,7 @@ func randomString(x int) string {
 	return hex.EncodeToString(b)
 }
 
-const region string = "us-east-1"
+const defaultRegion string = "us-east-1"
 
 type sqsFIFOQueue struct {
 	sqsClient  *sqs.SQS
@@ -46,32 +47,63 @@ type sqsFIFOQueue struct {
 		all       map[string]amboy.Job
 	}
 	runner amboy.Runner
+	log    grip.Journaler
 	mutex  sync.RWMutex
+}
+
+// Options holds the creation options. If region is not specified, it
+// defaults to "us-east-1" and if the journaler is not specified, the
+// global journal is used.
+type Options struct {
+	Name       string
+	Region     string
+	NumWorkers int
+	Logger     grip.Journaler
+}
+
+func (opts *Options) Validate() error {
+	if opts.Logger == nil {
+		opts.Logger = logging.MakeGrip(grip.GetSender())
+	}
+
+	if opts.Region == "" {
+		opts.Region = defaultRegion
+	}
+
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(opts.Name == "", "must specify a name")
+	catcher.NewWhen(opts.NumWorkers <= 0, "must specify > 1 workers")
+	return catcher.Resolve()
 }
 
 // NewFifoQueue constructs a AWS SQS backed Queue
 // implementation. This queue, generally is ephemeral: tasks are
 // removed from the queue, and therefore may not handle jobs across
 // restarts.
-func NewFifoQueue(queueName string, workers int) (amboy.Queue, error) {
+func NewFifoQueue(opts *Options) (amboy.Queue, error) {
+	if err := opts.Validate(); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	q := &sqsFIFOQueue{
 		sqsClient: sqs.New(session.Must(session.NewSession(&aws.Config{
-			Region: aws.String(region),
+			Region: aws.String(opts.Region),
 		}))),
 		id: fmt.Sprintf("queue.remote.sqs.fifo..%s", uuid.New().String()),
 	}
+
 	q.tasks.completed = make(map[string]bool)
 	q.tasks.all = make(map[string]amboy.Job)
-	q.runner = pool.NewLocalWorkers(workers, q)
-	q.dispatcher = queue.NewDispatcher(q)
+	q.runner = pool.NewLocalWorkers(&pool.WorkerOptions{NumWorkers: opts.NumWorkers, Queue: q, Logger: opts.Logger})
+	q.dispatcher = queue.NewDispatcher(q, opts.Logger)
 	result, err := q.sqsClient.CreateQueue(&sqs.CreateQueueInput{
-		QueueName: aws.String(fmt.Sprintf("%s.fifo", queueName)),
+		QueueName: aws.String(fmt.Sprintf("%s.fifo", opts.Name)),
 		Attributes: map[string]*string{
 			"FifoQueue": aws.String("true"),
 		},
 	})
 	if err != nil {
-		return nil, errors.Errorf("Error creating queue: %s", err)
+		return nil, errors.Wrapf(err, "creating queue: %s", opts.Name)
 	}
 	q.sqsURL = *result.QueueUrl
 	return q, nil
@@ -167,7 +199,7 @@ func (q *sqsFIFOQueue) Next(ctx context.Context) (amboy.Job, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	} else if len(messageOutput.Messages) == 0 {
-		grip.Debugf("No messages received in Next from %s", q.sqsURL)
+		q.log.Debugf("No messages received in Next from %s", q.sqsURL)
 		return nil, errors.New("no dispatchable jobs")
 	}
 	message := messageOutput.Messages[0]
@@ -236,7 +268,7 @@ func (q *sqsFIFOQueue) Complete(ctx context.Context, job amboy.Job) error {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 	if err := ctx.Err(); err != nil {
-		grip.Notice(message.Fields{
+		q.log.Notice(message.Fields{
 			"message":   "Did not complete job because context cancelled",
 			"id":        name,
 			"operation": "Complete",

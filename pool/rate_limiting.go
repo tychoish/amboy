@@ -28,10 +28,10 @@ import (
 //
 // The constructor returns an error if the size (number of workers) is
 // less than 1 or the interval is less than a millisecond.
-func NewSimpleRateLimitedWorkers(size int, sleepInterval time.Duration, q amboy.Queue) (amboy.Runner, error) {
+func NewSimpleRateLimitedWorkers(sleepInterval time.Duration, opts *WorkerOptions) (amboy.Runner, error) {
 	errs := []string{}
 
-	if size <= 0 {
+	if opts.NumWorkers < 1 {
 		errs = append(errs, "cannot specify a pool size less than 1")
 	}
 
@@ -39,7 +39,7 @@ func NewSimpleRateLimitedWorkers(size int, sleepInterval time.Duration, q amboy.
 		errs = append(errs, "cannot specify a sleep interval less than a millisecond.")
 	}
 
-	if q == nil {
+	if opts.Queue == nil {
 		errs = append(errs, "cannot specify a nil queue")
 	}
 
@@ -47,10 +47,12 @@ func NewSimpleRateLimitedWorkers(size int, sleepInterval time.Duration, q amboy.
 		return nil, errors.New(strings.Join(errs, "; "))
 	}
 
+	opts.setDefaults()
 	p := &simpleRateLimited{
-		size:     size,
+		size:     opts.NumWorkers,
 		interval: sleepInterval,
-		queue:    q,
+		queue:    opts.Queue,
+		log:      opts.Logger,
 	}
 
 	return p, nil
@@ -58,6 +60,7 @@ func NewSimpleRateLimitedWorkers(size int, sleepInterval time.Duration, q amboy.
 
 type simpleRateLimited struct {
 	size     int
+	log      grip.Journaler
 	interval time.Duration
 	queue    amboy.Queue
 	canceler context.CancelFunc
@@ -108,7 +111,7 @@ func (p *simpleRateLimited) worker(bctx context.Context) {
 	defer p.wg.Done()
 
 	defer func() {
-		err = recovery.HandlePanicWithError(recover(), nil, "worker process encountered error")
+		err = recovery.SendMessageWithPanicError(recover(), nil, p.log, "worker process encountered error")
 		if err != nil {
 			if job != nil {
 				job.AddError(err)
@@ -135,7 +138,7 @@ func (p *simpleRateLimited) worker(bctx context.Context) {
 				continue
 			}
 			ctx, cancel = context.WithCancel(bctx)
-			executeJob(ctx, "rate-limited-simple", job, p.queue)
+			executeJob(ctx, p.log, "rate-limited-simple", job, p.queue)
 
 			cancel()
 			timer.Reset(p.interval)
@@ -173,7 +176,7 @@ func (p *simpleRateLimited) Close(ctx context.Context) {
 
 	wait := make(chan struct{})
 	go func() {
-		defer recovery.LogStackTraceAndContinue("waiting for close")
+		defer recovery.SendStackTraceAndContinue(p.log, "waiting for close")
 		defer close(wait)
 		p.wg.Wait()
 	}()

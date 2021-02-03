@@ -9,6 +9,8 @@ import (
 
 	"github.com/cdr/amboy"
 	"github.com/cdr/amboy/job"
+	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -42,7 +44,7 @@ func TestLocalWorkersSuiteSizeOneHundred(t *testing.T) {
 }
 
 func (s *LocalWorkersSuite) SetupTest() {
-	s.pool = NewLocalWorkers(s.size, nil).(*localWorkers)
+	s.pool = NewLocalWorkers(&WorkerOptions{NumWorkers: s.size, Queue: nil}).(*localWorkers)
 	s.queue = NewQueueTester(s.pool)
 }
 
@@ -52,7 +54,7 @@ func (s *LocalWorkersSuite) TestPanicJobsDoNotPanicHarness() {
 	wg := &sync.WaitGroup{}
 
 	s.queue.toProcess = jobsChanWithPanicingJobs(ctx, s.size)
-	s.NotPanics(func() { worker(ctx, "test-local", s.queue, wg) })
+	s.NotPanics(func() { worker(ctx, logging.MakeGrip(grip.GetSender()), "test-local", s.queue, wg) })
 }
 
 func (s *LocalWorkersSuite) TestConstructedInstanceImplementsInterface() {
@@ -148,7 +150,7 @@ func TestLocalWorkerPoolConstructorDoesNotAllowSizeValuesLessThanOne(t *testing.
 	var runner amboy.Runner
 
 	for _, size := range []int{-10, -1, 0} {
-		runner = NewLocalWorkers(size, nil)
+		runner = NewLocalWorkers(&WorkerOptions{NumWorkers: size, Queue: nil})
 		pool = runner.(*localWorkers)
 
 		assert.Equal(1, pool.size)

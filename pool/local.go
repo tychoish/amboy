@@ -14,24 +14,42 @@ import (
 
 	"github.com/cdr/amboy"
 	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
+	"github.com/cdr/grip/message"
 	"github.com/cdr/grip/recovery"
 )
+
+// WorkerOptions describes the arguments passed to the constructors of
+// worker pools. Queue must not be nil.
+type WorkerOptions struct {
+	Logger     grip.Journaler
+	Queue      amboy.Queue
+	NumWorkers int
+}
+
+func (opts *WorkerOptions) setDefaults() {
+	if opts.NumWorkers < 1 {
+		opts.NumWorkers = 1
+	}
+
+	if opts.Logger == nil {
+		opts.Logger = logging.MakeGrip(grip.GetSender())
+	}
+
+	opts.Logger.CriticalWhen(opts.Queue == nil, "cannot construct a pool without a queue")
+}
 
 // NewLocalWorkers is a constructor for pool of worker processes that
 // execute jobs from a queue locally, and takes arguments for
 // the number of worker processes and a amboy.Queue object.
-func NewLocalWorkers(numWorkers int, q amboy.Queue) amboy.Runner {
-	r := &localWorkers{
-		queue: q,
-		size:  numWorkers,
-	}
+func NewLocalWorkers(opts *WorkerOptions) amboy.Runner {
+	opts.setDefaults()
 
-	if r.size <= 0 {
-		grip.Infof("setting minimal pool size is 1, overriding setting of '%d'", r.size)
-		r.size = 1
+	return &localWorkers{
+		queue: opts.Queue,
+		log:   opts.Logger,
+		size:  opts.NumWorkers,
 	}
-
-	return r
 }
 
 // localWorkers is a very minimal implementation of a worker pool, and
@@ -42,6 +60,7 @@ type localWorkers struct {
 	wg       sync.WaitGroup
 	canceler context.CancelFunc
 	queue    amboy.Queue
+	log      grip.Journaler
 	mu       sync.RWMutex
 }
 
@@ -85,12 +104,19 @@ func (r *localWorkers) Start(ctx context.Context) error {
 	r.canceler = cancel
 
 	for w := 1; w <= r.size; w++ {
-		go worker(workerCtx, "local", r.queue, &r.wg)
-		grip.Debugf("started worker %d of %d waiting for jobs", w, r.size)
-	}
+		go worker(workerCtx, r.log, "local", r.queue, &r.wg)
 
+		r.log.Debug(message.Fields{
+			"worker_id": w,
+			"total":     r.size,
+		})
+	}
 	r.started = true
-	grip.Debugf("running %d workers", r.size)
+
+	r.log.Debug(message.Fields{
+		"message": "running workers",
+		"total":   r.size,
+	})
 
 	return nil
 }
@@ -108,7 +134,7 @@ func (r *localWorkers) Close(ctx context.Context) {
 
 	wait := make(chan struct{})
 	go func() {
-		defer recovery.LogStackTraceAndContinue("waiting for close")
+		defer recovery.SendStackTraceAndContinue(r.log, "waiting for close")
 		defer close(wait)
 		r.wg.Wait()
 	}()

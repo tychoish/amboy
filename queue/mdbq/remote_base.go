@@ -31,6 +31,7 @@ type remoteBase struct {
 	dispatched map[string]struct{}
 	runner     amboy.Runner
 	mutex      sync.RWMutex
+	log        grip.Journaler
 }
 
 func newRemoteBase() *remoteBase {
@@ -75,7 +76,7 @@ func (q *remoteBase) Get(ctx context.Context, name string) (amboy.Job, error) {
 
 	job, err := q.driver.Get(ctx, name)
 	if err != nil {
-		grip.Debug(message.WrapError(err, message.Fields{
+		q.log.Debug(message.WrapError(err, message.Fields{
 			"driver": q.driver.ID(),
 			"type":   q.driverType,
 			"name":   name,
@@ -87,7 +88,7 @@ func (q *remoteBase) Get(ctx context.Context, name string) (amboy.Job, error) {
 }
 
 func (q *remoteBase) jobServer(ctx context.Context) {
-	grip.Info("starting queue job server for remote queue")
+	q.log.Info("starting queue job server for remote queue")
 
 	for {
 		select {
@@ -163,7 +164,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) error {
 
 			if err = q.driver.Complete(ctx, j); err != nil {
 				if time.Since(startAt) > time.Minute+q.Info().LockTimeout {
-					grip.Warning(message.WrapError(err, message.Fields{
+					q.log.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
 						"job_type":    j.Type().Name,
 						"driver_type": q.driverType,
@@ -173,7 +174,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) error {
 					}))
 					return errors.Wrapf(err, "encountered timeout marking %q complete ", id)
 				} else if count > 10 {
-					grip.Warning(message.WrapError(err, message.Fields{
+					q.log.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
 						"driver_type": q.driverType,
 						"job_type":    j.Type().Name,
@@ -183,7 +184,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) error {
 					}))
 					return errors.Wrapf(err, "failed to mark %q complete 10 times", id)
 				} else if isMongoDupKey(err) {
-					grip.Warning(message.WrapError(err, message.Fields{
+					q.log.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
 						"driver_type": q.driverType,
 						"job_type":    j.Type().Name,

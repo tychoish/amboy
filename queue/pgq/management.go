@@ -16,6 +16,7 @@ import (
 type sqlManager struct {
 	opts ManagerOptions
 	db   *sqlx.DB
+	log  grip.Journaler
 }
 
 // ManagerOptions control the behavior of the Manager implementation,
@@ -37,7 +38,7 @@ func (o *ManagerOptions) Validate() error {
 // NewManager constructs a manager instance that interacts with the
 // job data.
 func NewManager(db *sqlx.DB, opts ManagerOptions) management.Manager {
-	return &sqlManager{db: db, opts: opts}
+	return &sqlManager{db: db, opts: opts, log: opts.Options.Logger}
 }
 
 func (m *sqlManager) processQueryString(query string) string {

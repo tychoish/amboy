@@ -5,6 +5,7 @@ import (
 
 	"github.com/cdr/amboy"
 	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -17,6 +18,7 @@ type MongoDBQueueCreationOptions struct {
 	Name    string
 	Ordered bool
 	MDB     MongoDBOptions
+	Logger  grip.Journaler
 	Client  *mongo.Client
 }
 
@@ -24,6 +26,11 @@ type MongoDBQueueCreationOptions struct {
 // instance. These queues allow workers running in multiple processes
 // to service shared workloads in multiple processes.
 func NewMongoDBQueue(ctx context.Context, opts MongoDBQueueCreationOptions) (amboy.Queue, error) {
+	if opts.Logger == nil {
+		opts.Logger = logging.MakeGrip(grip.GetSender())
+	}
+	opts.MDB.logger = opts.Logger
+
 	if err := opts.Validate(); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -75,9 +82,9 @@ func (opts *MongoDBQueueCreationOptions) build(ctx context.Context) (amboy.Queue
 
 	var q remoteQueue
 	if opts.Ordered {
-		q = newSimpleRemoteOrdered(opts.Size)
+		q = newSimpleRemoteOrdered(opts.Size, opts.Logger)
 	} else {
-		q = newRemoteUnordered(opts.Size)
+		q = newRemoteUnordered(opts.Size, opts.Logger)
 	}
 
 	if err = q.SetDriver(driver); err != nil {

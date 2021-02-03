@@ -6,6 +6,8 @@ import (
 
 	"github.com/cdr/amboy"
 	"github.com/cdr/amboy/pool"
+	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/google/uuid"
 )
 
@@ -35,7 +37,7 @@ func DefaultPoolTestCases() []PoolTestCase {
 			MinSize:   1,
 			MaxSize:   1,
 			SetPool: func(q amboy.Queue, _ int) error {
-				runner := pool.NewSingle()
+				runner := pool.NewSingle(logging.MakeGrip(grip.GetSender()))
 				if err := runner.SetQueue(q); err != nil {
 					return err
 				}
@@ -46,7 +48,14 @@ func DefaultPoolTestCases() []PoolTestCase {
 		{
 			Name:    "Abortable",
 			MinSize: 4,
-			SetPool: func(q amboy.Queue, size int) error { return q.SetRunner(pool.NewAbortablePool(size, q)) },
+			SetPool: func(q amboy.Queue, size int) error {
+				return q.SetRunner(pool.NewAbortablePool(&pool.WorkerOptions{
+					Logger:     logging.MakeGrip(grip.GetSender()),
+					NumWorkers: size,
+					Queue:      q,
+				}))
+
+			},
 		},
 		{
 			Name:         "RateLimitedSimple",
@@ -54,7 +63,12 @@ func DefaultPoolTestCases() []PoolTestCase {
 			MaxSize:      16,
 			RateLimiting: true,
 			SetPool: func(q amboy.Queue, size int) error {
-				runner, err := pool.NewSimpleRateLimitedWorkers(size, 10*time.Millisecond, q)
+				runner, err := pool.NewSimpleRateLimitedWorkers(10*time.Millisecond,
+					&pool.WorkerOptions{
+						Logger:     logging.MakeGrip(grip.GetSender()),
+						NumWorkers: size,
+						Queue:      q,
+					})
 				if err != nil {
 					return nil
 				}
@@ -70,7 +84,12 @@ func DefaultPoolTestCases() []PoolTestCase {
 			SkipMulti:    true,
 			SkipRemote:   true,
 			SetPool: func(q amboy.Queue, size int) error {
-				runner, err := pool.NewMovingAverageRateLimitedWorkers(size, size*100, 10*time.Millisecond, q)
+				runner, err := pool.NewMovingAverageRateLimitedWorkers(size*100, 10*time.Millisecond,
+					&pool.WorkerOptions{
+						Logger:     logging.MakeGrip(grip.GetSender()),
+						NumWorkers: size,
+						Queue:      q,
+					})
 				if err != nil {
 					return nil
 				}

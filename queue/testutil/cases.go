@@ -26,7 +26,7 @@ func init() {
 	grip.Error(grip.SetSender(send.MakeNative()))
 
 	lvl := grip.GetSender().Level()
-	lvl.Threshold = level.Error
+	lvl.Threshold = level.Alert
 	_ = grip.GetSender().SetLevel(lvl)
 
 	job.RegisterDefaultJobs()

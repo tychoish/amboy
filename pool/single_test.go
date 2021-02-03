@@ -8,6 +8,8 @@ import (
 
 	"github.com/cdr/amboy"
 	"github.com/cdr/amboy/job"
+	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -22,7 +24,7 @@ func TestSingleWorkerSuite(t *testing.T) {
 }
 
 func (s *SingleRunnerSuite) SetupTest() {
-	s.pool = NewSingle().(*single)
+	s.pool = NewSingle(logging.MakeGrip(grip.GetSender())).(*single)
 	s.queue = NewQueueTester(s.pool)
 }
 

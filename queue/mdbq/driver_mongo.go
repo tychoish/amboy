@@ -30,6 +30,7 @@ type mongoDriver struct {
 	instanceID string
 	mu         sync.RWMutex
 	canceler   context.CancelFunc
+	log        grip.Journaler
 	dispatcher queue.Dispatcher
 }
 
@@ -46,6 +47,7 @@ func newMongoDriver(name string, opts MongoDBOptions) (remoteQueueDriver, error)
 	return &mongoDriver{
 		name:       name,
 		opts:       opts,
+		log:        opts.logger,
 		instanceID: fmt.Sprintf("%s.%s.%s", name, host, uuid.New()),
 	}, nil
 }
@@ -144,7 +146,7 @@ func (d *mongoDriver) start(ctx context.Context, client *mongo.Client) error {
 	startAt := time.Now()
 	go func() {
 		<-dCtx.Done()
-		grip.Info(message.Fields{
+		d.log.Info(message.Fields{
 			"message":  "closing session for mongodb driver",
 			"id":       d.instanceID,
 			"uptime":   time.Since(startAt),
@@ -559,7 +561,7 @@ func (d *mongoDriver) Jobs(ctx context.Context) <-chan amboy.Job {
 
 		iter, err := d.getCollection().Find(ctx, q, options.Find().SetSort(bson.M{"status.mod_ts": -1}))
 		if err != nil {
-			grip.Warning(message.WrapError(err, message.Fields{
+			d.log.Warning(message.WrapError(err, message.Fields{
 				"id":        d.instanceID,
 				"service":   "amboy.queue.mdb",
 				"is_group":  d.opts.UseGroups,
@@ -573,7 +575,7 @@ func (d *mongoDriver) Jobs(ctx context.Context) <-chan amboy.Job {
 		for iter.Next(ctx) {
 			j := &registry.JobInterchange{}
 			if err = iter.Decode(j); err != nil {
-				grip.Warning(message.WrapError(err, message.Fields{
+				d.log.Warning(message.WrapError(err, message.Fields{
 					"id":        d.instanceID,
 					"service":   "amboy.queue.mdb",
 					"is_group":  d.opts.UseGroups,
@@ -589,7 +591,7 @@ func (d *mongoDriver) Jobs(ctx context.Context) <-chan amboy.Job {
 
 			job, err = j.Resolve(d.opts.Unmarshaler)
 			if err != nil {
-				grip.Warning(message.WrapError(err, message.Fields{
+				d.log.Warning(message.WrapError(err, message.Fields{
 					"id":        d.instanceID,
 					"service":   "amboy.queue.mdb",
 					"operation": "job iterator",
@@ -603,7 +605,7 @@ func (d *mongoDriver) Jobs(ctx context.Context) <-chan amboy.Job {
 			output <- job
 		}
 
-		grip.Error(message.WrapError(iter.Err(), message.Fields{
+		d.log.Error(message.WrapError(iter.Err(), message.Fields{
 			"id":        d.instanceID,
 			"service":   "amboy.queue.mdb",
 			"is_group":  d.opts.UseGroups,
@@ -662,7 +664,7 @@ func (d *mongoDriver) Next(ctx context.Context) amboy.Job {
 
 	startAt := time.Now()
 	defer func() {
-		grip.WarningWhen(
+		d.log.WarningWhen(
 			time.Since(startAt) > time.Second,
 			message.Fields{
 				"duration_secs": time.Since(startAt).Seconds(),
@@ -698,7 +700,7 @@ RETRY:
 			qd = d.getNextQuery()
 			iter, err := d.getCollection().Find(ctx, qd, opts)
 			if err != nil {
-				grip.Debug(message.WrapError(err, message.Fields{
+				d.log.Debug(message.WrapError(err, message.Fields{
 					"id":            d.instanceID,
 					"service":       "amboy.queue.mdb",
 					"operation":     "retrieving next job",
@@ -713,7 +715,7 @@ RETRY:
 		CURSOR:
 			for iter.Next(ctx) {
 				if err = iter.Decode(j); err != nil {
-					grip.Warning(message.WrapError(err, message.Fields{
+					d.log.Warning(message.WrapError(err, message.Fields{
 						"id":            d.instanceID,
 						"service":       "amboy.queue.mdb",
 						"operation":     "converting next job",
@@ -728,7 +730,7 @@ RETRY:
 
 				job, err = j.Resolve(d.opts.Unmarshaler)
 				if err != nil {
-					grip.Warning(message.WrapError(err, message.Fields{
+					d.log.Warning(message.WrapError(err, message.Fields{
 						"id":            d.instanceID,
 						"service":       "amboy.queue.mdb",
 						"operation":     "converting document",
@@ -758,8 +760,8 @@ RETRY:
 						"group":         d.opts.GroupName,
 						"duration_secs": time.Since(startAt).Seconds(),
 					}
-					grip.Warning(message.WrapError(err, msg))
-					grip.NoticeWhen(err == nil, msg)
+					d.log.Warning(message.WrapError(err, msg))
+					d.log.NoticeWhen(err == nil, msg)
 					job = nil
 					continue CURSOR
 				}
@@ -778,7 +780,7 @@ RETRY:
 
 				if err = d.dispatcher.Dispatch(ctx, job); err != nil {
 					dispatchMisses++
-					grip.DebugWhen(
+					d.log.DebugWhen(
 						amboy.IsDispatchable(job.Status(), d.opts.LockTimeout),
 						message.WrapError(err, message.Fields{
 							"id":            d.instanceID,
@@ -801,7 +803,7 @@ RETRY:
 			}
 
 			if err = iter.Err(); err != nil {
-				grip.Warning(message.WrapError(err, message.Fields{
+				d.log.Warning(message.WrapError(err, message.Fields{
 					"id":            d.instanceID,
 					"service":       "amboy.queue.mdb",
 					"message":       "problem reported by iterator",
@@ -814,7 +816,7 @@ RETRY:
 			}
 
 			if err = iter.Close(ctx); err != nil {
-				grip.Warning(message.WrapError(err, message.Fields{
+				d.log.Warning(message.WrapError(err, message.Fields{
 					"id":        d.instanceID,
 					"service":   "amboy.queue.mdb",
 					"message":   "problem closing iterator",
@@ -859,7 +861,7 @@ func (d *mongoDriver) Stats(ctx context.Context) amboy.QueueStats {
 		numJobs, err = coll.EstimatedDocumentCount(ctx)
 	}
 
-	grip.Warning(message.WrapError(err, message.Fields{
+	d.log.Warning(message.WrapError(err, message.Fields{
 		"id":         d.instanceID,
 		"service":    "amboy.queue.mdb",
 		"collection": coll.Name(),
@@ -872,7 +874,7 @@ func (d *mongoDriver) Stats(ctx context.Context) amboy.QueueStats {
 	pendingQuery := bson.M{"status.completed": false}
 	d.modifyQueryForGroup(pendingQuery)
 	pending, err := coll.CountDocuments(ctx, pendingQuery)
-	grip.Warning(message.WrapError(err, message.Fields{
+	d.log.Warning(message.WrapError(err, message.Fields{
 		"id":         d.instanceID,
 		"service":    "amboy.queue.mdb",
 		"collection": coll.Name(),
@@ -885,7 +887,7 @@ func (d *mongoDriver) Stats(ctx context.Context) amboy.QueueStats {
 	lockedQuery := bson.M{"status.completed": false, "status.in_prog": true}
 	d.modifyQueryForGroup(lockedQuery)
 	numLocked, err := coll.CountDocuments(ctx, lockedQuery)
-	grip.Warning(message.WrapError(err, message.Fields{
+	d.log.Warning(message.WrapError(err, message.Fields{
 		"id":         d.instanceID,
 		"service":    "amboy.queue.mdb",
 		"collection": coll.Name(),

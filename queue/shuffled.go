@@ -37,22 +37,26 @@ type shuffledLocal struct {
 	operations chan func(map[string]amboy.Job, map[string]amboy.Job, map[string]amboy.Job, *fixedStorage)
 	capacity   int
 	id         string
-	starter    sync.Once
+	starter    *sync.Once
 	scopes     ScopeManager
 	dispatcher Dispatcher
+	log        grip.Journaler
 	runner     amboy.Runner
 }
 
 // NewShuffledLocal provides a queue implementation that shuffles the
 // order of jobs, relative the insertion order.
-func NewShuffledLocal(workers, capacity int) amboy.Queue {
+func NewShuffledLocal(opts *FixedSizeQueueOptions) amboy.Queue {
+	opts.setDefaults()
 	q := &shuffledLocal{
 		scopes:   NewLocalScopeManager(),
-		capacity: capacity,
+		capacity: opts.Capacity,
 		id:       fmt.Sprintf("queue.local.unordered.shuffled.%s", uuid.New().String()),
+		log:      opts.Logger,
+		starter:  &sync.Once{},
 	}
-	q.dispatcher = NewDispatcher(q)
-	q.runner = pool.NewLocalWorkers(workers, q)
+	q.dispatcher = NewDispatcher(q, q.log)
+	q.runner = pool.NewLocalWorkers(&pool.WorkerOptions{Logger: q.log, NumWorkers: opts.Workers, Queue: q})
 	return q
 }
 
@@ -69,8 +73,8 @@ func (q *shuffledLocal) Start(ctx context.Context) error {
 	q.starter.Do(func() {
 		q.operations = make(chan func(map[string]amboy.Job, map[string]amboy.Job, map[string]amboy.Job, *fixedStorage))
 		go q.reactor(ctx)
-		grip.Error(q.runner.Start(ctx))
-		grip.Info("started shuffled job storage rector")
+		q.log.Error(q.runner.Start(ctx))
+		q.log.Info("started shuffled job storage rector")
 	})
 
 	return nil
@@ -90,7 +94,7 @@ func (q *shuffledLocal) reactor(ctx context.Context) {
 		case op := <-q.operations:
 			op(pending, completed, dispatched, toDelete)
 		case <-ctx.Done():
-			grip.Info("shuffled storage reactor closing")
+			q.log.Info("shuffled storage reactor closing")
 			return
 		}
 	}
@@ -396,7 +400,8 @@ func (q *shuffledLocal) Complete(ctx context.Context, j amboy.Job) error {
 			}
 		}
 
-		grip.Warning(message.WrapError(q.scopes.Release(j.ID(), j.Scopes()),
+		q.log.Warning(message.WrapError(
+			q.scopes.Release(j.ID(), j.Scopes()),
 			message.Fields{
 				"id":     j.ID(),
 				"scopes": j.Scopes(),

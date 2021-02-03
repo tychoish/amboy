@@ -16,13 +16,14 @@ import (
 type single struct {
 	canceler context.CancelFunc
 	queue    amboy.Queue
+	log      grip.Journaler
 	wg       sync.WaitGroup
 	mu       sync.Mutex
 }
 
 // NewSingle returns an amboy.Runner implementation with single-worker
 // in the pool.
-func NewSingle() amboy.Runner { return &single{} }
+func NewSingle(logger grip.Journaler) amboy.Runner { return &single{log: logger} }
 
 // Started returns true when the Runner has begun executing tasks. For
 // LocalWorkers this means that workers are running.
@@ -70,15 +71,15 @@ func (r *single) Start(ctx context.Context) error {
 	waiter := make(chan struct{})
 	go func(wg *sync.WaitGroup) {
 		close(waiter)
-		worker(workerCtx, "single", r.queue, wg)
-		grip.Info("worker process complete")
+		worker(workerCtx, r.log, "single", r.queue, wg)
+		r.log.Info("worker process complete")
 	}(&r.wg)
 
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-waiter:
-		grip.Info("started single queue worker")
+		r.log.Info("started single queue worker")
 		return nil
 	}
 }
@@ -97,7 +98,7 @@ func (r *single) Close(ctx context.Context) {
 
 	wait := make(chan struct{})
 	go func(wg *sync.WaitGroup) {
-		defer recovery.LogStackTraceAndContinue("waiting for close")
+		defer recovery.SendStackTraceAndContinue(r.log, "waiting for close")
 		defer close(wait)
 		wg.Wait()
 	}(&r.wg)

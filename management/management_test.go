@@ -19,7 +19,7 @@ func TestManagerSuiteBackedByQueueMethods(t *testing.T) {
 
 	s := new(ManagerSuite)
 	s.Setup = func() {
-		s.Queue = queue.NewLocalLimitedSize(2, 128)
+		s.Queue = queue.NewLocalLimitedSize(&queue.FixedSizeQueueOptions{Workers: 2, Capacity: 128})
 		s.Require().NoError(s.Queue.Start(ctx))
 	}
 

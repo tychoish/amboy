@@ -23,7 +23,7 @@ func jitterNilJobWait() time.Duration {
 
 }
 
-func executeJob(ctx context.Context, id string, job amboy.Job, q amboy.Queue) {
+func executeJob(ctx context.Context, logger grip.Journaler, id string, job amboy.Job, q amboy.Queue) {
 	job.Run(ctx)
 	cerr := q.Complete(ctx, job)
 	ti := job.TimeInfo()
@@ -47,13 +47,13 @@ func executeJob(ctx context.Context, id string, job amboy.Job, q amboy.Queue) {
 	}
 
 	if err != nil || cerr != nil {
-		grip.Error(r)
+		logger.Error(r)
 	} else {
-		grip.Debug(r)
+		logger.Debug(r)
 	}
 }
 
-func worker(bctx context.Context, id string, q amboy.Queue, wg *sync.WaitGroup) {
+func worker(bctx context.Context, logger grip.Journaler, id string, q amboy.Queue, wg *sync.WaitGroup) {
 	var (
 		err    error
 		job    amboy.Job
@@ -65,7 +65,7 @@ func worker(bctx context.Context, id string, q amboy.Queue, wg *sync.WaitGroup) 
 	defer wg.Done()
 	defer func() {
 		// if we hit a panic we want to add an error to the job;
-		err = recovery.HandlePanicWithError(recover(), nil, "worker process encountered error")
+		err = recovery.SendMessageWithPanicError(recover(), nil, logger, "worker process encountered error")
 		if err != nil {
 			if job != nil {
 				job.AddError(err)
@@ -79,7 +79,7 @@ func worker(bctx context.Context, id string, q amboy.Queue, wg *sync.WaitGroup) 
 				_ = q.Complete(bctx, job)
 			}
 			// start a replacement worker.
-			go worker(bctx, id, q, wg)
+			go worker(bctx, logger, id, q, wg)
 		}
 
 		if cancel != nil {
@@ -101,7 +101,7 @@ func worker(bctx context.Context, id string, q amboy.Queue, wg *sync.WaitGroup) 
 			}
 
 			ctx, cancel = context.WithCancel(bctx)
-			executeJob(ctx, id, job, q)
+			executeJob(ctx, logger, id, job, q)
 			cancel()
 			timer.Reset(baseJobInterval)
 		}

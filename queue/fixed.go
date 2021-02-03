@@ -9,11 +9,24 @@ import (
 	"github.com/cdr/amboy"
 	"github.com/cdr/amboy/pool"
 	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/cdr/grip/message"
 	"github.com/cdr/grip/recovery"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
+
+type FixedSizeQueueOptions struct {
+	Workers  int
+	Capacity int
+	Logger   grip.Journaler
+}
+
+func (opts *FixedSizeQueueOptions) setDefaults() {
+	if opts.Logger == nil {
+		opts.Logger = logging.MakeGrip(grip.GetSender())
+	}
+}
 
 // LocalLimitedSize implements the amboy.Queue interface, and unlike
 // other implementations, the size of the queue is limited for both
@@ -25,14 +38,14 @@ import (
 // store no more than 2x the number specified, and no more the
 // specified capacity of completed jobs.
 type limitedSizeLocal struct {
-	channel     chan amboy.Job
-	toDelete    chan string
-	capacity    int
-	storage     map[string]amboy.Job
-	scopes      ScopeManager
-	dispatcher  Dispatcher
-	lifetimeCtx context.Context
-
+	channel      chan amboy.Job
+	toDelete     chan string
+	capacity     int
+	storage      map[string]amboy.Job
+	scopes       ScopeManager
+	dispatcher   Dispatcher
+	lifetimeCtx  context.Context
+	log          grip.Journaler
 	deletedCount int
 	staleCount   int
 	id           string
@@ -42,15 +55,17 @@ type limitedSizeLocal struct {
 
 // NewLocalLimitedSize constructs a LocalLimitedSize queue instance
 // with the specified number of workers and capacity.
-func NewLocalLimitedSize(workers, capacity int) amboy.Queue {
+func NewLocalLimitedSize(opts *FixedSizeQueueOptions) amboy.Queue {
+	opts.setDefaults()
 	q := &limitedSizeLocal{
-		capacity: capacity,
+		capacity: opts.Capacity,
 		storage:  make(map[string]amboy.Job),
 		scopes:   NewLocalScopeManager(),
 		id:       fmt.Sprintf("queue.local.unordered.fixed.%s", uuid.New().String()),
 	}
-	q.dispatcher = NewDispatcher(q)
-	q.runner = pool.NewLocalWorkers(workers, q)
+	q.log = opts.Logger
+	q.dispatcher = NewDispatcher(q, q.log)
+	q.runner = pool.NewLocalWorkers(&pool.WorkerOptions{Logger: q.log, NumWorkers: opts.Workers, Queue: q})
 	return q
 }
 
@@ -147,7 +162,7 @@ func (q *limitedSizeLocal) Next(ctx context.Context) (amboy.Job, error) {
 				q.staleCount++
 				q.mu.Unlock()
 
-				grip.Notice(message.Fields{
+				q.log.Notice(message.Fields{
 					"state":    "stale",
 					"job":      job.ID(),
 					"job_type": job.Type().Name,
@@ -280,7 +295,8 @@ func (q *limitedSizeLocal) Complete(ctx context.Context, j amboy.Job) error {
 		}
 	}
 
-	grip.Warning(message.WrapError(q.scopes.Release(j.ID(), j.Scopes()),
+	q.log.Alert(message.WrapError(
+		q.scopes.Release(j.ID(), j.Scopes()),
 		message.Fields{
 			"id":     j.ID(),
 			"scopes": j.Scopes(),
@@ -312,7 +328,7 @@ func (q *limitedSizeLocal) Start(ctx context.Context) error {
 		return err
 	}
 
-	grip.Info("job server running")
+	q.log.Info("job server running")
 
 	return nil
 }

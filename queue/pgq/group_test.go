@@ -9,11 +9,14 @@ import (
 	"github.com/cdr/amboy/queue"
 	"github.com/cdr/amboy/queue/testutil"
 	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGroup(t *testing.T) {
+	logger := logging.MakeGrip(grip.GetSender())
+
 	bctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	t.Parallel()
@@ -61,6 +64,7 @@ func TestGroup(t *testing.T) {
 
 				opts := Options{
 					WaitInterval: time.Millisecond,
+					Logger:       logger,
 				}
 
 				groupOpts := GroupOptions{
@@ -86,8 +90,14 @@ func TestGroup(t *testing.T) {
 		defer cancel()
 
 		testutil.RunGroupIntegrationTest(ctx, t, testutil.GroupIntegrationCase{
-			Name:             "PostgreSQL",
-			LocalConstructor: func(ctx context.Context) (amboy.Queue, error) { return queue.NewLocalLimitedSize(2, 128), nil },
+			Name: "PostgreSQL",
+			LocalConstructor: func(ctx context.Context) (amboy.Queue, error) {
+				return queue.NewLocalLimitedSize(&queue.FixedSizeQueueOptions{
+					Workers:  2,
+					Capacity: 128,
+					Logger:   logger,
+				}), nil
+			},
 			Constructor: func(ctx context.Context, ttl time.Duration) (amboy.QueueGroup, testutil.TestCloser, error) {
 				db, closer, err := MakeTestDatabase(ctx, "group_"+uuid.New().String()[0:4])
 				if err != nil {

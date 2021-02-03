@@ -98,7 +98,8 @@ func (s *OrderedQueueSuite) TestPuttingAJobIntoAQueueImpactsStats() {
 }
 
 func (s *OrderedQueueSuite) TestInternalRunnerCanBeChangedBeforeStartingTheQueue() {
-	newRunner := pool.NewLocalWorkers(2, s.queue)
+	opts := &pool.WorkerOptions{Queue: s.queue, NumWorkers: 2}
+	newRunner := pool.NewLocalWorkers(opts)
 	originalRunner := s.queue.Runner()
 	s.NotEqual(originalRunner, newRunner)
 
@@ -115,7 +116,8 @@ func (s *OrderedQueueSuite) TestInternalRunnerCannotBeChangedAfterStartingAQueue
 	s.NoError(s.queue.Start(ctx))
 	s.True(s.queue.Info().Started)
 
-	newRunner := pool.NewLocalWorkers(2, s.queue)
+	popts := &pool.WorkerOptions{Queue: s.queue, NumWorkers: 2}
+	newRunner := pool.NewLocalWorkers(popts)
 	s.Error(s.queue.SetRunner(newRunner))
 	s.NotEqual(runner, newRunner)
 }

@@ -18,6 +18,7 @@ type remoteMongoQueueGroupSingle struct {
 	canceler context.CancelFunc
 	client   *mongo.Client
 	opts     MongoDBQueueGroupOptions
+	log      grip.Journaler
 	dbOpts   MongoDBOptions
 	cache    queue.GroupCache
 	started  bool // reflects background prune/create threads active
@@ -45,6 +46,7 @@ func NewMongoDBSingleQueueGroup(ctx context.Context, opts MongoDBQueueGroupOptio
 		client: client,
 		dbOpts: mdbopts,
 		opts:   opts,
+		log:    opts.Logger,
 		cache:  queue.NewGroupCache(opts.TTL),
 	}
 
@@ -66,7 +68,7 @@ func (g *remoteMongoQueueGroupSingle) Start(ctx context.Context) error {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					grip.Error(message.WrapError(g.Prune(ctx), "problem pruning remote queue group database"))
+					g.log.Error(message.WrapError(g.Prune(ctx), "problem pruning remote queue group database"))
 				}
 			}
 		}()
@@ -82,7 +84,7 @@ func (g *remoteMongoQueueGroupSingle) Start(ctx context.Context) error {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					grip.Error(message.WrapError(g.startQueues(ctx), "problem starting external queues"))
+					g.log.Error(message.WrapError(g.startQueues(ctx), "problem starting external queues"))
 				}
 			}
 		}()

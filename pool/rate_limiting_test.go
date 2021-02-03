@@ -10,6 +10,7 @@ import (
 	"github.com/cdr/amboy"
 	"github.com/cdr/amboy/job"
 	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,19 +27,19 @@ func TestSimpleRateLimitingConstructor(t *testing.T) {
 		storage:   make(map[string]amboy.Job),
 	}
 
-	runner, err = NewSimpleRateLimitedWorkers(1, time.Nanosecond, nil)
+	runner, err = NewSimpleRateLimitedWorkers(time.Nanosecond, &WorkerOptions{NumWorkers: 1, Queue: nil})
 	assert.Nil(runner)
 	assert.Error(err)
 	assert.Contains(err.Error(), "less than a millisecond")
 	assert.Contains(err.Error(), "nil queue")
 
-	runner, err = NewSimpleRateLimitedWorkers(0, time.Millisecond, nil)
+	runner, err = NewSimpleRateLimitedWorkers(time.Millisecond, &WorkerOptions{NumWorkers: 0, Queue: nil})
 	assert.Nil(runner)
 	assert.Error(err)
 	assert.Contains(err.Error(), "pool size less than 1")
 	assert.Contains(err.Error(), "nil queue")
 
-	runner, err = NewSimpleRateLimitedWorkers(10, 10*time.Millisecond, queue)
+	runner, err = NewSimpleRateLimitedWorkers(10*time.Millisecond, &WorkerOptions{NumWorkers: 10, Queue: queue})
 	assert.NoError(err)
 	assert.NotNil(runner)
 }
@@ -56,20 +57,20 @@ func TestAverageRateLimitingConstructor(t *testing.T) {
 		storage:   make(map[string]amboy.Job),
 	}
 
-	runner, err = NewMovingAverageRateLimitedWorkers(1, 0, time.Nanosecond, nil)
+	runner, err = NewMovingAverageRateLimitedWorkers(0, time.Nanosecond, &WorkerOptions{NumWorkers: 1, Queue: nil})
 	assert.Nil(runner)
 	assert.Error(err)
 	assert.Contains(err.Error(), "less than a millisecond")
 	assert.Contains(err.Error(), "target number of tasks less than 1")
 	assert.Contains(err.Error(), "nil queue")
 
-	runner, err = NewMovingAverageRateLimitedWorkers(0, 1, time.Millisecond, nil)
+	runner, err = NewMovingAverageRateLimitedWorkers(1, time.Millisecond, &WorkerOptions{NumWorkers: 0, Queue: nil})
 	assert.Nil(runner)
 	assert.Error(err)
 	assert.Contains(err.Error(), "pool size less than 1")
 	assert.Contains(err.Error(), "nil queue")
 
-	runner, err = NewMovingAverageRateLimitedWorkers(4, 10, 10*time.Millisecond, queue)
+	runner, err = NewMovingAverageRateLimitedWorkers(10, 10*time.Millisecond, &WorkerOptions{NumWorkers: 4, Queue: queue})
 	assert.NoError(err)
 	assert.NotNil(runner)
 }
@@ -83,6 +84,7 @@ func TestAvergeTimeCalculator(t *testing.T) {
 		size:   2,
 		target: 10,
 		jobs:   map[string]context.CancelFunc{},
+		log:    logging.MakeGrip(grip.GetSender()),
 	}
 	// average is uninitialized by default
 	assert.Equal(p.ewma.Value(), float64(0))
@@ -141,7 +143,9 @@ func TestSimpleRateLimitingWorkerHandlesPanicingJobs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
-	p := &simpleRateLimited{}
+	p := &simpleRateLimited{
+		log: logging.MakeGrip(grip.GetSender()),
+	}
 	p.queue = &QueueTester{
 		toProcess: jobsChanWithPanicingJobs(ctx, 10),
 		storage:   make(map[string]amboy.Job),
@@ -154,7 +158,7 @@ func TestEWMARateLimitingWorkerHandlesPanicingJobs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
-	p := &ewmaRateLimiting{}
+	p := &ewmaRateLimiting{log: logging.MakeGrip(grip.GetSender())}
 	p.queue = &QueueTester{
 		toProcess: jobsChanWithPanicingJobs(ctx, 10),
 		storage:   make(map[string]amboy.Job),
@@ -191,7 +195,7 @@ func TestWeightedAverageGrowthLargeSample(t *testing.T) {
 		storage:   make(map[string]amboy.Job),
 	}
 
-	pool, err := NewMovingAverageRateLimitedWorkers(2, 10, 20*time.Hour, queue)
+	pool, err := NewMovingAverageRateLimitedWorkers(10, 20*time.Hour, &WorkerOptions{NumWorkers: 2, Queue: queue})
 	assert.NoError(err)
 	impl := pool.(*ewmaRateLimiting)
 
@@ -257,7 +261,7 @@ func TestWeightedAverageSmallSample(t *testing.T) {
 		storage:   make(map[string]amboy.Job),
 	}
 
-	pool, err := NewMovingAverageRateLimitedWorkers(2, 10, time.Minute, queue)
+	pool, err := NewMovingAverageRateLimitedWorkers(10, time.Minute, &WorkerOptions{NumWorkers: 2, Queue: queue})
 	assert.NoError(err)
 	impl := pool.(*ewmaRateLimiting)
 
@@ -276,7 +280,7 @@ func TestWeightedAverageLargeWorkerPoolLongDuration(t *testing.T) {
 		storage:   make(map[string]amboy.Job),
 	}
 
-	pool, err := NewMovingAverageRateLimitedWorkers(256, 10, time.Minute, queue)
+	pool, err := NewMovingAverageRateLimitedWorkers(10, time.Minute, &WorkerOptions{NumWorkers: 256, Queue: queue})
 	assert.NoError(err)
 	impl := pool.(*ewmaRateLimiting)
 
@@ -295,7 +299,7 @@ func TestWeightedAverageLargeWorkerPoolShortDuration(t *testing.T) {
 		storage:   make(map[string]amboy.Job),
 	}
 
-	pool, err := NewMovingAverageRateLimitedWorkers(256, 60, time.Minute, queue)
+	pool, err := NewMovingAverageRateLimitedWorkers(60, time.Minute, &WorkerOptions{NumWorkers: 256, Queue: queue})
 	assert.NoError(err)
 	impl := pool.(*ewmaRateLimiting)
 

@@ -25,13 +25,15 @@ type dispatcherImpl struct {
 	queue amboy.Queue
 	mutex sync.Mutex
 	cache map[string]dispatcherInfo
+	log   grip.Journaler
 }
 
 // NewDispatcher constructs a default dispatching implementation.
-func NewDispatcher(q amboy.Queue) Dispatcher {
+func NewDispatcher(q amboy.Queue, log grip.Journaler) Dispatcher {
 	return &dispatcherImpl{
 		queue: q,
 		cache: map[string]dispatcherInfo{},
+		log:   log,
 	}
 }
 
@@ -103,7 +105,7 @@ func (d *dispatcherImpl) Dispatch(ctx context.Context, job amboy.Job) error {
 					info.jobCancel()
 					return
 				}
-				grip.Debug(message.Fields{
+				d.log.Debug(message.Fields{
 					"queue_id":  d.queue.ID(),
 					"job_id":    job.ID(),
 					"ping_iter": iters,

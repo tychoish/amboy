@@ -9,6 +9,7 @@ import (
 	"github.com/cdr/amboy/queue"
 	"github.com/cdr/amboy/registry"
 	"github.com/cdr/grip"
+	"github.com/cdr/grip/logging"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -59,6 +60,8 @@ type MongoDBOptions struct {
 	TTL time.Duration
 	// LockTimeout overrides the default job lock timeout if set.
 	LockTimeout time.Duration
+
+	logger grip.Journaler
 }
 
 // DefaultMongoDBOptions constructs a new options object with default
@@ -92,6 +95,10 @@ func (opts *MongoDBOptions) Validate() error {
 
 	if opts.LockTimeout == 0 {
 		opts.LockTimeout = amboy.LockTimeout
+	}
+
+	if opts.logger == nil {
+		opts.logger = logging.MakeGrip(grip.GetSender())
 	}
 
 	return catcher.Resolve()

@@ -19,14 +19,14 @@ type remoteUnordered struct {
 
 // newRemoteUnordered returns a queue that has been initialized with a
 // local worker pool Runner instance of the specified size.
-func newRemoteUnordered(size int) remoteQueue {
+func newRemoteUnordered(size int, logger grip.Journaler) remoteQueue {
 	q := &remoteUnordered{
 		remoteBase: newRemoteBase(),
 	}
-
-	q.dispatcher = queue.NewDispatcher(q)
-	grip.Error(q.SetRunner(pool.NewLocalWorkers(size, q)))
-	grip.Infof("creating new remote job queue with %d workers", size)
+	q.log = logger
+	q.dispatcher = queue.NewDispatcher(q, q.log)
+	q.log.Error(q.SetRunner(pool.NewLocalWorkers(&pool.WorkerOptions{NumWorkers: size, Queue: q, Logger: logger})))
+	q.log.Infof("creating new remote job queue with %d workers", size)
 
 	return q
 }

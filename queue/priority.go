@@ -26,6 +26,7 @@ type priorityLocalQueue struct {
 	dispatcher Dispatcher
 	runner     amboy.Runner
 	id         string
+	log        grip.Journaler
 	counters   struct {
 		started   int
 		completed int
@@ -36,15 +37,17 @@ type priorityLocalQueue struct {
 // NewLocalPriorityQueue constructs a new priority queue instance and
 // initializes a local worker queue with the specified number of
 // worker processes.
-func NewLocalPriorityQueue(workers, capacity int) amboy.Queue {
+func NewLocalPriorityQueue(opts *FixedSizeQueueOptions) amboy.Queue {
+	opts.setDefaults()
 	q := &priorityLocalQueue{
 		scopes:  NewLocalScopeManager(),
 		storage: makePriorityStorage(),
-		fixed:   newFixedStorage(capacity),
+		fixed:   newFixedStorage(opts.Capacity),
 		id:      fmt.Sprintf("queue.local.unordered.priority.%s", uuid.New().String()),
+		log:     opts.Logger,
 	}
-	q.dispatcher = NewDispatcher(q)
-	q.runner = pool.NewLocalWorkers(workers, q)
+	q.dispatcher = NewDispatcher(q, q.log)
+	q.runner = pool.NewLocalWorkers(&pool.WorkerOptions{Logger: q.log, NumWorkers: opts.Workers, Queue: q})
 	return q
 }
 
@@ -93,7 +96,7 @@ func (q *priorityLocalQueue) Next(ctx context.Context) (amboy.Job, error) {
 			ti := job.TimeInfo()
 			if ti.IsStale() {
 				q.storage.Remove(job.ID())
-				grip.Notice(message.Fields{
+				q.log.Notice(message.Fields{
 					"state":    "stale",
 					"job":      job.ID(),
 					"job_type": job.Type().Name,
@@ -195,12 +198,12 @@ func (q *priorityLocalQueue) Complete(ctx context.Context, j amboy.Job) error {
 		return errors.WithStack(err)
 	}
 	id := j.ID()
-	grip.Debugf("marking job (%s) as complete", id)
+	q.log.Debugf("marking job (%s) as complete", id)
 	q.counters.Lock()
 	defer q.counters.Unlock()
 	q.fixed.Push(id)
 
-	grip.Warning(message.WrapError(
+	q.log.Warning(message.WrapError(
 		q.scopes.Release(j.ID(), j.Scopes()),
 		message.Fields{
 			"id":     j.ID(),
