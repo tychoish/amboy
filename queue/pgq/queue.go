@@ -388,6 +388,24 @@ func (q *sqlQueue) Save(ctx context.Context, j amboy.Job) error {
 	stat := j.Status()
 	stat.ErrorCount = len(stat.Errors)
 	stat.ModificationTime = time.Now()
+
+	if stat.Completed && stat.InProgress {
+		// this is a weird state, likely cauesd by a job that
+		// aborts (the MarkComplete defer runs,) and the
+		// thread that's pinging the lock saves it before
+		// Complete() runs. It's harmless, but looks weird in
+		// the database, so we complete it and log.
+		q.log.Warning(message.Fields{
+			"message":    "encountered inconsistency in job state, correcting",
+			"cause":      []string{"completed and running", "aborted job", "locking interference"},
+			"queue":      q.ID(),
+			"job_id":     j.ID(),
+			"dur_secs":   j.TimeInfo().Duration().Seconds(),
+			"has_errors": j.Error() != nil,
+		})
+		stat.InProgress = false
+	}
+
 	j.SetStatus(stat)
 
 	job, err := registry.MakeJobInterchange(j, json.Marshal)
