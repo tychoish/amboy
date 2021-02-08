@@ -48,6 +48,12 @@ type Options struct {
 	CheckDispatchBy bool
 	SkipBootstrap   bool
 	PoolSize        int
+
+	// When true, ordered forces the queue to respect dependencies
+	// of jobs. This can slow dispatching considerably,
+	// particularly if jobs define cyclic or incomplete dependency chains.
+	Ordered bool
+
 	// LockTimeout overrides the default job lock timeout if set.
 	WaitInterval time.Duration
 	LockTimeout  time.Duration
@@ -155,6 +161,10 @@ func NewQueue(ctx context.Context, db *sqlx.DB, opts Options) (amboy.Queue, erro
 	}
 
 	q.dispatcher = queue.NewDispatcher(q, q.log)
+
+	if opts.Ordered {
+		return orderedQueue{sqlQueue: q}, nil
+	}
 
 	return q, nil
 }
@@ -662,10 +672,15 @@ func (q *sqlQueue) getNextQuery() string {
 }
 
 func (q *sqlQueue) Next(ctx context.Context) (amboy.Job, error) {
+	return q.getNext(ctx, func(j amboy.Job) (amboy.Job, bool) { return j, true })
+}
+
+func (q *sqlQueue) getNext(ctx context.Context, check func(j amboy.Job) (amboy.Job, bool)) (amboy.Job, error) {
 	var (
 		misses         int64
 		dispatchSkips  int64
 		dispatchMisses int64
+		checkSkips     int64
 		job            amboy.Job
 	)
 
@@ -678,6 +693,7 @@ func (q *sqlQueue) Next(ctx context.Context) (amboy.Job, error) {
 				"operation":     "next job",
 				"attempts":      dispatchMisses,
 				"skips":         dispatchSkips,
+				"check_passes":  checkSkips,
 				"misses":        misses,
 				"dispatched":    job != nil,
 				"message":       "slow job dispatching operation",
@@ -769,6 +785,14 @@ func (q *sqlQueue) Next(ctx context.Context) (amboy.Job, error) {
 				}
 				if !amboy.IsDispatchable(job.Status(), q.opts.LockTimeout) {
 					dispatchSkips++
+					job = nil
+					continue CURSOR
+				}
+
+				if j, shouldDispatch := check(job); shouldDispatch {
+					job = j
+				} else {
+					checkSkips++
 					job = nil
 					continue CURSOR
 				}

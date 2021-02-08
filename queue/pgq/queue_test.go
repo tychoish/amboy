@@ -136,6 +136,39 @@ func TestQueueSmoke(t *testing.T) {
 			MultiSupported: true,
 			MaxSize:        32,
 		},
+
+		{
+			Name: "PostgreSQL/Ordered",
+			Constructor: func(ctx context.Context, name string, size int) (amboy.Queue, testutil.TestCloser, error) {
+				db, closer, err := MakeTestDatabase(ctx, name)
+				if err != nil {
+					return nil, nil, err
+				}
+				q, err := NewQueue(ctx, db, Options{
+					Name:         name,
+					PoolSize:     size,
+					WaitInterval: time.Second,
+					Ordered:      true,
+				})
+				if err != nil {
+					return nil, nil, err
+				}
+
+				return q, func(ctx context.Context) error {
+					q.Runner().Close(ctx)
+					catcher := grip.NewBasicCatcher()
+					catcher.Add(CleanDatabase(ctx, db, "amboy"))
+					catcher.Check(closer)
+					return catcher.Resolve()
+				}, nil
+			},
+			SingleWorker:     false,
+			IsRemote:         true,
+			OrderedSupported: true,
+			MultiSupported:   true,
+			MaxSize:          32,
+		},
+
 		{
 			Name: "PostgreSQL/Timing",
 			Constructor: func(ctx context.Context, name string, size int) (amboy.Queue, testutil.TestCloser, error) {
