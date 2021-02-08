@@ -259,11 +259,11 @@ func (q *limitedSizeLocal) Stats(ctx context.Context) amboy.QueueStats {
 	defer q.mu.RUnlock()
 
 	s := amboy.QueueStats{
-		Total:     len(q.storage) + q.staleCount,
+		Total:     len(q.storage) + q.staleCount + q.deletedCount,
 		Completed: len(q.toDelete) + q.deletedCount,
 		Pending:   len(q.channel),
 	}
-	s.Running = s.Total - s.Completed - s.Pending
+	s.Running = s.Total - s.Completed - s.Pending - q.staleCount
 	return s
 }
 
