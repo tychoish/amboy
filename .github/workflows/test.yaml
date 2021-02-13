@@ -3,10 +3,12 @@ on: [push]
 
 jobs:
   test-queue-pgq:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/cache@v1
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.7.0
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -14,11 +16,15 @@ jobs:
             ${{ runner.os }}-go-
       - name: PostgreSQL Tests
         run: ./ci/test_pgq.sh
+        env:
+          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   test-queue:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/cache@v1
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.7.0
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -26,11 +32,15 @@ jobs:
             ${{ runner.os }}-go-
       - name: Queue Tests
         run: ./ci/test_queue.sh
+        env:
+          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   test-other:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/cache@v1
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.7.0
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -38,12 +48,27 @@ jobs:
             ${{ runner.os }}-go-
       - name: Supporting Tests
         run: ./ci/test_other.sh
-  lint:
-    runs-on: ubuntu-latest
+        env:
+          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  coverage:
+    runs-on: ubuntu-20.04
+    needs:
+      - test-other
+      - test-queue
+      - test-queue-pgq
     steps:
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.github_token }}
+          parallel-finished: true
+  lint:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.7.0
       - uses: actions/checkout@v2
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.31.0
-
+          version: v1.36.0

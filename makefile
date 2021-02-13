@@ -12,7 +12,7 @@ gobin := ${GO_BIN_PATH}
 ifeq (,$(gobin))
 gobin := go
 endif
-gopath := ${GOPATH}
+gopath := $(shell $(gobin) env GOPATH)
 gocache := $(abspath $(buildDir)/.cache)
 ifeq ($(OS),Windows_NT)
 gocache := $(shell cygpath -m $(gocache))
@@ -28,10 +28,26 @@ $(buildDir)/.lintSetup:$(buildDir)/golangci-lint
 	@touch $@
 $(buildDir)/golangci-lint:
 	@mkdir -p $(buildDir)
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/76a82c6ed19784036bbf2d4c84d0228ca12381a4/install.sh | sh -s -- -b $(buildDir) v1.23.8 >/dev/null 2>&1
+	$(goEnv) GO111MODULES=on $(gobin) get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.36.0
+	@cp $(gopath)/bin/golangci-lint $(buildDir)
 $(buildDir)/run-linter:buildscripts/run-linter.go $(buildDir)/.lintSetup $(buildDir)
 	@$(goEnv) $(gobin) build -o $@ $<
 # end lint setup targets
+
+
+# start test setup targets
+testDeps := $(buildDir)/.testSetup $(buildDir)/gotestsum $(buildDir)/goveralls
+$(buildDir)/.testSetup:$(buildDir)/gotestsum $(buildDir)/goveralls
+	@touch $@
+$(buildDir)/gotestsum:
+	@mkdir -p $(buildDir)
+	$(goEnv) GO111MODULES=on $(gobin) get gotest.tools/gotestsum@latest
+	@cp $(gopath)/bin/gotestsum $(buildDir)
+$(buildDir)/goveralls:
+	@mkdir -p $(buildDir)
+	$(goEnv) GO111MODULES=on $(gobin) get github.com/mattn/goveralls@latest
+	@cp $(gopath)/bin/goveralls $(buildDir)
+# end test setup targets
 
 
 # benchmark setup targets
@@ -56,7 +72,7 @@ coverageHtmlOutput := $(foreach target,$(packages),$(buildDir)/output.$(target).
 
 # start dependency installation tools
 #   implementation details for being able to lazily install dependencies
-testOutput := $(foreach target,$(packages),$(buildDir)/output.$(target).test)
+testOutput := $(foreach target,$(packages),$(buildDir)/output.$(target).json)
 coverageOutput := $(foreach target,$(packages),$(buildDir)/output.$(target).coverage)
 coverageHtmlOutput := $(foreach target,$(packages),$(buildDir)/output.$(target).coverage.html)
 # end dependency installation tools
@@ -64,7 +80,7 @@ coverageHtmlOutput := $(foreach target,$(packages),$(buildDir)/output.$(target).
 
 # userfacing targets for basic build and development operations
 lint:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)
-test:$(foreach target,$(packages),$(buildDir)/output.$(target).test)
+test:$(foreach target,$(packages),$(buildDir)/output.$(target).json)
 coverage:$(buildDir) $(coverageOutput)
 coverage-html:$(buildDir) $(coverageHtmlOutput)
 compile $(buildDir):
@@ -74,7 +90,7 @@ compile-base:
 	$(goEnv) $(gobin) build  ./
 # convenience targets for runing tests and coverage tasks on a
 # specific package.
-test-%:$(buildDir)/output.%.test
+test-%:$(buildDir)/output.%.json
 	
 coverage-%:$(buildDir)/output.%.coverage
 	
@@ -105,7 +121,7 @@ $(gopath)/src/$(projectPath):$(gopath)/src/$(orgPath)
 #    tests have compile and runtime deps. This varable has everything
 #    that the tests actually need to run. (The "build" target is
 #    intentional and makes these targets rerun as expected.)
-testArgs := -test.v --test.timeout=10m
+testArgs := -test.v --test.timeout=10m -json
 ifneq (,$(RUN_TEST))
 testArgs += -test.run='$(RUN_TEST)'
 endif
@@ -132,15 +148,15 @@ endif
 # nonobvious thing: 
 $(buildDir)/:
 	@mkdir -p $@
-$(buildDir)/output.%.test:.FORCE
+$(buildDir)/output.%.json:$(buildDir)/gotestsum .FORCE
 	@mkdir -p $(buildDir)/
-	$(goEnv) $(gobin) test $(testArgs) $(if $(findstring mdbq,$@),-test.parallel=1,) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) | tee $@
-	@!( grep -s -q "^FAIL" $@ && grep -s -q "^WARNING: DATA RACE" $@)
-	@(grep -s -q "^PASS" $@ || grep -s -q "no test files" $@)
-$(buildDir)/output.%.coverage:.FORCE
+	$(buildDir)/gotestsum --debug --hide-summary=skipped --jsonfile=$@ -- $(testArgs) $(if $(findstring mdbq,$@),-test.parallel=1,) ./$(if $(subst $(name),,$*),$(subst -,/,$*),)
+	$(buildDir)/gotestsum tool slowest --jsonfile=$@ --threshold=5s
+$(buildDir)/output.%.coverage:$(buildDir)/gotestsum $(buildDir)/goveralls .FORCE
 	@mkdir -p $(buildDir)/
-	$(goEnv) $(gobin) test $(testArgs) $(if $(findstring mdbq,$@),-p 1,) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) -coverprofile $@ | tee $(buildDir)/output.$*.test
+	$(buildDir)/gotestsum --debug --hide-summary=skipped --jsonfile=$(buildDir)/output.$*.json -- $(testArgs) $(if $(findstring mdbq,$@),-p 1,) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) -race -covermode atomic -coverprofile=$@
 	@-[ -f $@ ] && $(gobin) tool cover -func=$@ | sed 's%$(projectPath)/%%' | column -t
+	@-[ -z "$(COVERALLS_TOKEN)" ] || $(buildDir)/goveralls -coverprofile=$@ -parallel -flagname=$* -service=github
 $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
 	$(goEnv) $(gobin) tool cover -html=$< -o $@
 #  targets to generate gotest output from the linter.
@@ -148,37 +164,6 @@ $(buildDir)/output.%.lint:$(buildDir)/run-linter .FORCE
 	@mkdir -p $(buildDir)/
 	@$(goEnv) ./$< --output=$@ --lintBin=$(buildDir)/golangci-lint --packages='$*'
 # end test and coverage artifacts
-
-
-# start vendoring configuration
-vendor-clean:
-	rm -rf vendor/gopkg.in/mgo.v2/harness/
-	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/google/uuid
-	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/stretchr/testify/
-	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/mongodb/grip/
-	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/pkg/errors/
-	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/github.com/aws/aws-sdk-go/
-	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/amboy/
-	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/grip/
-	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/stretchr/testify/
-	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/pkg/errors/
-	rm -rf vendor/gopkg.in/mgo.v2/harness/
-	rm -rf vendor/gopkg.in/mgo.v2/testdb/
-	rm -rf vendor/gopkg.in/mgo.v2/testserver/
-	rm -rf vendor/gopkg.in/mgo.v2/internal/json/testdata
-	rm -rf vendor/gopkg.in/mgo.v2/.git/
-	rm -rf vendor/gopkg.in/mgo.v2/txn/
-	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/gopkg.in/yaml.v2
-	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/davecgh/
-	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/stretchr/testify/
-	rm -rf vendor/go.mongodb.org/mongo-driver/data/
-	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/pmezard/
-	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/google/go-cmp/
-	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/kr/
-	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*.dat" -o -name "*testdata" | xargs rm -rf
-#   define dependencies for buildscripts
-phony += vendor-clean
-# end vendoring tooling configuration
 
 
 # clean and other utility targets
