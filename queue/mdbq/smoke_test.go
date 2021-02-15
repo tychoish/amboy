@@ -7,6 +7,7 @@ import (
 
 	"github.com/cdr/amboy"
 	"github.com/cdr/amboy/queue/testutil"
+	"github.com/cdr/grip"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -37,12 +38,17 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 				}
 
 				closer := func(ctx context.Context) error {
-					d := rq.Driver()
-					if d != nil {
+					catcher := grip.NewBasicCatcher()
+
+					catcher.Add(q.Close(ctx))
+
+					if d := rq.Driver(); d != nil {
 						d.Close()
 					}
 
-					return client.Database(opts.MDB.DB).Collection(addJobsSuffix(name)).Drop(ctx)
+					catcher.Add(client.Database(opts.MDB.DB).Collection(addJobsSuffix(name)).Drop(ctx))
+
+					return catcher.Resolve()
 				}
 
 				return q, closer, nil
@@ -72,12 +78,17 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 				}
 
 				closer := func(ctx context.Context) error {
-					d := rq.Driver()
-					if d != nil {
+					catcher := grip.NewBasicCatcher()
+
+					catcher.Add(q.Close(ctx))
+
+					if d := rq.Driver(); d != nil {
 						d.Close()
 					}
 
-					return client.Database(opts.MDB.DB).Collection(addGroupSuffix(name)).Drop(ctx)
+					catcher.Add(client.Database(opts.MDB.DB).Collection(addJobsSuffix(name)).Drop(ctx))
+
+					return catcher.Resolve()
 				}
 
 				return q, closer, nil
@@ -105,12 +116,17 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 				}
 
 				closer := func(ctx context.Context) error {
-					d := rq.Driver()
-					if d != nil {
+					catcher := grip.NewBasicCatcher()
+
+					catcher.Add(q.Close(ctx))
+
+					if d := rq.Driver(); d != nil {
 						d.Close()
 					}
 
-					return client.Database(opts.MDB.DB).Collection(addJobsSuffix(name)).Drop(ctx)
+					catcher.Add(client.Database(opts.MDB.DB).Collection(addJobsSuffix(name)).Drop(ctx))
+
+					return catcher.Resolve()
 				}
 
 				return q, closer, nil

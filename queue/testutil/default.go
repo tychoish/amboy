@@ -28,8 +28,14 @@ func DefaultSizeTestCases() []SizeTestCase {
 func DefaultPoolTestCases() []PoolTestCase {
 	return []PoolTestCase{
 		{
-			Name:    "Default",
-			SetPool: func(q amboy.Queue, _ int) error { return nil },
+			Name: "Default",
+			SetPool: func(q amboy.Queue, size int) error {
+				return q.SetRunner(pool.NewLocalWorkers(&pool.WorkerOptions{
+					Logger:     logging.MakeGrip(grip.GetSender()),
+					NumWorkers: size,
+					Queue:      q,
+				}))
+			},
 		},
 		{
 			Name:      "Single",
@@ -45,18 +51,18 @@ func DefaultPoolTestCases() []PoolTestCase {
 				return q.SetRunner(runner)
 			},
 		},
-		{
-			Name:    "Abortable",
-			MinSize: 4,
-			SetPool: func(q amboy.Queue, size int) error {
-				return q.SetRunner(pool.NewAbortablePool(&pool.WorkerOptions{
-					Logger:     logging.MakeGrip(grip.GetSender()),
-					NumWorkers: size,
-					Queue:      q,
-				}))
+		// {
+		// 	Name:    "Abortable",
+		// 	MinSize: 4,
+		// 	SetPool: func(q amboy.Queue, size int) error {
+		// 		return q.SetRunner(pool.NewAbortablePool(&pool.WorkerOptions{
+		// 			Logger:     logging.MakeGrip(grip.GetSender()),
+		// 			NumWorkers: size,
+		// 			Queue:      q,
+		// 		}))
 
-			},
-		},
+		// 	},
+		// },
 		{
 			Name:         "RateLimitedSimple",
 			MinSize:      4,

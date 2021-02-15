@@ -2,4 +2,6 @@
 
 # Run tests that don't require an external db.
 
-make coverage-queue
+# make coverage-queue
+
+go test -v ./queue/

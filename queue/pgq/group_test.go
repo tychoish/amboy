@@ -63,8 +63,9 @@ func TestGroup(t *testing.T) {
 				defer func() { require.NoError(t, closer()) }()
 
 				opts := Options{
-					WaitInterval: time.Millisecond,
-					Logger:       logger,
+					WaitInterval:    time.Millisecond,
+					Logger:          logger,
+					CompleteRetries: 2,
 				}
 
 				groupOpts := GroupOptions{
@@ -105,7 +106,8 @@ func TestGroup(t *testing.T) {
 				}
 
 				opts := Options{
-					WaitInterval: time.Millisecond,
+					WaitInterval:    time.Millisecond,
+					CompleteRetries: 2,
 				}
 
 				groupOpts := GroupOptions{

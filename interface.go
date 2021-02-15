@@ -103,6 +103,7 @@ type JobStatusInfo struct {
 	Owner             string    `bson:"owner" json:"owner" yaml:"owner" db:"owner"`
 	Completed         bool      `bson:"completed" json:"completed" yaml:"completed" db:"completed" `
 	InProgress        bool      `bson:"in_prog" json:"in_progress" yaml:"in_progress" db:"in_progress"`
+	Canceled          bool      `bson:"canceled" json:"canceled" yaml:"canceled" db:"canceled"`
 	ModificationTime  time.Time `bson:"mod_ts" json:"mod_time" yaml:"mod_time" db:"updated_at"`
 	ModificationCount int       `bson:"mod_count" json:"mod_count" yaml:"mod_count" db:"mod_count"`
 	ErrorCount        int       `bson:"err_count" json:"err_count" yaml:"err_count" db:"err_count"`
@@ -218,6 +219,10 @@ type Queue interface {
 	// Begins the execution of the job Queue, using the embedded
 	// Runner.
 	Start(context.Context) error
+
+	// Close will terminate the runner (e.g. Runner().Close())
+	// and also release any queue specific resources.
+	Close(context.Context) error
 }
 
 // QueueInfo describes runtime information associated with a Queue.

@@ -56,29 +56,40 @@ func (p *abortablePool) SetQueue(q amboy.Queue) error {
 }
 
 func (p *abortablePool) Close(ctx context.Context) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	var (
+		wg  *sync.WaitGroup
+		log grip.Journaler
+	)
 
-	if p.canceler != nil {
-		p.canceler()
-		p.canceler = nil
-		p.started = false
-	}
+	func() {
+		p.mu.Lock()
+		defer p.mu.Unlock()
 
-	for id, closer := range p.jobs {
-		if ctx.Err() != nil {
-			return
+		if p.canceler != nil {
+			p.canceler()
+			p.canceler = nil
+			p.started = false
 		}
 
-		closer()
-		delete(p.jobs, id)
-	}
+		for id, closer := range p.jobs {
+			if ctx.Err() != nil {
+				return
+			}
+
+			closer()
+			delete(p.jobs, id)
+		}
+		wg = &p.wg
+		log = p.log
+	}()
 
 	wait := make(chan struct{})
 	go func() {
-		defer recovery.SendStackTraceAndContinue(p.log, "waiting for close")
+		defer recovery.SendStackTraceAndContinue(log, "waiting for close")
 		defer close(wait)
-		p.wg.Wait()
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		wg.Wait()
 	}()
 
 	select {
@@ -176,10 +187,11 @@ func (p *abortablePool) runJob(ctx context.Context, job amboy.Job) {
 	p.addCanceler(job.ID(), cancel)
 
 	defer func() {
-		p.mu.Lock()
-		defer p.mu.Unlock()
-
-		delete(p.jobs, job.ID())
+		if ctx.Err() == nil {
+			p.mu.Lock()
+			defer p.mu.Unlock()
+			delete(p.jobs, job.ID())
+		}
 	}()
 
 	executeJob(ctx, p.log, "abortable", job, p.queue)

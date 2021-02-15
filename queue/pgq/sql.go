@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS {schemaName}.jobs (
 	owner text NOT NULL,
 	completed boolean NOT NULL,
 	in_progress boolean NOT NULL,
+        canceled boolean NOT NULL,
 	mod_count integer NOT NULL,
 	err_count integer NOT NULL,
 
@@ -56,7 +57,7 @@ INSERT INTO
 	{schemaName}.jobs (
 		id, type, queue_group, version, priority, body, errors,
 		started_at, ended_at, wait_until, dispatch_by, max_time,
-		owner, completed, in_progress, mod_count, err_count,
+		owner, completed, in_progress, canceled, mod_count, err_count,
 		dep_type, dep_version, dependency, dep_edges,
 		created_at, updated_at
 	)
@@ -64,7 +65,7 @@ VALUES
 	(
 		:id, :type, :queue_group, :version, :priority, :body, :errors,
 		:started_at, :ended_at, :wait_until, :dispatch_by, :max_time,
-		:owner, :completed, :in_progress, :mod_count, :err_count,
+		:owner, :completed, :in_progress, :canceled, :mod_count, :err_count,
 		:dep_type, :dep_version, :dependency, :dep_edges,
 		:created_at, :updated_at
 	)
@@ -99,6 +100,7 @@ SET
 	body = :body,
 	owner = :owner,
 	completed = :completed,
+	canceled = :canceled,
 	in_progress = :in_progress,
 	mod_count = :mod_count,
 	err_count = :err_count,

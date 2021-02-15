@@ -261,12 +261,23 @@ func (q *sqsFIFOQueue) Complete(ctx context.Context, job amboy.Job) error {
 	if err := ctx.Err(); err != nil {
 		return errors.WithStack(err)
 	}
+
+	if stat := job.Status(); stat.Canceled {
+		q.dispatcher.Release(ctx, job)
+		q.mutex.Lock()
+		defer q.mutex.Unlock()
+		q.numRunning--
+
+		return nil
+	}
+
 	name := job.ID()
 	if err := q.dispatcher.Complete(ctx, job); err != nil {
 		return errors.WithStack(err)
 	}
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
+	q.numRunning--
 	if err := ctx.Err(); err != nil {
 		q.log.Notice(message.Fields{
 			"message":   "Did not complete job because context cancelled",
@@ -367,4 +378,12 @@ func (q *sqsFIFOQueue) Start(ctx context.Context) error {
 		return errors.Wrap(err, "problem starting runner")
 	}
 	return nil
+}
+
+func (q *sqsFIFOQueue) Close(ctx context.Context) error {
+	if q.runner != nil || q.runner.Started() {
+		q.runner.Close(ctx)
+	}
+
+	return q.dispatcher.Close(ctx)
 }

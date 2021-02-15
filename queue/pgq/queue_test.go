@@ -115,26 +115,34 @@ func TestQueueSmoke(t *testing.T) {
 					return nil, nil, err
 				}
 				q, err := NewQueue(ctx, db, Options{
-					Name:         name,
-					PoolSize:     size,
-					WaitInterval: time.Second,
+					Name:            name,
+					PoolSize:        size,
+					CompleteRetries: 2,
+					WaitInterval:    2 * time.Second,
 				})
 				if err != nil {
 					return nil, nil, err
 				}
 
 				return q, func(ctx context.Context) error {
-					q.Runner().Close(ctx)
-					catcher := grip.NewBasicCatcher()
-					catcher.Add(CleanDatabase(ctx, db, "amboy"))
-					catcher.Check(closer)
+					catcher := grip.NewCatcher()
+					go func() {
+
+						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+						defer cancel()
+
+						catcher.Add(q.Close(cctx))
+						grip.Warning(CleanDatabase(cctx, db, "amboy"))
+						catcher.Add(closer())
+
+					}()
 					return catcher.Resolve()
 				}, nil
 			},
 			SingleWorker:   false,
 			IsRemote:       true,
 			MultiSupported: true,
-			MaxSize:        32,
+			MaxSize:        16,
 		},
 
 		{
@@ -145,28 +153,37 @@ func TestQueueSmoke(t *testing.T) {
 					return nil, nil, err
 				}
 				q, err := NewQueue(ctx, db, Options{
-					Name:         name,
-					PoolSize:     size,
-					WaitInterval: time.Second,
-					Ordered:      true,
+					Name:            name,
+					PoolSize:        size,
+					CompleteRetries: 2,
+					WaitInterval:    2 * time.Second,
+					Ordered:         true,
 				})
 				if err != nil {
 					return nil, nil, err
 				}
-
 				return q, func(ctx context.Context) error {
-					q.Runner().Close(ctx)
-					catcher := grip.NewBasicCatcher()
-					catcher.Add(CleanDatabase(ctx, db, "amboy"))
-					catcher.Check(closer)
+					catcher := grip.NewCatcher()
+					go func() {
+
+						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+						defer cancel()
+
+						catcher.Add(q.Close(cctx))
+						grip.Warning(CleanDatabase(cctx, db, "amboy"))
+						catcher.Add(closer())
+
+					}()
 					return catcher.Resolve()
 				}, nil
 			},
-			SingleWorker:     false,
-			IsRemote:         true,
-			OrderedSupported: true,
-			MultiSupported:   true,
-			MaxSize:          32,
+			SingleWorker:          false,
+			IsRemote:              true,
+			OrderedSupported:      true,
+			MultiSupported:        true,
+			MinSize:               2,
+			MaxSize:               16,
+			SkipRateLimitedWorker: true,
 		},
 
 		{
@@ -179,21 +196,37 @@ func TestQueueSmoke(t *testing.T) {
 				q, err := NewQueue(ctx, db, Options{
 					Name:            name,
 					PoolSize:        size,
+					CompleteRetries: 2,
 					CheckWaitUntil:  true,
 					CheckDispatchBy: true,
-					WaitInterval:    time.Second,
+					WaitInterval:    2 * time.Second,
 				})
 				if err != nil {
 					return nil, nil, err
 				}
 
-				return q, func(ctx context.Context) error { q.Runner().Close(ctx); return closer() }, nil
+				return q, func(ctx context.Context) error {
+					catcher := grip.NewCatcher()
+					go func() {
+
+						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+						defer cancel()
+
+						catcher.Add(q.Close(cctx))
+						grip.Warning(CleanDatabase(cctx, db, "amboy"))
+						catcher.Add(closer())
+
+					}()
+					return catcher.Resolve()
+				}, nil
 			},
 			SingleWorker:            false,
 			IsRemote:                true,
 			WaitUntilSupported:      true,
 			DispatchBeforeSupported: true,
-			MaxSize:                 32,
+			MinSize:                 2,
+			MaxSize:                 16,
+			SkipRateLimitedWorker:   true,
 		},
 		{
 			Name: "PostgreSQL/Group",
@@ -204,22 +237,38 @@ func TestQueueSmoke(t *testing.T) {
 				}
 
 				q, err := NewQueue(ctx, db, Options{
-					Name:         name,
-					PoolSize:     size,
-					UseGroups:    true,
-					GroupName:    "kip",
-					WaitInterval: time.Second,
+					Name:            name,
+					PoolSize:        size,
+					UseGroups:       true,
+					CompleteRetries: 2,
+					GroupName:       "kip",
+					WaitInterval:    2 * time.Second,
 				})
 				if err != nil {
 					return nil, nil, err
 				}
 
-				return q, func(ctx context.Context) error { q.Runner().Close(ctx); return closer() }, nil
+				return q, func(ctx context.Context) error {
+					catcher := grip.NewCatcher()
+					go func() {
+
+						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+						defer cancel()
+
+						catcher.Add(q.Close(cctx))
+						grip.Warning(CleanDatabase(cctx, db, "amboy"))
+						catcher.Add(closer())
+
+					}()
+					return catcher.Resolve()
+				}, nil
 			},
-			IsRemote:       true,
-			SingleWorker:   false,
-			MultiSupported: true,
-			MaxSize:        32,
+			IsRemote:              true,
+			SingleWorker:          false,
+			MultiSupported:        true,
+			MinSize:               2,
+			MaxSize:               8,
+			SkipRateLimitedWorker: true,
 		},
 	} {
 		testutil.RunSmokeTest(bctx, t, test)

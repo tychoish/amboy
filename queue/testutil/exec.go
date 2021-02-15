@@ -28,12 +28,22 @@ func RunSmokeTest(bctx context.Context, t *testing.T, test QueueTestCase) {
 				continue
 			}
 
+			if test.SkipRateLimitedWorker && runner.RateLimiting {
+				continue
+			}
+
+			if !test.SingleWorker && runner.MaxSize == 1 && runner.MinSize == 1 {
+				continue
+			}
+
+			runner := runner
 			t.Run(runner.Name+"Pool", func(t *testing.T) {
 				if !test.DisableParallelTests {
 					t.Parallel()
 				}
-				runner := runner
+
 				for _, size := range DefaultSizeTestCases() {
+					size := size
 					if test.MaxSize > 0 && size.Size > test.MaxSize {
 						continue
 					}
@@ -51,7 +61,6 @@ func RunSmokeTest(bctx context.Context, t *testing.T, test QueueTestCase) {
 					}
 
 					t.Run(size.Name, func(t *testing.T) {
-						size := size
 						if !test.DisableParallelTests {
 							t.Parallel()
 						}
@@ -65,7 +74,7 @@ func RunSmokeTest(bctx context.Context, t *testing.T, test QueueTestCase) {
 								OrderedTest(bctx, t, test, runner, size)
 							})
 						}
-						if test.WaitUntilSupported {
+						if test.WaitUntilSupported && size.Size > 1 {
 							t.Run("WaitUntil", func(t *testing.T) {
 								WaitUntilTest(bctx, t, test, runner, size)
 							})
@@ -99,11 +108,17 @@ func RunSmokeTest(bctx context.Context, t *testing.T, test QueueTestCase) {
 							}
 						}
 
+						if size.Size < 8 {
+							t.Run("AbortableJobs", func(t *testing.T) {
+								AbortTracking(bctx, t, test, runner, size)
+							})
+						}
+
 						t.Run("SaveLockingCheck", func(t *testing.T) {
 							if test.OrderedSupported && !test.OrderedStartsBefore {
 								t.Skip("test does not support queues where queues don't accept work after dispatching")
 							}
-							ctx, cancel := context.WithCancel(bctx)
+							ctx, cancel := context.WithTimeout(bctx, time.Minute)
 							defer cancel()
 							name := RandomID()
 

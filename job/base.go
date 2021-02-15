@@ -21,6 +21,7 @@ interface, or needing more constrained options for some values
 package job
 
 import (
+	"context"
 	"strings"
 	"sync"
 	"time"
@@ -67,6 +68,10 @@ func (b *Base) AddError(err error) {
 	if err != nil {
 		b.mutex.Lock()
 		defer b.mutex.Unlock()
+
+		if errors.Cause(err) == context.Canceled || errors.Is(err, context.Canceled) {
+			b.status.Canceled = true
+		}
 
 		b.status.Errors = append(b.status.Errors, err.Error())
 	}

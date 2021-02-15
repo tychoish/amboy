@@ -151,6 +151,11 @@ func (q *QueueTester) Start(ctx context.Context) error {
 	return nil
 }
 
+func (q *QueueTester) Close(ctx context.Context) error {
+	q.Runner().Close(ctx)
+	return nil
+}
+
 func (q *QueueTester) Jobs(ctx context.Context) <-chan amboy.Job {
 	output := make(chan amboy.Job)
 

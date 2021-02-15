@@ -405,6 +405,12 @@ func (q *depGraphOrderedLocal) Complete(ctx context.Context, j amboy.Job) error 
 	if err := ctx.Err(); err != nil {
 		return errors.WithStack(err)
 	}
+
+	if stat := j.Status(); stat.Canceled {
+		q.dispatcher.Release(ctx, j)
+		return nil
+	}
+
 	q.log.Debugf("marking job (%s) as complete", j.ID())
 	if err := q.dispatcher.Complete(ctx, j); err != nil {
 		return errors.WithStack(err)
@@ -413,4 +419,12 @@ func (q *depGraphOrderedLocal) Complete(ctx context.Context, j amboy.Job) error 
 	defer q.mutex.Unlock()
 	q.tasks.completed[j.ID()] = true
 	return nil
+}
+
+func (q *depGraphOrderedLocal) Close(ctx context.Context) error {
+	if q.runner != nil || q.runner.Started() {
+		q.runner.Close(ctx)
+	}
+
+	return q.dispatcher.Close(ctx)
 }

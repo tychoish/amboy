@@ -15,5 +15,6 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/urfave/cli v1.22.4
 	go.mongodb.org/mongo-driver v1.4.2
+	golang.org/x/sys v0.0.0-20201009025420-dfb3f7c4e634 // indirect
 	gonum.org/v1/gonum v0.7.0
 )

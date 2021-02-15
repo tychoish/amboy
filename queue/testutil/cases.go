@@ -33,7 +33,7 @@ func init() {
 }
 
 func UnorderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runner PoolTestCase, size SizeTestCase) {
-	ctx, cancel := context.WithCancel(bctx)
+	ctx, cancel := context.WithTimeout(bctx, time.Minute)
 	defer cancel()
 
 	q, closer, err := test.Constructor(ctx, RandomID(), size.Size)
@@ -48,11 +48,18 @@ func UnorderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 	}
 
 	testNames := []string{"test", "second", "workers", "forty-two", "true", "false", ""}
-	numJobs := size.Size * len(testNames)
 
 	wg := &sync.WaitGroup{}
 
-	for i := 0; i < size.Size; i++ {
+	sz := size.Size
+
+	if sz > 4 {
+		sz = 4
+	}
+
+	numJobs := sz * len(testNames)
+
+	for i := 0; i < sz; i++ {
 		wg.Add(1)
 		go func(num int) {
 			defer wg.Done()
@@ -71,14 +78,17 @@ func UnorderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 		require.NoError(t, q.Start(ctx))
 	}
 
-	amboy.WaitInterval(ctx, q, 100*time.Millisecond)
+	amboy.WaitInterval(ctx, q, 10*time.Millisecond)
+
+	require.NoError(t, ctx.Err(), "test hit timedout")
 
 	assert.Equal(t, numJobs, q.Stats(ctx).Total, fmt.Sprintf("with %d workers", size.Size))
 
-	amboy.WaitInterval(ctx, q, 100*time.Millisecond)
+	amboy.WaitInterval(ctx, q, 10*time.Millisecond)
 
 	grip.Infof("workers complete for %d worker smoke test", size.Size)
 	assert.Equal(t, numJobs, q.Stats(ctx).Completed, fmt.Sprintf("%+v", q.Stats(ctx)))
+
 	for result := range q.Jobs(ctx) {
 		require.True(t, result.Status().Completed, fmt.Sprintf("with %d workers", size.Size))
 
@@ -99,7 +109,7 @@ func UnorderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 }
 
 func OrderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runner PoolTestCase, size SizeTestCase) {
-	ctx, cancel := context.WithCancel(bctx)
+	ctx, cancel := context.WithTimeout(bctx, time.Minute)
 	defer cancel()
 
 	q, closer, err := test.Constructor(ctx, RandomID(), size.Size)
@@ -155,7 +165,7 @@ func OrderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runner 
 }
 
 func WaitUntilTest(bctx context.Context, t *testing.T, test QueueTestCase, runner PoolTestCase, size SizeTestCase) {
-	ctx, cancel := context.WithTimeout(bctx, 2*time.Minute)
+	ctx, cancel := context.WithTimeout(bctx, time.Minute)
 	defer cancel()
 
 	q, closer, err := test.Constructor(ctx, RandomID(), size.Size)
@@ -168,8 +178,8 @@ func WaitUntilTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 	testNames := []string{"test", "second", "workers", "forty-two", "true", "false"}
 
 	sz := size.Size
-	if sz > 16 {
-		sz = 16
+	if sz > 8 {
+		sz = 8
 	} else if sz < 2 {
 		sz = 2
 	}
@@ -205,8 +215,8 @@ func WaitUntilTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 	wg.Wait()
 	// waitC for things to finish
 	const (
-		interval = 100 * time.Millisecond
-		maxTime  = 10 * time.Second
+		interval = 10 * time.Millisecond
+		maxTime  = 5 * time.Second
 	)
 	var dur time.Duration
 	timer := time.NewTimer(interval)
@@ -252,7 +262,7 @@ waitLoop:
 }
 
 func DispatchBeforeTest(bctx context.Context, t *testing.T, test QueueTestCase, runner PoolTestCase, size SizeTestCase) {
-	ctx, cancel := context.WithTimeout(bctx, 2*time.Minute)
+	ctx, cancel := context.WithTimeout(bctx, time.Minute)
 	defer cancel()
 
 	q, closer, err := test.Constructor(ctx, RandomID(), size.Size)
@@ -299,7 +309,7 @@ func OneExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, ru
 	if test.Name == "LocalOrdered" {
 		t.Skip("topological sort deadlocks")
 	}
-	ctx, cancel := context.WithTimeout(bctx, 2*time.Minute)
+	ctx, cancel := context.WithTimeout(bctx, time.Minute)
 	defer cancel()
 
 	testID := RandomID()
@@ -332,7 +342,7 @@ func OneExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, ru
 }
 
 func MultiExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, runner PoolTestCase, size SizeTestCase) {
-	ctx, cancel := context.WithTimeout(bctx, 2*time.Minute)
+	ctx, cancel := context.WithTimeout(bctx, 90*time.Second)
 	defer cancel()
 	name := RandomID()
 	qOne, closerOne, err := test.Constructor(ctx, name, size.Size)
@@ -347,8 +357,8 @@ func MultiExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, 
 	assert.NoError(t, qOne.Start(ctx))
 	assert.NoError(t, qTwo.Start(ctx))
 
-	num := 200
-	adderProcs := 4
+	num := 50
+	adderProcs := 2
 
 	wg := &sync.WaitGroup{}
 	for o := 0; o < adderProcs; o++ {
@@ -375,8 +385,10 @@ func MultiExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, 
 	grip.Info("added jobs to queues")
 
 	// wait for all jobs to complete.
-	amboy.WaitInterval(ctx, qOne, 100*time.Millisecond)
-	amboy.WaitInterval(ctx, qTwo, 100*time.Millisecond)
+	amboy.WaitInterval(ctx, qOne, 10*time.Millisecond)
+	amboy.WaitInterval(ctx, qTwo, 10*time.Millisecond)
+
+	require.NoError(t, ctx.Err(), "test timed out")
 
 	// check that both queues see all jobs
 	statsOne := qOne.Stats(ctx)
@@ -417,7 +429,7 @@ func MultiExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, 
 }
 
 func ManyQueueTest(bctx context.Context, t *testing.T, test QueueTestCase, runner PoolTestCase, size SizeTestCase) {
-	ctx, cancel := context.WithCancel(bctx)
+	ctx, cancel := context.WithTimeout(bctx, time.Minute)
 	defer cancel()
 
 	driverID := RandomID()
@@ -490,24 +502,95 @@ func ScopedLockTest(bctx context.Context, t *testing.T, test QueueTestCase, runn
 		}
 		require.NoError(t, q.Put(ctx, j))
 	}
-	ticker := time.NewTicker(20 * time.Millisecond)
-	defer ticker.Stop()
+
+	timer := time.NewTimer(0)
+	const interval = 10 * time.Millisecond
+	defer timer.Stop()
 
 waitLoop:
 	for {
 		select {
 		case <-ctx.Done():
 			break waitLoop
-		case <-ticker.C:
+		case <-timer.C:
 			stat := q.Stats(ctx)
 			if stat.Completed >= size.Size {
 				break waitLoop
 			}
+			timer.Reset(interval)
 		}
 	}
 
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(25 * time.Millisecond)
 	stats := q.Stats(ctx)
 	assert.Equal(t, 2*size.Size, stats.Total)
 	assert.Equal(t, size.Size, stats.Completed)
+}
+
+func AbortTracking(bctx context.Context, t *testing.T, test QueueTestCase, runner PoolTestCase, size SizeTestCase) {
+	ctx, cancel := context.WithTimeout(bctx, time.Minute)
+	defer cancel()
+	testID := RandomID()
+
+	q, closer, err := test.Constructor(ctx, testID, size.Size)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, closer(ctx)) }()
+	require.NoError(t, runner.SetPool(q, size.Size))
+
+	if test.OrderedSupported && !test.OrderedStartsBefore {
+		// pass
+	} else {
+		require.NoError(t, q.Start(ctx))
+	}
+
+	counter := GetCounterCache().Get(testID)
+	counter.Reset()
+
+	for i := 0; i < 2*size.Size; i++ {
+		require.NoError(t, q.Put(ctx, MakeAbortedJob(fmt.Sprintf("%d.%d.mock.abortable", i, job.GetNumber()), testID)))
+	}
+
+	if test.OrderedSupported && !test.OrderedStartsBefore {
+		require.NoError(t, q.Start(ctx))
+	}
+
+	// wait for the jobs to all run at least once, none of them
+	// complete, which makes this awkward.
+	time.Sleep(2 * time.Second)
+
+	func() {
+		nctx, ncancel := context.WithTimeout(ctx, 4*time.Second)
+		defer ncancel()
+		q.Close(nctx)
+		time.Sleep(500 * time.Millisecond)
+	}()
+
+	stat := q.Stats(ctx)
+
+	require.NoError(t, ctx.Err(), "main test context timed out")
+	assert.Equal(t, 0, stat.Completed, "%+v", stat)
+	assert.Equal(t, 2*size.Size, stat.Total, "%+v", stat)
+	assert.True(t, 2*size.Size <= counter.Count(), "%+v, %d <= %d", stat, 2*size.Size, counter.Count())
+	assert.Equal(t, stat, q.Stats(ctx))
+
+	count := 0
+	for job := range q.Jobs(ctx) {
+		stat := job.Status()
+		if stat.InProgress {
+			count++
+			continue
+		}
+		failed := false
+		if assert.True(t, stat.Canceled, "%+v", stat) {
+			failed = true
+		} else if assert.False(t, stat.Completed) {
+			failed = true
+		}
+
+		if failed {
+			break
+		}
+	}
+
+	assert.True(t, count <= 2, "most jobs should no longer be in progress, but there were %d", count)
 }

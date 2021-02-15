@@ -100,13 +100,22 @@ func (e *mockJobRunEnv) Reset() {
 
 //
 type mockJob struct {
-	Test     string `bson:"test_name" json:"test_name" yaml:"test_name"`
-	job.Base `bson:"job_base" json:"job_base" yaml:"job_base"`
+	Test         string `bson:"test_name" json:"test_name" yaml:"test_name"`
+	ShouldCancel bool   `bson:"cancel" json:"cancel" yaml:"cancel"`
+	job.Base     `bson:"job_base" json:"job_base" yaml:"job_base"`
 }
 
 func MakeMockJob(id string, name string) amboy.Job {
 	j := NewMockJob().(*mockJob)
 	j.Test = name
+	j.SetID(id)
+	return j
+}
+
+func MakeAbortedJob(id string, name string) amboy.Job {
+	j := NewMockJob().(*mockJob)
+	j.Test = name
+	j.ShouldCancel = true
 	j.SetID(id)
 	return j
 }
@@ -124,8 +133,16 @@ func NewMockJob() amboy.Job {
 	return j
 }
 
-func (j *mockJob) Run(_ context.Context) {
-	defer j.MarkComplete()
+func (j *mockJob) Run(ctx context.Context) {
+	if !j.ShouldCancel {
+		defer j.MarkComplete()
+	}
+
+	if stat := j.Status(); !stat.Canceled && j.ShouldCancel {
+		cctx, cancel := context.WithCancel(ctx)
+		cancel()
+		j.AddError(cctx.Err())
+	}
 
 	GetCounterCache().Get(j.Test).Inc()
 }

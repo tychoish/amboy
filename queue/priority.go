@@ -197,6 +197,15 @@ func (q *priorityLocalQueue) Complete(ctx context.Context, j amboy.Job) error {
 	if err := ctx.Err(); err != nil {
 		return errors.WithStack(err)
 	}
+
+	if stat := j.Status(); stat.Canceled {
+		q.dispatcher.Release(ctx, j)
+		q.counters.Lock()
+		defer q.counters.Unlock()
+		q.counters.started--
+		return q.storage.Insert(j)
+	}
+
 	id := j.ID()
 	q.log.Debugf("marking job (%s) as complete", id)
 	q.counters.Lock()
@@ -211,6 +220,7 @@ func (q *priorityLocalQueue) Complete(ctx context.Context, j amboy.Job) error {
 			"queue":  q.ID(),
 			"op":     "releasing scope lock during completion",
 		}))
+
 	if err := q.dispatcher.Complete(ctx, j); err != nil {
 		return errors.WithStack(err)
 	}
@@ -255,4 +265,12 @@ func (q *priorityLocalQueue) Delete(ctx context.Context, id string) error {
 		return errors.Errorf("job %s does not exist and cannot be removed", id)
 	}
 	return nil
+}
+
+func (q *priorityLocalQueue) Close(ctx context.Context) error {
+	if q.runner != nil || q.runner.Started() {
+		q.runner.Close(ctx)
+	}
+
+	return q.dispatcher.Close(ctx)
 }

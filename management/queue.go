@@ -449,6 +449,7 @@ func (m *queueManager) CompleteJob(ctx context.Context, name string) error {
 
 	status := j.Status()
 	status.ModificationCount += 2
+	status.Completed = true
 	j.SetStatus(status)
 
 	return errors.WithStack(m.queue.Complete(ctx, j))
@@ -492,6 +493,7 @@ func (m *queueManager) CompleteJobsByType(ctx context.Context, f StatusFilter, j
 
 		status := job.Status()
 		status.ModificationCount += 2
+		status.Completed = true
 		job.SetStatus(status)
 		catcher.Add(m.queue.Complete(ctx, job))
 	}
@@ -543,6 +545,7 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 		}
 		status := job.Status()
 		status.ModificationCount += 2
+		status.Completed = true
 		job.SetStatus(status)
 		catcher.Add(m.queue.Complete(ctx, job))
 	}

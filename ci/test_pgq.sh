@@ -28,7 +28,9 @@ until pg_isready --host localhost --port 5432; do
     sleep 2
 done
 
-make coverage-queue-pgq
+# make coverage-queue-pgq
+
+go test ./queue/pgq
 
 docker rm -f amboy-postgres || true
 popd

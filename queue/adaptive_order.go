@@ -295,23 +295,34 @@ func (q *adaptiveLocalOrdering) Complete(ctx context.Context, j amboy.Job) error
 	if err := ctx.Err(); err != nil {
 		return errors.WithStack(err)
 	}
+
 	wait := make(chan struct{})
-	if err := q.dispatcher.Complete(ctx, j); err != nil {
-		return errors.WithStack(err)
-	}
-	op := func(ctx context.Context, items *adaptiveOrderItems, fixed *fixedStorage) {
-		id := j.ID()
-		items.completed = append(items.completed, id)
-		items.jobs[id] = j
-		fixed.Push(id)
-
-		if num := fixed.Oversize(); num > 0 {
-			for i := 0; i < num; i++ {
-				items.remove(fixed.Pop())
-			}
+	var op func(context.Context, *adaptiveOrderItems, *fixedStorage)
+	if stat := j.Status(); stat.Canceled {
+		q.dispatcher.Release(ctx, j)
+		op = func(ctx context.Context, items *adaptiveOrderItems, fixed *fixedStorage) {
+			defer close(wait)
+			id := j.ID()
+			items.jobs[id] = j
 		}
-
+	} else if err := q.dispatcher.Complete(ctx, j); err != nil {
 		close(wait)
+		return errors.WithStack(err)
+	} else {
+		op = func(ctx context.Context, items *adaptiveOrderItems, fixed *fixedStorage) {
+			id := j.ID()
+			items.completed = append(items.completed, id)
+			items.jobs[id] = j
+			fixed.Push(id)
+
+			if num := fixed.Oversize(); num > 0 {
+				for i := 0; i < num; i++ {
+					items.remove(fixed.Pop())
+				}
+			}
+
+			close(wait)
+		}
 	}
 
 	select {
@@ -351,4 +362,12 @@ func (q *adaptiveLocalOrdering) SetRunner(r amboy.Runner) error {
 
 	q.runner = r
 	return r.SetQueue(q)
+}
+
+func (q *adaptiveLocalOrdering) Close(ctx context.Context) error {
+	if q.runner != nil || q.runner.Started() {
+		q.runner.Close(ctx)
+	}
+
+	return q.dispatcher.Close(ctx)
 }

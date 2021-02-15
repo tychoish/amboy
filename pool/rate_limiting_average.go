@@ -162,8 +162,10 @@ func (p *ewmaRateLimiting) worker(bctx context.Context) {
 			if job != nil {
 				job.AddError(err)
 			}
-			// start a replacement worker.
-			go p.worker(bctx)
+			if bctx.Err() == nil && p.canceler != nil {
+				// start a replacement worker.
+				go p.worker(bctx)
+			}
 		}
 		if cancel != nil {
 			cancel()
@@ -208,10 +210,12 @@ func (p *ewmaRateLimiting) runJob(ctx context.Context, j amboy.Job) time.Duratio
 	p.addCanceler(j.ID(), cancel)
 
 	defer func() {
-		p.mutex.Lock()
-		defer p.mutex.Unlock()
+		if ctx.Err() == nil {
+			p.mutex.Lock()
+			defer p.mutex.Unlock()
 
-		delete(p.jobs, j.ID())
+			delete(p.jobs, j.ID())
+		}
 	}()
 
 	executeJob(ctx, p.log, "rate-limited-average", j, p.queue)
@@ -233,21 +237,34 @@ func (p *ewmaRateLimiting) SetQueue(q amboy.Queue) error {
 }
 
 func (p *ewmaRateLimiting) Close(ctx context.Context) {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
+	var (
+		wg  *sync.WaitGroup
+		log grip.Journaler
+	)
 
-	for id, closer := range p.jobs {
-		closer()
-		delete(p.jobs, id)
-	}
+	if func() bool {
+		p.mutex.Lock()
+		defer p.mutex.Unlock()
 
-	if p.canceler == nil {
+		for id, closer := range p.jobs {
+			closer()
+			delete(p.jobs, id)
+		}
+
+		if p.canceler == nil {
+			return true
+		}
+
+		p.canceler()
+		p.canceler = nil
+		p.log.Debug("pool's context canceled, waiting for running jobs to complete")
+
+		wg = &p.wg
+		log = p.log
+		return false
+	}() {
 		return
 	}
-
-	p.canceler()
-	p.canceler = nil
-	p.log.Debug("pool's context canceled, waiting for running jobs to complete")
 
 	// because of the timer+2 contexts in the worker
 	// implementation, we can end up returning earlier and because
@@ -257,9 +274,11 @@ func (p *ewmaRateLimiting) Close(ctx context.Context) {
 	defer func() { _ = recover() }()
 	wait := make(chan struct{})
 	go func() {
-		defer recovery.SendStackTraceAndContinue(p.log, "waiting for close")
+		defer recovery.SendStackTraceAndContinue(log, "waiting for close")
 		defer close(wait)
-		p.wg.Wait()
+		p.mutex.Lock()
+		defer p.mutex.Unlock()
+		wg.Wait()
 	}()
 
 	select {

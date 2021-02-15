@@ -88,20 +88,24 @@ func (r *single) Start(ctx context.Context) error {
 // job will complete and the process will terminate before beginning a
 // new job. If the queue has not started, Close is a no-op.
 func (r *single) Close(ctx context.Context) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	func() {
+		r.mu.Lock()
+		defer r.mu.Unlock()
 
-	if r.canceler != nil {
-		r.canceler()
-		r.canceler = nil
-	}
+		if r.canceler != nil {
+			r.canceler()
+			r.canceler = nil
+		}
+	}()
 
 	wait := make(chan struct{})
-	go func(wg *sync.WaitGroup) {
+	go func() {
 		defer recovery.SendStackTraceAndContinue(r.log, "waiting for close")
 		defer close(wait)
-		wg.Wait()
-	}(&r.wg)
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		r.wg.Wait()
+	}()
 
 	select {
 	case <-ctx.Done():

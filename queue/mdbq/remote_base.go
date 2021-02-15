@@ -132,6 +132,11 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) error {
 		return errors.WithStack(err)
 	}
 
+	if stat := j.Status(); stat.Canceled {
+		q.dispatcher.Release(ctx, j)
+		return q.driver.Save(ctx, j)
+	}
+
 	if err := q.dispatcher.Complete(ctx, j); err != nil {
 		return errors.WithStack(err)
 	}
@@ -152,7 +157,6 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) error {
 			return errors.WithStack(ctx.Err())
 		case <-timer.C:
 			stat := j.Status()
-			stat.Completed = true
 			stat.InProgress = false
 			j.SetStatus(stat)
 
@@ -342,4 +346,12 @@ func jobCanRestart(stat amboy.JobStatusInfo, lockTimeout time.Duration) bool {
 
 func (q *remoteBase) Delete(ctx context.Context, id string) error {
 	return errors.WithStack(q.driver.Delete(ctx, id))
+}
+
+func (q *remoteBase) Close(ctx context.Context) error {
+	if q.runner != nil || q.runner.Started() {
+		q.runner.Close(ctx)
+	}
+
+	return q.dispatcher.Close(ctx)
 }

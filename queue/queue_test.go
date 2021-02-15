@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/cdr/amboy"
 	"github.com/cdr/amboy/queue/testutil"
@@ -21,8 +22,14 @@ func DefaultQueueTestCases() []testutil.QueueTestCase {
 			DispatchBeforeSupported: true,
 			MinSize:                 2,
 			MaxSize:                 16,
+			SkipRateLimitedWorker:   true,
 			Constructor: func(ctx context.Context, _ string, size int) (amboy.Queue, testutil.TestCloser, error) {
-				return NewAdaptiveOrderedLocalQueue(&FixedSizeQueueOptions{Workers: size, Capacity: defaultLocalQueueCapcity}), func(ctx context.Context) error { return nil }, nil
+				q := NewAdaptiveOrderedLocalQueue(&FixedSizeQueueOptions{Workers: size, Capacity: defaultLocalQueueCapcity})
+				return q, func(ctx context.Context) error {
+					cctx, cancel := context.WithTimeout(ctx, time.Second)
+					defer cancel()
+					return q.Close(cctx)
+				}, nil
 			},
 		},
 		{
@@ -32,13 +39,24 @@ func DefaultQueueTestCases() []testutil.QueueTestCase {
 			MinSize:             2,
 			MaxSize:             8,
 			Constructor: func(ctx context.Context, _ string, size int) (amboy.Queue, testutil.TestCloser, error) {
-				return NewLocalOrdered(size), func(ctx context.Context) error { return nil }, nil
+				q := NewLocalOrdered(size)
+				return q, func(ctx context.Context) error {
+					cctx, cancel := context.WithTimeout(ctx, time.Second)
+					defer cancel()
+					return q.Close(cctx)
+				}, nil
 			},
 		},
 		{
-			Name: "Priority",
+			Name:                  "Priority",
+			SkipRateLimitedWorker: true,
 			Constructor: func(ctx context.Context, _ string, size int) (amboy.Queue, testutil.TestCloser, error) {
-				return NewLocalPriorityQueue(&FixedSizeQueueOptions{Workers: size, Capacity: defaultLocalQueueCapcity}), func(ctx context.Context) error { return nil }, nil
+				q := NewLocalPriorityQueue(&FixedSizeQueueOptions{Workers: size, Capacity: defaultLocalQueueCapcity})
+				return q, func(ctx context.Context) error {
+					cctx, cancel := context.WithTimeout(ctx, time.Second)
+					defer cancel()
+					return q.Close(cctx)
+				}, nil
 			},
 		},
 		{
@@ -46,14 +64,26 @@ func DefaultQueueTestCases() []testutil.QueueTestCase {
 			WaitUntilSupported:      true,
 			DispatchBeforeSupported: true,
 			Constructor: func(ctx context.Context, _ string, size int) (amboy.Queue, testutil.TestCloser, error) {
-				return NewLocalLimitedSize(&FixedSizeQueueOptions{Workers: size, Capacity: 1024 * size}), func(ctx context.Context) error { return nil }, nil
+				q := NewLocalLimitedSize(&FixedSizeQueueOptions{Workers: size, Capacity: 1024 * size})
+
+				return q, func(ctx context.Context) error {
+					cctx, cancel := context.WithTimeout(ctx, time.Second)
+					defer cancel()
+					return q.Close(cctx)
+				}, nil
 			},
 		},
 		{
-			Name:         "Shuffled",
-			SingleWorker: true,
+			Name:                  "Shuffled",
+			SingleWorker:          true,
+			SkipRateLimitedWorker: true,
 			Constructor: func(ctx context.Context, _ string, size int) (amboy.Queue, testutil.TestCloser, error) {
-				return NewShuffledLocal(&FixedSizeQueueOptions{Workers: size, Capacity: defaultLocalQueueCapcity}), func(ctx context.Context) error { return nil }, nil
+				q := NewShuffledLocal(&FixedSizeQueueOptions{Workers: size, Capacity: defaultLocalQueueCapcity})
+				return q, func(ctx context.Context) error {
+					cctx, cancel := context.WithTimeout(ctx, time.Second)
+					defer cancel()
+					return q.Close(cctx)
+				}, nil
 			},
 		},
 	}

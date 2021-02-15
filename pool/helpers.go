@@ -25,7 +25,14 @@ func jitterNilJobWait() time.Duration {
 
 func executeJob(ctx context.Context, logger grip.Journaler, id string, job amboy.Job, q amboy.Queue) {
 	job.Run(ctx)
+
+	if stat := job.Status(); stat.Canceled {
+		stat.InProgress = false
+		job.SetStatus(stat)
+	}
+
 	cerr := q.Complete(ctx, job)
+
 	ti := job.TimeInfo()
 	r := message.Fields{
 		"job":           job.ID(),
@@ -71,15 +78,24 @@ func worker(bctx context.Context, logger grip.Journaler, id string, q amboy.Queu
 				job.AddError(err)
 				// we ignore this next error because
 				// it's during panic recovery and it
-				// doesn't make sense to add Complete
-				// errors, which are really
+				// doesn't make sense to add
 				// queue-level errors to a local copy
 				// of a job that we're about to throw
 				// out.
+				//
+				// There's some debate, if
+				// we should save or complete this
+				// job. I think it's more correct to
+				// save them, but realistically, if a
+				// job panics once, we shouldn't try
+				// and re-execute, which Save would
+				// permit and complete wouldn't.
 				_ = q.Complete(bctx, job)
 			}
 			// start a replacement worker.
-			go worker(bctx, logger, id, q, wg)
+			if bctx.Err() == nil {
+				go worker(bctx, logger, id, q, wg)
+			}
 		}
 
 		if cancel != nil {

@@ -117,8 +117,10 @@ func (p *simpleRateLimited) worker(bctx context.Context) {
 				job.AddError(err)
 				_ = p.queue.Complete(bctx, job)
 			}
-			// start a replacement worker.
-			go p.worker(bctx)
+			if bctx.Err() == nil && p.canceler != nil {
+				// start a replacement worker.
+				go p.worker(bctx)
+			}
 		}
 		if cancel != nil {
 			cancel()
@@ -159,13 +161,22 @@ func (p *simpleRateLimited) SetQueue(q amboy.Queue) error {
 }
 
 func (p *simpleRateLimited) Close(ctx context.Context) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	var (
+		wg  *sync.WaitGroup
+		log grip.Journaler
+	)
 
-	if p.canceler != nil {
-		p.canceler()
-		p.canceler = nil
-	}
+	func() {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+
+		if p.canceler != nil {
+			p.canceler()
+			p.canceler = nil
+		}
+		wg = &p.wg
+		log = p.log
+	}()
 
 	// because of the timer+2 contexts in the worker
 	// implementation, we can end up returning earlier and because
@@ -176,9 +187,12 @@ func (p *simpleRateLimited) Close(ctx context.Context) {
 
 	wait := make(chan struct{})
 	go func() {
-		defer recovery.SendStackTraceAndContinue(p.log, "waiting for close")
+		defer recovery.SendStackTraceAndContinue(log, "waiting for close")
 		defer close(wait)
-		p.wg.Wait()
+
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		wg.Wait()
 	}()
 
 	select {

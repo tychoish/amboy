@@ -141,7 +141,7 @@ ifneq (,$(SKIP_LONG))
 testArgs += -short
 endif
 ifneq (,$(NUM_THREADS))
-testArgs += -test.parallel='$(NUM_THREADS)'
+testArgs += -parallel='$(NUM_THREADS)'
 endif
 #    implementation for package coverage and test running,mongodb to produce
 #    and save test output.

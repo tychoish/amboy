@@ -54,6 +54,11 @@ type Options struct {
 	// particularly if jobs define cyclic or incomplete dependency chains.
 	Ordered bool
 
+	// Number of times the Complete operation should
+	// retry. Previously defaulted to 10, and settings of 1 or 2
+	// are reasonable.
+	CompleteRetries int
+
 	// LockTimeout overrides the default job lock timeout if set.
 	WaitInterval time.Duration
 	LockTimeout  time.Duration
@@ -65,6 +70,10 @@ type Options struct {
 func (opts *Options) Validate() error {
 	if opts.LockTimeout < 0 {
 		return errors.New("cannot have negative lock timeout")
+	}
+
+	if opts.CompleteRetries < 0 {
+		return errors.New("cannot have negative complete retries")
 	}
 
 	if opts.LockTimeout == 0 {
@@ -197,7 +206,7 @@ func isPgDuplicateError(err error) bool {
 		return false
 	}
 
-	if pgerr, ok := err.(*pq.Error); ok && pgerr.Code == "23505" {
+	if pgerr, ok := errors.Cause(err).(*pq.Error); ok && pgerr.Code == "23505" {
 		return true
 	}
 
@@ -431,15 +440,14 @@ func (q *sqlQueue) Save(ctx context.Context, j amboy.Job) error {
 func (q *sqlQueue) Complete(ctx context.Context, j amboy.Job) error {
 	if err := q.dispatcher.Complete(ctx, j); err != nil {
 		return errors.WithStack(err)
-
 	}
 
 	stat := j.Status()
 	stat.ErrorCount = len(stat.Errors)
 	stat.ModificationTime = time.Now()
 	stat.ModificationCount++
-	stat.Completed = true
 	stat.InProgress = false
+
 	j.SetStatus(stat)
 	j.UpdateTimeInfo(amboy.JobTimeInfo{
 		End: time.Now(),
@@ -477,7 +485,7 @@ RETRY:
 						"message":     "job took too long to mark complete",
 					}))
 					return errors.Wrapf(err, "encountered timeout marking %q complete ", id)
-				} else if count > 10 {
+				} else if count > q.opts.CompleteRetries {
 					q.log.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
 						"service":     "amboy.queue.pgq",
@@ -497,6 +505,16 @@ RETRY:
 						"message":     "attempting to mark job complete without lock",
 					}))
 					return errors.Errorf("problem marking job %q complete without the lock", id)
+				} else if errors.Cause(err) == errLockNotHeld {
+					q.log.Warning(message.WrapError(err, message.Fields{
+						"job_id":      id,
+						"service":     "amboy.queue.pgq",
+						"job_type":    j.Type().Name,
+						"retry_count": count,
+						"queue_id":    q.id,
+						"message":     "cannot complete a job without lock",
+					}))
+					return errors.Errorf("problem marking job %q complete without the lock", id)
 				} else {
 					timer.Reset(retryInterval)
 					continue RETRY
@@ -506,6 +524,8 @@ RETRY:
 		}
 	}
 }
+
+var errLockNotHeld = errors.New("lock not held")
 
 func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) error {
 	q.processJobForGroup(job)
@@ -535,7 +555,7 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 	}
 
 	if count == 0 {
-		return errors.Errorf("do not have lock for job='%s' num=%d", job.Name, count)
+		return errors.Wrapf(errLockNotHeld, "job='%s' num=%d", job.Name, count)
 	}
 
 	if _, err = tx.ExecContext(ctx, q.processQueryString(removeJobScopes), job.Name); err != nil {
@@ -600,6 +620,7 @@ func (q *sqlQueue) Jobs(ctx context.Context) <-chan amboy.Job {
 		}
 		defer rows.Close()
 
+	CURSOR:
 		for rows.Next() {
 			var id string
 
@@ -613,7 +634,7 @@ func (q *sqlQueue) Jobs(ctx context.Context) <-chan amboy.Job {
 					"op":       "jobs iterator",
 				}))
 
-				continue
+				continue CURSOR
 			}
 
 			if q.opts.UseGroups {
@@ -630,10 +651,16 @@ func (q *sqlQueue) Jobs(ctx context.Context) <-chan amboy.Job {
 					"message":  "problem resolving job",
 					"op":       "jobs iterator",
 				}))
-				continue
+				continue CURSOR
 			}
 
-			output <- job
+			select {
+			case output <- job:
+				continue CURSOR
+			case <-ctx.Done():
+				break CURSOR
+			}
+
 		}
 		q.log.Debug(message.WrapError(rows.Close(), message.Fields{
 			"queue":    q.id,
@@ -946,4 +973,12 @@ func (q *sqlQueue) deleteMaybe(ctx context.Context, id string) (int, error) {
 func (q *sqlQueue) tryDelete(ctx context.Context, id string) error {
 	_, err := q.deleteMaybe(ctx, id)
 	return errors.WithStack(err)
+}
+
+func (q *sqlQueue) Close(ctx context.Context) error {
+	if q.runner != nil || q.runner.Started() {
+		q.runner.Close(ctx)
+	}
+
+	return q.dispatcher.Close(ctx)
 }

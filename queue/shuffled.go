@@ -124,17 +124,17 @@ func (q *shuffledLocal) Put(ctx context.Context, j amboy.Job) error {
 		dispatched map[string]amboy.Job,
 		toDelete *fixedStorage,
 	) {
+		defer close(ret)
 		_, isPending := pending[id]
 		_, isCompleted := completed[id]
 		_, isDispatched := dispatched[id]
 
 		if isPending || isCompleted || isDispatched {
 			ret <- amboy.NewDuplicateJobErrorf("job '%s' already exists", id)
+			return
 		}
 
 		pending[id] = j
-
-		close(ret)
 	}
 
 	select {
@@ -378,36 +378,52 @@ func (q *shuffledLocal) Complete(ctx context.Context, j amboy.Job) error {
 		return errors.WithStack(err)
 	}
 
-	if err := q.dispatcher.Complete(ctx, j); err != nil {
-		return errors.WithStack(err)
-	}
+	var op func(map[string]amboy.Job, map[string]amboy.Job, map[string]amboy.Job, *fixedStorage)
+	if stat := j.Status(); stat.Canceled {
+		q.dispatcher.Release(ctx, j)
 
-	op := func(
-		pending map[string]amboy.Job,
-		completed map[string]amboy.Job,
-		dispatched map[string]amboy.Job,
-		toDelete *fixedStorage,
-	) {
-		id := j.ID()
-
-		completed[id] = j
-		delete(dispatched, id)
-		toDelete.Push(id)
-
-		if num := toDelete.Oversize(); num > 0 {
-			for i := 0; i < num; i++ {
-				delete(completed, toDelete.Pop())
-			}
+		op = func(
+			pending map[string]amboy.Job,
+			completed map[string]amboy.Job,
+			dispatched map[string]amboy.Job,
+			toDelete *fixedStorage,
+		) {
+			id := j.ID()
+			delete(dispatched, id)
+			pending[id] = j
 		}
 
-		q.log.Warning(message.WrapError(
-			q.scopes.Release(j.ID(), j.Scopes()),
-			message.Fields{
-				"id":     j.ID(),
-				"scopes": j.Scopes(),
-				"queue":  q.ID(),
-				"op":     "releasing scope lock during completion",
-			}))
+	} else if err := q.dispatcher.Complete(ctx, j); err != nil {
+		return errors.WithStack(err)
+	} else {
+		op = func(
+			pending map[string]amboy.Job,
+			completed map[string]amboy.Job,
+			dispatched map[string]amboy.Job,
+			toDelete *fixedStorage,
+		) {
+			id := j.ID()
+
+			completed[id] = j
+			delete(dispatched, id)
+			toDelete.Push(id)
+
+			if num := toDelete.Oversize(); num > 0 {
+				for i := 0; i < num; i++ {
+					delete(completed, toDelete.Pop())
+				}
+			}
+
+			q.log.Warning(message.WrapError(
+				q.scopes.Release(j.ID(), j.Scopes()),
+				message.Fields{
+					"id":     j.ID(),
+					"scopes": j.Scopes(),
+					"queue":  q.ID(),
+					"op":     "releasing scope lock during completion",
+				}))
+		}
+
 	}
 
 	select {
@@ -471,4 +487,12 @@ func (q *shuffledLocal) SetRunner(r amboy.Runner) error {
 // Runner returns the embedded runner.
 func (q *shuffledLocal) Runner() amboy.Runner {
 	return q.runner
+}
+
+func (q *shuffledLocal) Close(ctx context.Context) error {
+	if q.runner != nil || q.runner.Started() {
+		q.runner.Close(ctx)
+	}
+
+	return q.dispatcher.Close(ctx)
 }

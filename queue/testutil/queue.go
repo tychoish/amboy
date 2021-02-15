@@ -15,6 +15,7 @@ type QueueTestCase struct {
 	MaxSize                 int
 	DisableParallelTests    bool
 	SingleWorker            bool
+	SkipRateLimitedWorker   bool
 	MultiSupported          bool
 	OrderedSupported        bool
 	OrderedStartsBefore     bool

@@ -272,6 +272,12 @@ func (q *limitedSizeLocal) Complete(ctx context.Context, j amboy.Job) error {
 	if err := ctx.Err(); err != nil {
 		return errors.WithStack(err)
 	}
+
+	if stat := j.Status(); stat.Canceled {
+		q.dispatcher.Release(ctx, j)
+		return nil
+	}
+
 	if err := q.dispatcher.Complete(ctx, j); err != nil {
 		return errors.WithStack(err)
 	}
@@ -280,7 +286,6 @@ func (q *limitedSizeLocal) Complete(ctx context.Context, j amboy.Job) error {
 	defer q.mu.Unlock()
 	// save it
 	status := j.Status()
-	status.Completed = true
 	status.InProgress = false
 	status.ModificationTime = time.Now()
 	status.ModificationCount += 1
@@ -331,4 +336,15 @@ func (q *limitedSizeLocal) Start(ctx context.Context) error {
 	q.log.Info("job server running")
 
 	return nil
+}
+
+func (q *limitedSizeLocal) Close(ctx context.Context) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	if q.runner != nil || q.runner.Started() {
+		q.runner.Close(ctx)
+	}
+
+	return q.dispatcher.Close(ctx)
 }
