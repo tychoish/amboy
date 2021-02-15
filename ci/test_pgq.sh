@@ -30,7 +30,7 @@ done
 
 # make coverage-queue-pgq
 
-go test ./queue/pgq
+go test -parallel=1 ./queue/pgq
 
 docker rm -f amboy-postgres || true
 popd
