@@ -325,6 +325,11 @@ func (p *ewmaRateLimiting) Abort(ctx context.Context, id string) error {
 		return errors.Wrapf(err, "could not find '%s' in the queue", id)
 	}
 
+	stat := job.Status()
+	stat.Canceled = false
+	stat.Completed = true
+	job.SetStatus(stat)
+
 	return errors.WithStack(p.queue.Complete(ctx, job))
 }
 
@@ -342,6 +347,12 @@ func (p *ewmaRateLimiting) AbortAll(ctx context.Context) {
 		if err != nil {
 			continue
 		}
+
+		stat := job.Status()
+		stat.Canceled = false
+		stat.Completed = true
+		job.SetStatus(stat)
+
 		_ = p.queue.Complete(ctx, job)
 	}
 }

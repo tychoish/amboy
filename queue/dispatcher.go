@@ -163,6 +163,11 @@ func (d *dispatcherImpl) Complete(ctx context.Context, job amboy.Job) error {
 		job.AddError(errors.New("job was aborted during execution"))
 	}
 
+	if stat := job.Status(); stat.Canceled && stat.Completed {
+		stat.Completed = false
+		job.SetStatus(stat)
+	}
+
 	info.stopPing()
 	info.jobCancel()
 	return nil

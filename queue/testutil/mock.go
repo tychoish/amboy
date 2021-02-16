@@ -134,14 +134,10 @@ func NewMockJob() amboy.Job {
 }
 
 func (j *mockJob) Run(ctx context.Context) {
-	if !j.ShouldCancel {
-		defer j.MarkComplete()
-	}
+	defer j.MarkComplete()
 
-	if stat := j.Status(); !stat.Canceled && j.ShouldCancel {
-		cctx, cancel := context.WithCancel(ctx)
-		cancel()
-		j.AddError(cctx.Err())
+	if j.ShouldCancel {
+		j.AddError(context.Canceled)
 	}
 
 	GetCounterCache().Get(j.Test).Inc()

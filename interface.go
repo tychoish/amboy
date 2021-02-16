@@ -308,6 +308,10 @@ type Runner interface {
 
 // AbortableRunner provides a superset of the Runner interface but
 // allows callers to abort jobs by ID.
+//
+// Implementations should be sure to abort jobs in such a way that
+// they not set the job to be canceled, and have the effect of
+// "completing" the job.
 type AbortableRunner interface {
 	Runner
 

@@ -145,6 +145,8 @@ func (r *localWorkers) Close(ctx context.Context) {
 	go func() {
 		defer recovery.SendStackTraceAndContinue(log, "waiting for close")
 		defer close(wait)
+		r.mu.Lock()
+		defer r.mu.Unlock()
 		wg.Wait()
 	}()
 
