@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/registry"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/logging"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )

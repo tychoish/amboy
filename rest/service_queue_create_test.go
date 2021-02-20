@@ -10,10 +10,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/tychoish/amboy/job"
-	"github.com/tychoish/amboy/registry"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/tychoish/amboy/job"
+	"github.com/tychoish/amboy/registry"
 )
 
 type CreateJobSuite struct {

@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
-	"github.com/pkg/errors"
 )
 
 // SimpleRemoteOrdered queue implements the amboy.Queue interface and

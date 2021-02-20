@@ -14,6 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/amboy/queue"
@@ -22,8 +24,6 @@ import (
 	"github.com/tychoish/grip/logging"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
-	"github.com/google/uuid"
-	"github.com/pkg/errors"
 )
 
 // RandomString returns a cryptographically random string.

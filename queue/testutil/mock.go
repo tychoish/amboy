@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/registry"
-	"github.com/google/uuid"
 )
 
 type counterCacheImpl struct {

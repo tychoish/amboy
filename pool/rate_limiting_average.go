@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/VividCortex/ewma"
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/recovery"
-	"github.com/pkg/errors"
 )
 
 // NewMovingAverageRateLimitedWorkers returns a worker pool

@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/VividCortex/ewma"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/logging"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSimpleRateLimitingConstructor(t *testing.T) {

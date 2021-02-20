@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
-	"github.com/google/uuid"
-	"github.com/pkg/errors"
 )
 
 type remoteQueue interface {

@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func localConstructor(ctx context.Context) (amboy.Queue, error) {

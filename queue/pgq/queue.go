@@ -12,6 +12,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/amboy/queue"
@@ -20,10 +24,6 @@ import (
 	"github.com/tychoish/grip/logging"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
-	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
-	"github.com/pkg/errors"
 )
 
 type sqlQueue struct {

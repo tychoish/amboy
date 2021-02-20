@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/amboy/queue/testutil"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/logging"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/require"
 )
 
 func TestGroup(t *testing.T) {

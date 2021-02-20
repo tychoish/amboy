@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/registry"
-	"github.com/stretchr/testify/suite"
 )
 
 func init() {

@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/grip"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type QueueClientSuite struct {

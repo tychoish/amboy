@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue/testutil"
 	"github.com/tychoish/grip"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )

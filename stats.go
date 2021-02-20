@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/grip/level"
 	"github.com/tychoish/grip/message"
-	"github.com/pkg/errors"
 )
 
 // QueueStats is a simple structure that the Stats() method in the

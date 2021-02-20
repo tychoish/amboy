@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/grip"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type GroupConstructor func(context.Context, time.Duration) (amboy.QueueGroup, TestCloser, error)

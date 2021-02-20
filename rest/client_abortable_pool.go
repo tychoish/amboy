@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/tychoish/gimlet"
 	"github.com/pkg/errors"
+	"github.com/tychoish/gimlet"
 )
 
 // AbortablePoolManagementClient provides a go wrapper to the

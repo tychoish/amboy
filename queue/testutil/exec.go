@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/job"
-	"github.com/stretchr/testify/require"
 )
 
 func RunSmokeTest(bctx context.Context, t *testing.T, test QueueTestCase) {

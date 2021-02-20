@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/recovery"
-	"github.com/pkg/errors"
 )
 
 type abortablePool struct {

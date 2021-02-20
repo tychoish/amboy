@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/management"
 	"github.com/tychoish/amboy/rest"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 

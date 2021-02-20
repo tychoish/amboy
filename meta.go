@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
-	"github.com/pkg/errors"
 )
 
 // ResolveErrors takes a queue object and iterates over the results

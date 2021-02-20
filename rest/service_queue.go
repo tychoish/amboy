@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/amboy/registry"
 	"github.com/tychoish/gimlet"
 	"github.com/tychoish/grip"
-	"github.com/pkg/errors"
 )
 
 // QueueService is used as a place holder for application state and configuration.

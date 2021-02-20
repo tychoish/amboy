@@ -20,13 +20,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
-	"github.com/google/uuid"
-	"github.com/pkg/errors"
 )
 
 // LocalShuffled provides a queue implementation that shuffles the

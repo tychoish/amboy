@@ -4,10 +4,10 @@ import (
 	"context"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/recovery"
-	"github.com/pkg/errors"
 )
 
 // single is an implementation of of the amboy.Runner interface

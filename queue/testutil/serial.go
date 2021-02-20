@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/job"
-	"github.com/stretchr/testify/require"
 )
 
 func RunSerializationTest(ctx context.Context, t *testing.T, test QueueTestCase) {

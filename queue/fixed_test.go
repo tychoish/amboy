@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/logging"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 // LocalLimitedSizeQueue suite tests the queue implementation that

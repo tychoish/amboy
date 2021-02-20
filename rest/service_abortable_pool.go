@@ -3,9 +3,9 @@ package rest
 import (
 	"net/http"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/gimlet"
-	"github.com/pkg/errors"
 )
 
 // AbortablePoolManagementService defines a set of rest routes that make it

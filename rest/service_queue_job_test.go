@@ -9,10 +9,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/tychoish/amboy"
-	"github.com/tychoish/amboy/job"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/job"
 )
 
 type JobStatusSuite struct {

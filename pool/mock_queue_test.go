@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/tychoish/amboy"
-	"github.com/tychoish/amboy/job"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/job"
 )
 
 type QueueTester struct {

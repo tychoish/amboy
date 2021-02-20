@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip/level"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/send"
-	"github.com/stretchr/testify/suite"
 )
 
 type MsgJobSuite struct {

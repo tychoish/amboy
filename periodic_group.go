@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
-	"github.com/pkg/errors"
 )
 
 // GroupQueueOperation describes a single queue population operation

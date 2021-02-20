@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/management"
 	"github.com/tychoish/gimlet"
-	"github.com/pkg/errors"
 )
 
 // managementClient provides a wrapper for communicating with an amboy rest

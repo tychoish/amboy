@@ -3,8 +3,8 @@ package amboy
 import (
 	"testing"
 
-	"github.com/tychoish/grip/message"
 	"github.com/stretchr/testify/assert"
+	"github.com/tychoish/grip/message"
 )
 
 func TestQueueStats(t *testing.T) {

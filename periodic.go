@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/timing"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
-	"github.com/pkg/errors"
 )
 
 // QueueOperation is a named function literal for use in the

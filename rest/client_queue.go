@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/registry"
 	"github.com/tychoish/gimlet"
 	"github.com/tychoish/grip"
-	"github.com/pkg/errors"
 )
 
 const (

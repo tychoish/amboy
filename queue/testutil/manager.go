@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/management"
 	"github.com/tychoish/amboy/registry"
-	"github.com/stretchr/testify/suite"
 )
 
 func init() {

@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/registry"
-	"github.com/stretchr/testify/suite"
 )
 
 // NOTE: this file is largely duplicated in the amboy/queue/testutil package

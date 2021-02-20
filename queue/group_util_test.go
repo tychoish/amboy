@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tychoish/amboy/queue/testutil"
 	"github.com/stretchr/testify/require"
+	"github.com/tychoish/amboy/queue/testutil"
 )
 
 func TestGroupCache(t *testing.T) {

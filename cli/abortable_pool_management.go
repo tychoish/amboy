@@ -3,9 +3,9 @@ package cli
 import (
 	"context"
 
-	"github.com/tychoish/amboy/rest"
 	"github.com/cheynewallace/tabby"
 	"github.com/pkg/errors"
+	"github.com/tychoish/amboy/rest"
 	"github.com/urfave/cli"
 )
 

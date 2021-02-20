@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/management"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
-	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

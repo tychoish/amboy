@@ -3,10 +3,10 @@ package mdbq
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/logging"
-	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 

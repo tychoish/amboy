@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/logging"
-	"github.com/stretchr/testify/suite"
 )
 
 type SingleRunnerSuite struct {

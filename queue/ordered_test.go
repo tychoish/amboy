@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/pool"
-	"github.com/stretchr/testify/suite"
 )
 
 type OrderedQueueSuite struct {

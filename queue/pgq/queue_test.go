@@ -6,17 +6,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tychoish/amboy"
-	"github.com/tychoish/amboy/job"
-	"github.com/tychoish/amboy/queue/testutil"
-	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/message"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/job"
+	"github.com/tychoish/amboy/queue/testutil"
+	"github.com/tychoish/grip"
+	"github.com/tychoish/grip/message"
 )
 
 func init() {

@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
-	"github.com/google/uuid"
-	"github.com/pkg/errors"
 )
 
 // LocalPriorityQueue is an amboy.Queue implementation that dispatches

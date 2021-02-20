@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
-	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
 )
 

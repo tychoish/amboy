@@ -3,8 +3,8 @@ package dependency
 import (
 	"sync"
 
-	"github.com/tychoish/grip"
 	"github.com/pkg/errors"
+	"github.com/tychoish/grip"
 )
 
 var registry *registryCache

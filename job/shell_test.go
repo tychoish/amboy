@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tychoish/amboy"
-	"github.com/tychoish/amboy/dependency"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/dependency"
 )
 
 // ShellJobSuite collects tests of the generic shell command running

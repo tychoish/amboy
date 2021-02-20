@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tychoish/amboy"
-	"github.com/tychoish/amboy/job"
-	"github.com/tychoish/grip"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/job"
+	"github.com/tychoish/grip"
 )
 
 // All drivers should be able to pass this suite of tests which

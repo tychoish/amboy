@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/registry"
 	"github.com/tychoish/grip"
-	"github.com/pkg/errors"
 )
 
 // Group is a structure for running collections of Job objects at the

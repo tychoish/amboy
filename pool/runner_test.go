@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/VividCortex/ewma"
+	"github.com/stretchr/testify/assert"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/level"
 	"github.com/tychoish/grip/logging"
 	"github.com/tychoish/grip/send"
-	"github.com/stretchr/testify/assert"
 )
 
 func init() {

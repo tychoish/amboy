@@ -9,13 +9,13 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/logging"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type ShuffledQueueSuite struct {

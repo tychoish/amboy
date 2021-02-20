@@ -1,9 +1,9 @@
 package registry
 
 import (
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
-	"github.com/pkg/errors"
 )
 
 // JobInterchange provides a consistent way to describe and reliably

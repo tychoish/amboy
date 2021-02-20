@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/management"
 	"github.com/tychoish/gimlet"
-	"github.com/pkg/errors"
 )
 
 // ManagementService wraps a manager instance as described in the management

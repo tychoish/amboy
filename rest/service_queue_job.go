@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/gimlet"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
-	"github.com/pkg/errors"
 )
 
 type jobStatusResponse struct {

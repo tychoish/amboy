@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
-	"github.com/pkg/errors"
 )
 
 type queueManager struct {

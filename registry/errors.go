@@ -3,9 +3,9 @@ package registry
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
-	"github.com/pkg/errors"
 )
 
 type resolutionError struct {

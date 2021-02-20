@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/tychoish/amboy"
-	"github.com/tychoish/amboy/job"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/job"
 )
 
 type PriorityStorageSuite struct {

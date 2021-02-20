@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/VividCortex/ewma"
-	"github.com/tychoish/amboy"
 	"github.com/stretchr/testify/suite"
+	"github.com/tychoish/amboy"
 )
 
 type AbortablePoolSuite struct {

@@ -3,11 +3,11 @@ package mdbq
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/grip"
-	"github.com/pkg/errors"
 )
 
 // RemoteUnordered are queues that use a Driver as backend for job

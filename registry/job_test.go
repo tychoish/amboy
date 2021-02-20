@@ -5,10 +5,10 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/level"
-	"github.com/stretchr/testify/suite"
 )
 
 // AmboyJobRegustrySuite tests the amboy job registry resource, which is

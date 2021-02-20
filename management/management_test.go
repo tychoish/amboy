@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/queue"
-	"github.com/stretchr/testify/suite"
 )
 
 func init() {

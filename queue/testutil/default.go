@@ -4,11 +4,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/logging"
-	"github.com/google/uuid"
 )
 
 func RandomID() string { return strings.Replace(uuid.New().String(), "-", "", -1) }

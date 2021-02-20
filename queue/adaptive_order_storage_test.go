@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/job"
-	"github.com/stretchr/testify/suite"
 )
 
 type AdaptiveOrderItemsSuite struct {

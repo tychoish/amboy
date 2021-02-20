@@ -3,8 +3,8 @@ package pool
 import (
 	"context"
 
-	"github.com/tychoish/amboy"
 	"github.com/pkg/errors"
+	"github.com/tychoish/amboy"
 )
 
 type noopPool struct {

@@ -3,10 +3,10 @@ package registry
 import (
 	"testing"
 
-	"github.com/tychoish/amboy"
-	"github.com/tychoish/amboy/dependency"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/dependency"
 )
 
 func TestErrors(t *testing.T) {

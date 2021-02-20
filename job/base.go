@@ -26,9 +26,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
-	"github.com/pkg/errors"
 )
 
 // Base is a type that all new checks should compose, and provides

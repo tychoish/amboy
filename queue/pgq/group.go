@@ -6,14 +6,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/level"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
-	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
 )
 
 type sqlGroup struct {

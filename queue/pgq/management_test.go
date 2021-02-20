@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/tychoish/amboy/management"
-	"github.com/tychoish/amboy/queue/testutil"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/tychoish/amboy/management"
+	"github.com/tychoish/amboy/queue/testutil"
 )
 
 func TestManager(t *testing.T) {
