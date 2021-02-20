@@ -38,7 +38,7 @@ func UnorderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 
 	q, closer, err := test.Constructor(ctx, RandomID(), size.Size)
 	require.NoError(t, err)
-	defer func() { require.NoError(t, closer(ctx)) }()
+	defer func() { cancel(); require.NoError(t, closer(bctx)) }()
 	require.NoError(t, runner.SetPool(q, size.Size))
 
 	if test.OrderedSupported && !test.OrderedStartsBefore {
@@ -170,7 +170,7 @@ func WaitUntilTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 
 	q, closer, err := test.Constructor(ctx, RandomID(), size.Size)
 	require.NoError(t, err)
-	defer func() { require.NoError(t, closer(ctx)) }()
+	defer func() { cancel(); require.NoError(t, closer(bctx)) }()
 	require.NoError(t, runner.SetPool(q, size.Size))
 
 	require.NoError(t, q.Start(ctx))
@@ -267,7 +267,7 @@ func DispatchBeforeTest(bctx context.Context, t *testing.T, test QueueTestCase, 
 
 	q, closer, err := test.Constructor(ctx, RandomID(), size.Size)
 	require.NoError(t, err)
-	defer func() { require.NoError(t, closer(ctx)) }()
+	defer func() { cancel(); require.NoError(t, closer(bctx)) }()
 	require.NoError(t, runner.SetPool(q, size.Size))
 
 	require.NoError(t, q.Start(ctx))
@@ -317,7 +317,7 @@ func OneExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, ru
 	require.NoError(t, err)
 	require.NoError(t, runner.SetPool(q, size.Size))
 
-	defer func() { require.NoError(t, closer(ctx)) }()
+	defer func() { cancel(); require.NoError(t, closer(bctx)) }()
 
 	counter := GetCounterCache().Get(testID)
 	counter.Reset()
@@ -444,11 +444,12 @@ func ManyQueueTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 	for i := 0; i < sz; i++ {
 		q, closer, err := test.Constructor(ctx, driverID, size.Size)
 		require.NoError(t, err)
-		defer func() { cancel(); require.NoError(t, closer(ctx)) }()
+		defer func() { require.NoError(t, closer(bctx)) }()
 
 		require.NoError(t, q.Start(ctx))
 		queues = append(queues, q)
 	}
+	defer cancel()
 
 	const (
 		inside  = 15
@@ -489,7 +490,7 @@ func ScopedLockTest(bctx context.Context, t *testing.T, test QueueTestCase, runn
 	defer cancel()
 	q, closer, err := test.Constructor(ctx, RandomID(), 2*size.Size)
 	require.NoError(t, err)
-	defer func() { require.NoError(t, closer(ctx)) }()
+	defer func() { cancel(); require.NoError(t, closer(bctx)) }()
 	require.NoError(t, runner.SetPool(q, size.Size*3))
 
 	require.NoError(t, q.Start(ctx))
@@ -534,7 +535,7 @@ func AbortTracking(bctx context.Context, t *testing.T, test QueueTestCase, runne
 
 	q, closer, err := test.Constructor(ctx, testID, size.Size)
 	require.NoError(t, err)
-	defer func() { require.NoError(t, closer(ctx)) }()
+	defer func() { cancel(); require.NoError(t, closer(bctx)) }()
 	require.NoError(t, runner.SetPool(q, size.Size))
 
 	if test.OrderedSupported && !test.OrderedStartsBefore {
