@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/queue/testutil"
-	"github.com/cdr/grip"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/queue/testutil"
+	"github.com/tychoish/grip"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/mongo"

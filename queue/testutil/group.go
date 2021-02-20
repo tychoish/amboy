@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/job"
-	"github.com/cdr/grip"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/job"
+	"github.com/tychoish/grip"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/grip/level"
-	"github.com/cdr/grip/message"
-	"github.com/cdr/grip/send"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/grip/level"
+	"github.com/tychoish/grip/message"
+	"github.com/tychoish/grip/send"
 	"github.com/stretchr/testify/suite"
 )
 

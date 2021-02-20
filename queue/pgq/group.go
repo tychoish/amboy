@@ -6,12 +6,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/queue"
-	"github.com/cdr/grip"
-	"github.com/cdr/grip/level"
-	"github.com/cdr/grip/message"
-	"github.com/cdr/grip/recovery"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/queue"
+	"github.com/tychoish/grip"
+	"github.com/tychoish/grip/level"
+	"github.com/tychoish/grip/message"
+	"github.com/tychoish/grip/recovery"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )

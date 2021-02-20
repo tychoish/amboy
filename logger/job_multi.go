@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/job"
-	"github.com/cdr/grip/message"
-	"github.com/cdr/grip/send"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/job"
+	"github.com/tychoish/grip/message"
+	"github.com/tychoish/grip/send"
 )
 
 type multiSendMessageJob struct {

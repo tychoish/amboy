@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/VividCortex/ewma"
-	"github.com/cdr/amboy"
-	"github.com/cdr/grip"
-	"github.com/cdr/grip/level"
-	"github.com/cdr/grip/logging"
-	"github.com/cdr/grip/send"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/grip"
+	"github.com/tychoish/grip/level"
+	"github.com/tychoish/grip/logging"
+	"github.com/tychoish/grip/send"
 	"github.com/stretchr/testify/assert"
 )
 

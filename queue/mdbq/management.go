@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cdr/amboy/management"
-	"github.com/cdr/grip"
-	"github.com/cdr/grip/message"
+	"github.com/tychoish/amboy/management"
+	"github.com/tychoish/grip"
+	"github.com/tychoish/grip/message"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"

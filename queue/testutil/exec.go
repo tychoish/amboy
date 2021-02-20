@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/job"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/job"
 	"github.com/stretchr/testify/require"
 )
 

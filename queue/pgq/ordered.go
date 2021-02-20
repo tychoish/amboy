@@ -3,9 +3,9 @@ package pgq
 import (
 	"context"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/dependency"
-	"github.com/cdr/grip/message"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/dependency"
+	"github.com/tychoish/grip/message"
 )
 
 type orderedQueue struct {

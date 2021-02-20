@@ -4,11 +4,11 @@ import (
 	"context"
 	"sync"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/queue"
-	"github.com/cdr/grip"
-	"github.com/cdr/grip/message"
-	"github.com/cdr/grip/send"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/queue"
+	"github.com/tychoish/grip"
+	"github.com/tychoish/grip/message"
+	"github.com/tychoish/grip/send"
 )
 
 type multiQueueSender struct {

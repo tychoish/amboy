@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/grip"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/grip"
 	"github.com/pkg/errors"
 )
 

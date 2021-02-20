@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/job"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/job"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )

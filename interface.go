@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/cdr/amboy/dependency"
-	"github.com/cdr/grip"
+	"github.com/tychoish/amboy/dependency"
+	"github.com/tychoish/grip"
 )
 
 // LockTimeout describes the default period of time that a queue will respect

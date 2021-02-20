@@ -3,8 +3,8 @@ package registry
 import (
 	"fmt"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/dependency"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/dependency"
 	"github.com/pkg/errors"
 )
 

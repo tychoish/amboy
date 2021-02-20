@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cdr/amboy/management"
-	"github.com/cdr/amboy/queue/testutil"
+	"github.com/tychoish/amboy/management"
+	"github.com/tychoish/amboy/queue/testutil"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"

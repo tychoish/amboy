@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/grip"
-	"github.com/cdr/grip/recovery"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/grip"
+	"github.com/tychoish/grip/recovery"
 	"github.com/pkg/errors"
 )
 

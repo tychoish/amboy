@@ -3,7 +3,7 @@ package pool
 import (
 	"context"
 
-	"github.com/cdr/amboy"
+	"github.com/tychoish/amboy"
 	"github.com/pkg/errors"
 )
 

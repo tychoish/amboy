@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/queue/testutil"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/queue/testutil"
 )
 
 const defaultLocalQueueCapcity = 10000

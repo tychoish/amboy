@@ -3,10 +3,10 @@ package mdbq
 import (
 	"context"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/pool"
-	"github.com/cdr/amboy/queue"
-	"github.com/cdr/grip"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/pool"
+	"github.com/tychoish/amboy/queue"
+	"github.com/tychoish/grip"
 	"github.com/pkg/errors"
 )
 

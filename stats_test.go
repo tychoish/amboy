@@ -3,7 +3,7 @@ package amboy
 import (
 	"testing"
 
-	"github.com/cdr/grip/message"
+	"github.com/tychoish/grip/message"
 	"github.com/stretchr/testify/assert"
 )
 

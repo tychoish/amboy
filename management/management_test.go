@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cdr/amboy/job"
-	"github.com/cdr/amboy/queue"
+	"github.com/tychoish/amboy/job"
+	"github.com/tychoish/amboy/queue"
 	"github.com/stretchr/testify/suite"
 )
 

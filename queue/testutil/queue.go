@@ -3,7 +3,7 @@ package testutil
 import (
 	"context"
 
-	"github.com/cdr/amboy"
+	"github.com/tychoish/amboy"
 )
 
 type TestCloser func(context.Context) error

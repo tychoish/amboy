@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cdr/amboy/management"
-	"github.com/cdr/gimlet"
+	"github.com/tychoish/amboy/management"
+	"github.com/tychoish/gimlet"
 	"github.com/pkg/errors"
 )
 

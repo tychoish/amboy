@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/VividCortex/ewma"
-	"github.com/cdr/amboy"
+	"github.com/tychoish/amboy"
 	"github.com/stretchr/testify/suite"
 )
 

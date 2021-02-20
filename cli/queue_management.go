@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/cdr/amboy/management"
+	"github.com/tychoish/amboy/management"
 	"github.com/cheynewallace/tabby"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"

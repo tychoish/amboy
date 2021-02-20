@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cdr/amboy/management"
-	"github.com/cdr/grip"
+	"github.com/tychoish/amboy/management"
+	"github.com/tychoish/grip"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )

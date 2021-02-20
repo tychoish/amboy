@@ -3,7 +3,7 @@ package cli
 import (
 	"context"
 
-	"github.com/cdr/amboy/rest"
+	"github.com/tychoish/amboy/rest"
 	"github.com/cheynewallace/tabby"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"

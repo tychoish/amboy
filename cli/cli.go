@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/cdr/amboy/management"
-	"github.com/cdr/amboy/rest"
+	"github.com/tychoish/amboy/management"
+	"github.com/tychoish/amboy/rest"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )

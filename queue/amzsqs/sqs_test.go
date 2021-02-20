@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/job"
-	"github.com/cdr/amboy/pool"
-	"github.com/cdr/amboy/queue/testutil"
-	"github.com/cdr/grip"
-	"github.com/cdr/grip/logging"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/job"
+	"github.com/tychoish/amboy/pool"
+	"github.com/tychoish/amboy/queue/testutil"
+	"github.com/tychoish/grip"
+	"github.com/tychoish/grip/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )

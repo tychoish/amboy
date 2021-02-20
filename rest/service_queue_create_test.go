@@ -10,8 +10,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/cdr/amboy/job"
-	"github.com/cdr/amboy/registry"
+	"github.com/tychoish/amboy/job"
+	"github.com/tychoish/amboy/registry"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )

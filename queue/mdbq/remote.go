@@ -3,9 +3,9 @@ package mdbq
 import (
 	"context"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/grip"
-	"github.com/cdr/grip/logging"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/grip"
+	"github.com/tychoish/grip/logging"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 )

@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/queue"
-	"github.com/cdr/amboy/queue/testutil"
-	"github.com/cdr/grip"
-	"github.com/cdr/grip/logging"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/queue"
+	"github.com/tychoish/amboy/queue/testutil"
+	"github.com/tychoish/grip"
+	"github.com/tychoish/grip/logging"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )

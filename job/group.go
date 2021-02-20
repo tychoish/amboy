@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/dependency"
-	"github.com/cdr/amboy/registry"
-	"github.com/cdr/grip"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/dependency"
+	"github.com/tychoish/amboy/registry"
+	"github.com/tychoish/grip"
 	"github.com/pkg/errors"
 )
 

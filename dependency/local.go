@@ -3,7 +3,7 @@ package dependency
 import (
 	"os"
 
-	"github.com/cdr/grip"
+	"github.com/tychoish/grip"
 )
 
 // LocalFile describes a dependency between a task and local

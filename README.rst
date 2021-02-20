@@ -2,8 +2,8 @@
 ``amboy`` -- Task and Worker Pool Infrastructure |PkgGoDev|
 ===========================================================
 
-.. |PkgGoDev| image:: https://pkg.go.dev/badge/cdr/amboy
-	      :target: https://pkg.go.dev/github.com/cdr/amboy
+.. |PkgGoDev| image:: https://pkg.go.dev/badge/tychoish/amboy
+	      :target: https://pkg.go.dev/github.com/tychoish/amboy
 
 Overview
 --------
@@ -30,7 +30,7 @@ complete. Current queue implementations include:
 
 - an unordered queue that ignores dependency information in tasks. For
   most basic cases these queues are ideal. (`LocalUnordered
-  <https://godoc.org/github.com/cdr/amboy/queue#LocalUnordered>`_
+  <https://godoc.org/github.com/tychoish/amboy/queue#LocalUnordered>`_
   as implementation detail this queue dispatches tasks in a FIFO order.)
 
 - a limited size queue that keep a fixed number of completed jobs in
@@ -45,7 +45,7 @@ complete. Current queue implementations include:
 Queue Groups
 ~~~~~~~~~~~~
 
-The `QueueGroup <https://godoc.org/github.com/cdr/amboy#QueueGroup>`_
+The `QueueGroup <https://godoc.org/github.com/tychoish/amboy#QueueGroup>`_
 interface provides a mechanism to manage collections of queues. There are remote
 and local versions of the queue group possible, but these groups make it
 possible to create new queues at runtime, and improve the isolation of queues
@@ -57,7 +57,7 @@ Runners
 Runners are the execution component of the worker pool, and are
 embedded within the queues, and can be injected at run time before
 starting the queue pool. The `LocalWorkers
-<https://godoc.org/github.com/cdr/amboy/pool#LocalWorkers>`_
+<https://godoc.org/github.com/tychoish/amboy/pool#LocalWorkers>`_
 implementation executes tasks in a fixed-size worker pool, which is
 the default of most queue implementations.
 
@@ -69,12 +69,12 @@ Dependencies
 ~~~~~~~~~~~~
 
 The `DependencyManager
-<https://godoc.org/github.com/cdr/amboy/dependency#Manager>`_
+<https://godoc.org/github.com/tychoish/amboy/dependency#Manager>`_
 interface makes it possible for tasks to express relationships to each
 other and to their environment so that Job operations can noop or
 block if their requirements are not satisfied. The data about
 relationships between jobs can inform task ordering as in the `LocalOrdered
-<https://godoc.org/github.com/cdr/amboy/queue#LocalOrdered>`_
+<https://godoc.org/github.com/tychoish/amboy/queue#LocalOrdered>`_
 queue.
 
 The handling of dependency information is the responsibility of the
@@ -84,9 +84,9 @@ Management
 ~~~~~~~~~~
 
 The `management package
-<https://godoc.org/github.com/cdr/amboy/management>`_ centers around a
+<https://godoc.org/github.com/tychoish/amboy/management>`_ centers around a
 `management interface
-<https://godoc.org/github.com/cdr/amboy/management#Manager>`_ that provides
+<https://godoc.org/github.com/tychoish/amboy/management#Manager>`_ that provides
 methods for reporting and safely interacting with the state of jobs.
 
 REST Interface
@@ -98,16 +98,16 @@ build clients and services, although any client that can construct
 JSON formated Job object can use the REST API.
 
 Additionally the REST package provides remote implementations of the `management
-interface <https://godoc.org/github.com/cdr/amboy/rest#ManagementService>`_
+interface <https://godoc.org/github.com/tychoish/amboy/rest#ManagementService>`_
 which makes it possible to manage and report on the jobs in an existing queue,
 and the `abortable pool
-<https://godoc.org/github.com/cdr/amboy/rest#AbortablePoolManagementService>`_
+<https://godoc.org/github.com/tychoish/amboy/rest#AbortablePoolManagementService>`_
 interface, that makes it possible to abort running jobs. These management tools
 can help administrators of larger amboy systems gain insights into the current
 behavior of the system, and promote safe and gentle operational interventions.
 
 See the documentation of the `REST package
-<https://godoc.org/github.com/cdr/amboy/rest>`_
+<https://godoc.org/github.com/tychoish/amboy/rest>`_
 
 Logger
 ~~~~~~
@@ -125,7 +125,7 @@ Base Job
 ~~~~~~~~
 
 Embed the `job.Base
-<https://godoc.org/github.com/cdr/amboy/job/#Base>`_
+<https://godoc.org/github.com/tychoish/amboy/job/#Base>`_
 type in your amboy.Job implementations. This provides a number of
 helpers for basic job defintion in addition to implementations of all
 general methods in the interface. With the Base, you only need to
@@ -146,14 +146,14 @@ synchronous operation for short running queues, and use a limited size
 queue or remote-backed queue as part of a long running service.
 
 Please submit pull requests or `issues
-<https://github.com/cdr/amboy>`_ with additional examples of amboy
+<https://github.com/tychoish/amboy>`_ with additional examples of amboy
 use.
 
 API and Documentation
 ---------------------
 
 See the `godoc API documentation
-<http://godoc.org/github.com/cdr/amboy>` for more information
+<http://godoc.org/github.com/tychoish/amboy>` for more information
 about amboy interfaces and internals.
 
 Development

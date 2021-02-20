@@ -3,7 +3,7 @@ package dependency
 import (
 	"sync"
 
-	"github.com/cdr/grip"
+	"github.com/tychoish/grip"
 	"github.com/pkg/errors"
 )
 

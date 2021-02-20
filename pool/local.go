@@ -12,11 +12,11 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/grip"
-	"github.com/cdr/grip/logging"
-	"github.com/cdr/grip/message"
-	"github.com/cdr/grip/recovery"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/grip"
+	"github.com/tychoish/grip/logging"
+	"github.com/tychoish/grip/message"
+	"github.com/tychoish/grip/recovery"
 )
 
 // WorkerOptions describes the arguments passed to the constructors of

@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/cdr/gimlet"
+	"github.com/tychoish/gimlet"
 	"github.com/pkg/errors"
 )
 

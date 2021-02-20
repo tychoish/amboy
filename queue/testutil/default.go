@@ -4,10 +4,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/amboy/pool"
-	"github.com/cdr/grip"
-	"github.com/cdr/grip/logging"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/amboy/pool"
+	"github.com/tychoish/grip"
+	"github.com/tychoish/grip/logging"
 	"github.com/google/uuid"
 )
 

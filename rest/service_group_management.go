@@ -3,8 +3,8 @@ package rest
 import (
 	"net/http"
 
-	"github.com/cdr/amboy"
-	"github.com/cdr/gimlet"
+	"github.com/tychoish/amboy"
+	"github.com/tychoish/gimlet"
 )
 
 // ManagementGroupService provides the reporting service

@@ -1,6 +1,6 @@
 package registry
 
-import "github.com/cdr/amboy/dependency"
+import "github.com/tychoish/amboy/dependency"
 
 // this is is a mock dependency implementation that's here
 

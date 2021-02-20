@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cdr/amboy/job"
-	"github.com/cdr/amboy/pool"
-	"github.com/cdr/grip"
-	"github.com/cdr/grip/logging"
+	"github.com/tychoish/amboy/job"
+	"github.com/tychoish/amboy/pool"
+	"github.com/tychoish/grip"
+	"github.com/tychoish/grip/logging"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
