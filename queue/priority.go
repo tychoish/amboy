@@ -253,7 +253,7 @@ func (q *priorityLocalQueue) Start(ctx context.Context) error {
 		return err
 	}
 
-	grip.Info("job server running")
+	q.log.Debug("queue job server running")
 
 	return nil
 }

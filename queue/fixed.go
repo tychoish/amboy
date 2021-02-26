@@ -333,7 +333,7 @@ func (q *limitedSizeLocal) Start(ctx context.Context) error {
 		return err
 	}
 
-	q.log.Info("job server running")
+	q.log.Debug("queue job server running")
 
 	return nil
 }
