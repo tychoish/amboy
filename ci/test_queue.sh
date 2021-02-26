@@ -2,4 +2,4 @@
 
 # Run tests that don't require an external db.
 
-make coverage-queue
+RACE_DETECTOR=true make test-queue

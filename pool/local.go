@@ -123,10 +123,7 @@ func (r *localWorkers) Start(ctx context.Context) error {
 
 // Close terminates all worker processes as soon as possible.
 func (r *localWorkers) Close(ctx context.Context) {
-	var (
-		wg  *sync.WaitGroup
-		log grip.Journaler
-	)
+	wait := make(chan struct{})
 
 	func() {
 		r.mu.Lock()
@@ -137,17 +134,14 @@ func (r *localWorkers) Close(ctx context.Context) {
 			r.canceler = nil
 			r.started = false
 		}
-		wg = &r.wg
-		log = r.log
-	}()
 
-	wait := make(chan struct{})
-	go func() {
-		defer recovery.SendStackTraceAndContinue(log, "waiting for close")
-		defer close(wait)
-		r.mu.Lock()
-		defer r.mu.Unlock()
-		wg.Wait()
+		go func(wg *sync.WaitGroup, log grip.Journaler) {
+			defer recovery.SendStackTraceAndContinue(log, "waiting for close")
+			defer close(wait)
+			r.mu.Lock()
+			defer r.mu.Unlock()
+			wg.Wait()
+		}(&r.wg, r.log)
 	}()
 
 	select {
