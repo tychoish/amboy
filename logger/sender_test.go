@@ -140,7 +140,7 @@ func (s *SenderSuite) TestLevelSetterRejectsInvalidSettings() {
 func (s *SenderSuite) TestFlush() {
 	for t, sender := range s.senders {
 		for i := 0; i < 10; i++ {
-			sender.Send(message.ConvertToComposer(level.Error, "message"))
+			sender.Send(message.ConvertWithPriority(level.Error, "message"))
 		}
 		s.Require().NoError(sender.Flush(context.TODO()), t)
 		for i := 0; i < 10; i++ {
@@ -161,7 +161,7 @@ func (s *SenderSuite) TestBasicNoopSendTest() {
 	for name, sender := range s.senders {
 		grip.Info(name)
 		for i := -10; i <= 110; i += 5 {
-			m := message.NewDefaultMessage(level.Priority(i), "hello world! "+randomString(10, s.rand))
+			m := message.NewString(level.Priority(i), "hello world! "+randomString(10, s.rand))
 			sender.Send(m)
 		}
 	}

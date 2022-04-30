@@ -10,12 +10,12 @@ import (
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/amboy/queue/testutil"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 )
 
 func TestGroup(t *testing.T) {
-	logger := logging.MakeGrip(grip.GetSender())
+	logger := grip.NewLogger(grip.Sender())
 
 	bctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -118,7 +118,7 @@ func TestGroup(t *testing.T) {
 
 				g, err := NewGroup(ctx, db, opts, groupOpts)
 				if err != nil {
-					catcher := grip.NewBasicCatcher()
+					catcher := emt.NewBasicCatcher()
 					catcher.Add(err)
 					catcher.Check(closer)
 					return nil, nil, catcher.Resolve()

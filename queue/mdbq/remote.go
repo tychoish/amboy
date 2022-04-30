@@ -5,8 +5,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -18,7 +18,7 @@ type MongoDBQueueCreationOptions struct {
 	Name    string
 	Ordered bool
 	MDB     MongoDBOptions
-	Logger  grip.Journaler
+	Logger  grip.Logger
 	Client  *mongo.Client
 }
 
@@ -26,8 +26,8 @@ type MongoDBQueueCreationOptions struct {
 // instance. These queues allow workers running in multiple processes
 // to service shared workloads in multiple processes.
 func NewMongoDBQueue(ctx context.Context, opts MongoDBQueueCreationOptions) (amboy.Queue, error) {
-	if opts.Logger == nil {
-		opts.Logger = logging.MakeGrip(grip.GetSender())
+	if opts.Logger.Sender() == nil {
+		opts.Logger = grip.NewLogger(grip.Sender())
 	}
 	opts.MDB.logger = opts.Logger
 
@@ -40,7 +40,7 @@ func NewMongoDBQueue(ctx context.Context, opts MongoDBQueueCreationOptions) (amb
 
 // Validate ensure that the arguments defined are valid.
 func (opts *MongoDBQueueCreationOptions) Validate() error {
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 
 	catcher.NewWhen(opts.Name == "", "must specify a name")
 

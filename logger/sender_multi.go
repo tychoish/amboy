@@ -6,7 +6,7 @@ import (
 
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
-	"github.com/tychoish/grip"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/send"
 )
@@ -82,7 +82,7 @@ func (s *multiQueueSender) Flush(ctx context.Context) error {
 		return ctx.Err()
 	}
 
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	for _, sender := range s.senders {
 		catcher.Add(sender.Flush(ctx))
 	}

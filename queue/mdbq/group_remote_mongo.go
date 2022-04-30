@@ -11,8 +11,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
 	"go.mongodb.org/mongo-driver/bson"
@@ -24,7 +24,7 @@ type remoteMongoQueueGroup struct {
 	canceler context.CancelFunc
 	client   *mongo.Client
 	mu       sync.RWMutex
-	log      grip.Journaler
+	log      grip.Logger
 	opts     MongoDBQueueGroupOptions
 	dbOpts   MongoDBOptions
 	queues   map[string]amboy.Queue
@@ -63,7 +63,7 @@ type MongoDBQueueGroupOptions struct {
 
 	// Logger allows callers to pass specific loggers to the
 	// group. If not specified the global logger is used.
-	Logger grip.Journaler
+	Logger grip.Logger
 }
 
 func (opts *MongoDBQueueGroupOptions) constructor(ctx context.Context, name string) remoteQueue {
@@ -91,7 +91,7 @@ func (opts *MongoDBQueueGroupOptions) constructor(ctx context.Context, name stri
 }
 
 func (opts MongoDBQueueGroupOptions) validate() error {
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	catcher.NewWhen(opts.Prefix == "", "prefix must be set")
 	catcher.NewWhen(opts.TTL < 0, "ttl must be greater than or equal to 0")
 	catcher.NewWhen(opts.TTL > 0 && opts.TTL < time.Second, "ttl cannot be less than 1 second, unless it is 0")
@@ -102,8 +102,8 @@ func (opts MongoDBQueueGroupOptions) validate() error {
 	catcher.NewWhen(opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil,
 		"must specify either a default worker pool size or a WorkerPoolSize function")
 
-	if opts.Logger == nil {
-		opts.Logger = logging.MakeGrip(grip.GetSender())
+	if opts.Logger.Sender() == nil {
+		opts.Logger = grip.NewLogger(grip.Sender())
 	}
 
 	return catcher.Resolve()
@@ -213,7 +213,7 @@ func (g *remoteMongoQueueGroup) startQueues(ctx context.Context) error {
 		return errors.Wrap(err, "problem getting existing collections")
 	}
 
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	for _, coll := range colls {
 		q, err := g.startProcessingRemoteQueue(ctx, coll)
 		if err != nil {
@@ -351,7 +351,7 @@ func (g *remoteMongoQueueGroup) Prune(ctx context.Context) error {
 			collsToCheck = append(collsToCheck, coll)
 		}
 	}
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	wg := &sync.WaitGroup{}
 	collsDeleteChan := make(chan string, len(collsToCheck))
 	collsDropChan := make(chan string, len(collsToCheck))

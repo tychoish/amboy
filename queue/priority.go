@@ -26,7 +26,7 @@ type priorityLocalQueue struct {
 	dispatcher Dispatcher
 	runner     amboy.Runner
 	id         string
-	log        grip.Journaler
+	log        grip.Logger
 	counters   struct {
 		started   int
 		completed int

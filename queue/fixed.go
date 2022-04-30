@@ -11,7 +11,6 @@ import (
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
 )
@@ -19,12 +18,12 @@ import (
 type FixedSizeQueueOptions struct {
 	Workers  int
 	Capacity int
-	Logger   grip.Journaler
+	Logger   grip.Logger
 }
 
 func (opts *FixedSizeQueueOptions) setDefaults() {
-	if opts.Logger == nil {
-		opts.Logger = logging.MakeGrip(grip.GetSender())
+	if opts.Logger.Sender() == nil {
+		opts.Logger = grip.NewLogger(grip.Sender())
 	}
 }
 
@@ -45,7 +44,7 @@ type limitedSizeLocal struct {
 	scopes       ScopeManager
 	dispatcher   Dispatcher
 	lifetimeCtx  context.Context
-	log          grip.Journaler
+	log          grip.Logger
 	deletedCount int
 	staleCount   int
 	id           string

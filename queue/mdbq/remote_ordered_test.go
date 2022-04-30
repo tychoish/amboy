@@ -13,7 +13,6 @@ import (
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/registry"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -70,7 +69,7 @@ func (s *SimpleRemoteOrderedSuite) SetupTest() {
 	s.Require().NoError(err)
 	s.canceler = canceler
 	s.NoError(s.driver.Open(ctx))
-	queue := newSimpleRemoteOrdered(2, logging.MakeGrip(grip.GetSender()))
+	queue := newSimpleRemoteOrdered(2, grip.NewLogger(grip.Sender()))
 	s.NoError(queue.SetDriver(s.driver))
 	s.queue = queue
 }

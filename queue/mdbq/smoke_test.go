@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue/testutil"
-	"github.com/tychoish/grip"
+	"github.com/tychoish/emt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -38,7 +38,7 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 				}
 
 				closer := func(ctx context.Context) error {
-					catcher := grip.NewBasicCatcher()
+					catcher := emt.NewBasicCatcher()
 
 					catcher.Add(q.Close(ctx))
 
@@ -78,7 +78,7 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 				}
 
 				closer := func(ctx context.Context) error {
-					catcher := grip.NewBasicCatcher()
+					catcher := emt.NewBasicCatcher()
 
 					catcher.Add(q.Close(ctx))
 
@@ -116,7 +116,7 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 				}
 
 				closer := func(ctx context.Context) error {
-					catcher := grip.NewBasicCatcher()
+					catcher := emt.NewBasicCatcher()
 
 					catcher.Add(q.Close(ctx))
 

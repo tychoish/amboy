@@ -9,19 +9,9 @@ import (
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/registry"
-	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/level"
-	"github.com/tychoish/grip/send"
 )
 
 func init() {
-	grip.SetName("amboy.rest.tests")
-	grip.Error(grip.SetSender(send.MakeNative()))
-
-	lvl := grip.GetSender().Level()
-	lvl.Threshold = level.Warning
-	_ = grip.GetSender().SetLevel(lvl)
-
 	job.RegisterDefaultJobs()
 }
 

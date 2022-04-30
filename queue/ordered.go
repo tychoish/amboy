@@ -30,7 +30,6 @@ import (
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 	"github.com/tychoish/grip/message"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/simple"
@@ -50,7 +49,7 @@ type depGraphOrderedLocal struct {
 	id         string
 	channel    chan amboy.Job
 	dispatcher Dispatcher
-	log        grip.Journaler
+	log        grip.Logger
 	tasks      struct {
 		m         map[string]amboy.Job
 		ids       map[string]int64
@@ -83,7 +82,7 @@ func NewLocalOrdered(workers int) amboy.Queue {
 	q.tasks.graph = simple.NewDirectedGraph()
 	q.id = fmt.Sprintf("queue.local.ordered.graph.%s", uuid.New().String())
 	q.runner = pool.NewLocalWorkers(&pool.WorkerOptions{Logger: q.log, NumWorkers: workers, Queue: q})
-	q.log = logging.MakeGrip(grip.GetSender())
+	q.log = grip.NewLogger(grip.Sender())
 	q.dispatcher = NewDispatcher(q, q.log)
 	return q
 }

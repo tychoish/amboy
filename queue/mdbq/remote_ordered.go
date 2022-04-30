@@ -29,7 +29,7 @@ type remoteSimpleOrdered struct {
 
 // newSimpleRemoteOrdered returns a queue with a configured local
 // runner with the specified number of workers.
-func newSimpleRemoteOrdered(size int, logger grip.Journaler) remoteQueue {
+func newSimpleRemoteOrdered(size int, logger grip.Logger) remoteQueue {
 	q := &remoteSimpleOrdered{remoteBase: newRemoteBase()}
 	q.log = logger
 	q.dispatcher = queue.NewDispatcher(q, q.log)
@@ -80,7 +80,7 @@ func (q *remoteSimpleOrdered) Next(ctx context.Context) (amboy.Job, error) {
 				q.addBlocked(job.ID())
 				continue
 			case dependency.Unresolved:
-				q.log.Warning(message.MakeFieldsMessage("detected a dependency error",
+				q.log.Warning(message.MakeAnnotated("detected a dependency error",
 					message.Fields{
 						"job":   id,
 						"edges": dep.Edges(),
@@ -120,7 +120,7 @@ func (q *remoteSimpleOrdered) Next(ctx context.Context) (amboy.Job, error) {
 				continue
 			default:
 				q.dispatcher.Release(ctx, job)
-				q.log.Warning(message.MakeFieldsMessage("detected invalid dependency",
+				q.log.Warning(message.MakeAnnotated("detected invalid dependency",
 					message.Fields{
 						"job":   id,
 						"edges": dep.Edges(),

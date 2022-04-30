@@ -8,8 +8,8 @@ import (
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/amboy/registry"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -61,7 +61,7 @@ type MongoDBOptions struct {
 	// LockTimeout overrides the default job lock timeout if set.
 	LockTimeout time.Duration
 
-	logger grip.Journaler
+	logger grip.Logger
 }
 
 // DefaultMongoDBOptions constructs a new options object with default
@@ -86,7 +86,7 @@ func DefaultMongoDBOptions() MongoDBOptions {
 // Validate validates that the required options are given and sets fields that
 // are unspecified and have a default value.
 func (opts *MongoDBOptions) Validate() error {
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	catcher.NewWhen(opts.URI == "", "must specify connection URI")
 	catcher.NewWhen(opts.DB == "", "must specify database")
 	catcher.NewWhen(opts.LockTimeout < 0, "cannot have negative lock timeout")
@@ -97,8 +97,8 @@ func (opts *MongoDBOptions) Validate() error {
 		opts.LockTimeout = amboy.LockTimeout
 	}
 
-	if opts.logger == nil {
-		opts.logger = logging.MakeGrip(grip.GetSender())
+	if opts.logger.Sender() == nil {
+		opts.logger = grip.NewLogger(grip.Sender())
 	}
 
 	return catcher.Resolve()

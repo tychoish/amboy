@@ -15,7 +15,6 @@ import (
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/amboy/queue/testutil"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -80,7 +79,7 @@ func (s *RemoteUnorderedSuite) SetupTest() {
 	s.driver = s.driverConstructor()
 	s.canceler = canceler
 	s.NoError(s.driver.Open(ctx))
-	s.queue = newRemoteUnordered(2, logging.MakeGrip(grip.GetSender())).(*remoteUnordered)
+	s.queue = newRemoteUnordered(2, grip.NewLogger(grip.Sender())).(*remoteUnordered)
 }
 
 func (s *RemoteUnorderedSuite) TearDownTest() {

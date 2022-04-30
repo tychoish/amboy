@@ -12,7 +12,6 @@ import (
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 )
 
 func TestSimpleRateLimitingConstructor(t *testing.T) {
@@ -84,7 +83,7 @@ func TestAvergeTimeCalculator(t *testing.T) {
 		size:   2,
 		target: 10,
 		jobs:   map[string]context.CancelFunc{},
-		log:    logging.MakeGrip(grip.GetSender()),
+		log:    grip.NewLogger(grip.Sender()),
 	}
 	// average is uninitialized by default
 	assert.Equal(p.ewma.Value(), float64(0))
@@ -144,7 +143,7 @@ func TestSimpleRateLimitingWorkerHandlesPanicingJobs(t *testing.T) {
 	defer cancel()
 
 	p := &simpleRateLimited{
-		log: logging.MakeGrip(grip.GetSender()),
+		log: grip.NewLogger(grip.Sender()),
 	}
 	p.queue = &QueueTester{
 		toProcess: jobsChanWithPanicingJobs(ctx, 10),
@@ -158,7 +157,7 @@ func TestEWMARateLimitingWorkerHandlesPanicingJobs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
-	p := &ewmaRateLimiting{log: logging.MakeGrip(grip.GetSender())}
+	p := &ewmaRateLimiting{log: grip.NewLogger(grip.Sender())}
 	p.queue = &QueueTester{
 		toProcess: jobsChanWithPanicingJobs(ctx, 10),
 		storage:   make(map[string]amboy.Job),

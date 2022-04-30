@@ -10,13 +10,14 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/management"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
 )
 
 type sqlManager struct {
 	opts ManagerOptions
 	db   *sqlx.DB
-	log  grip.Journaler
+	log  grip.Logger
 }
 
 // ManagerOptions control the behavior of the Manager implementation,
@@ -29,9 +30,9 @@ type ManagerOptions struct {
 }
 
 func (o *ManagerOptions) Validate() error {
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	catcher.NewWhen(o.SingleGroup && o.ByGroups, "cannot specify conflicting group options")
-	catcher.Wrap(o.Options.Validate(), "invalid database options")
+	catcher.Add(o.Options.Validate())
 	return catcher.Resolve()
 }
 

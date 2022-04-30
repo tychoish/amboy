@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/level"
 	"github.com/tychoish/grip/message"
@@ -20,7 +21,7 @@ type sqlGroup struct {
 	db        *sqlx.DB
 	opts      GroupOptions
 	queueOpts Options
-	log       grip.Journaler
+	log       grip.Logger
 	cache     queue.GroupCache
 	canceler  context.CancelFunc
 	started   bool // reflects background prune/create threads active
@@ -59,7 +60,7 @@ type GroupOptions struct {
 }
 
 func (opts *GroupOptions) validate() error {
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	catcher.NewWhen(opts.TTL < 0, "ttl must be greater than or equal to 0")
 	catcher.NewWhen(opts.TTL > 0 && opts.TTL < time.Second, "ttl cannot be less than 1 second, unless it is 0")
 	catcher.NewWhen(opts.PruneFrequency < 0, "prune frequency must be greater than or equal to 0")
@@ -196,7 +197,7 @@ func (g *sqlGroup) startQueues(ctx context.Context) error {
 		return errors.WithStack(err)
 	}
 
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	for _, id := range queues {
 		_, err := g.Get(ctx, id)
 		catcher.Add(err)

@@ -60,7 +60,7 @@ func NewSimpleRateLimitedWorkers(sleepInterval time.Duration, opts *WorkerOption
 
 type simpleRateLimited struct {
 	size     int
-	log      grip.Journaler
+	log      grip.Logger
 	interval time.Duration
 	queue    amboy.Queue
 	canceler context.CancelFunc
@@ -163,7 +163,7 @@ func (p *simpleRateLimited) SetQueue(q amboy.Queue) error {
 func (p *simpleRateLimited) Close(ctx context.Context) {
 	var (
 		wg  *sync.WaitGroup
-		log grip.Journaler
+		log grip.Logger
 	)
 
 	func() {

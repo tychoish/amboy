@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/tychoish/amboy/dependency"
-	"github.com/tychoish/grip"
+	"github.com/tychoish/emt"
 )
 
 // LockTimeout describes the default period of time that a queue will respect
@@ -152,7 +152,7 @@ func (j JobTimeInfo) IsDispatchable() bool {
 
 // Validate ensures that the structure has reasonable values set.
 func (j JobTimeInfo) Validate() error {
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 
 	catcher.NewWhen(!j.DispatchBy.IsZero() && j.WaitUntil.After(j.DispatchBy), "invalid for wait_until to be after dispatch_by")
 	catcher.NewWhen(j.Created.IsZero(), "must specify non-zero created timestamp")

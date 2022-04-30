@@ -8,7 +8,6 @@ import (
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 )
 
 func RandomID() string { return strings.Replace(uuid.New().String(), "-", "", -1) }
@@ -31,7 +30,7 @@ func DefaultPoolTestCases() []PoolTestCase {
 			Name: "Default",
 			SetPool: func(q amboy.Queue, size int) error {
 				return q.SetRunner(pool.NewLocalWorkers(&pool.WorkerOptions{
-					Logger:     logging.MakeGrip(grip.GetSender()),
+					Logger:     grip.NewLogger(grip.Sender()),
 					NumWorkers: size,
 					Queue:      q,
 				}))
@@ -43,7 +42,7 @@ func DefaultPoolTestCases() []PoolTestCase {
 			MinSize:   1,
 			MaxSize:   1,
 			SetPool: func(q amboy.Queue, _ int) error {
-				runner := pool.NewSingle(logging.MakeGrip(grip.GetSender()))
+				runner := pool.NewSingle(grip.NewLogger(grip.Sender()))
 				if err := runner.SetQueue(q); err != nil {
 					return err
 				}
@@ -56,7 +55,7 @@ func DefaultPoolTestCases() []PoolTestCase {
 			MinSize: 4,
 			SetPool: func(q amboy.Queue, size int) error {
 				return q.SetRunner(pool.NewAbortablePool(&pool.WorkerOptions{
-					Logger:     logging.MakeGrip(grip.GetSender()),
+					Logger:     grip.NewLogger(grip.Sender()),
 					NumWorkers: size,
 					Queue:      q,
 				}))
@@ -71,7 +70,7 @@ func DefaultPoolTestCases() []PoolTestCase {
 			SetPool: func(q amboy.Queue, size int) error {
 				runner, err := pool.NewSimpleRateLimitedWorkers(10*time.Millisecond,
 					&pool.WorkerOptions{
-						Logger:     logging.MakeGrip(grip.GetSender()),
+						Logger:     grip.NewLogger(grip.Sender()),
 						NumWorkers: size,
 						Queue:      q,
 					})
@@ -92,7 +91,7 @@ func DefaultPoolTestCases() []PoolTestCase {
 			SetPool: func(q amboy.Queue, size int) error {
 				runner, err := pool.NewMovingAverageRateLimitedWorkers(size*100, 10*time.Millisecond,
 					&pool.WorkerOptions{
-						Logger:     logging.MakeGrip(grip.GetSender()),
+						Logger:     grip.NewLogger(grip.Sender()),
 						NumWorkers: size,
 						Queue:      q,
 					})

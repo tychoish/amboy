@@ -15,7 +15,6 @@ import (
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/amboy/queue/testutil"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 )
 
 type SQSFifoQueueSuite struct {
@@ -35,7 +34,7 @@ func (s *SQSFifoQueueSuite) SetupTest() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	logger := logging.MakeGrip(grip.GetSender())
+	logger := grip.NewLogger(grip.Sender())
 
 	var err error
 	s.queue, err = NewFifoQueue(&Options{Name: randomString(4), NumWorkers: 4, Logger: logger})
@@ -77,7 +76,7 @@ func (s *SQSFifoQueueSuite) TestGetMethodReturnsRequestedJob() {
 func (s *SQSFifoQueueSuite) TestCannotSetRunnerWhenQueueStarted() {
 	s.True(s.queue.Info().Started)
 
-	s.Error(s.queue.SetRunner(pool.NewSingle(logging.MakeGrip(grip.GetSender()))))
+	s.Error(s.queue.SetRunner(pool.NewSingle(grip.NewLogger(grip.Sender()))))
 }
 
 func (s *SQSFifoQueueSuite) TestCompleteMethodChangesStatsAndResults() {
@@ -112,7 +111,7 @@ func TestSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 	assert := assert.New(t)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	q, err := NewFifoQueue(&Options{Name: randomString(8), NumWorkers: 4, Logger: logging.MakeGrip(grip.GetSender())})
+	q, err := NewFifoQueue(&Options{Name: randomString(8), NumWorkers: 4, Logger: grip.NewLogger(grip.Sender())})
 	assert.NoError(err)
 	assert.NoError(q.Start(ctx))
 	wg := &sync.WaitGroup{}
@@ -158,11 +157,11 @@ func TestMultipleSQSFifoQueueRunsJobsOnlyOnce(t *testing.T) {
 
 	defer cancel()
 	name := randomString(8)
-	q, err := NewFifoQueue(&Options{Name: name, NumWorkers: 4, Logger: logging.MakeGrip(grip.GetSender())})
+	q, err := NewFifoQueue(&Options{Name: name, NumWorkers: 4, Logger: grip.NewLogger(grip.Sender())})
 	assert.NoError(err)
 	assert.NoError(q.Start(ctx))
 
-	q2, err := NewFifoQueue(&Options{Name: name, NumWorkers: 4, Logger: logging.MakeGrip(grip.GetSender())})
+	q2, err := NewFifoQueue(&Options{Name: name, NumWorkers: 4, Logger: grip.NewLogger(grip.Sender())})
 	assert.NoError(err)
 	assert.NoError(q2.Start(ctx))
 

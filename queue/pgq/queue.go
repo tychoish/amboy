@@ -21,7 +21,6 @@ import (
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/amboy/registry"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
 )
@@ -34,7 +33,7 @@ type sqlQueue struct {
 	mutex      sync.RWMutex
 	runner     amboy.Runner
 	dispatcher queue.Dispatcher
-	log        grip.Journaler
+	log        grip.Logger
 }
 
 // Options describe the
@@ -62,7 +61,7 @@ type Options struct {
 	// LockTimeout overrides the default job lock timeout if set.
 	WaitInterval time.Duration
 	LockTimeout  time.Duration
-	Logger       grip.Journaler
+	Logger       grip.Logger
 }
 
 // Validate ensures that all options are reasonable, and will override
@@ -92,8 +91,8 @@ func (opts *Options) Validate() error {
 		opts.SchemaName = "amboy"
 	}
 
-	if opts.Logger == nil {
-		opts.Logger = logging.MakeGrip(grip.GetSender())
+	if opts.Logger.Sender() == nil {
+		opts.Logger = grip.NewLogger(grip.Sender())
 	}
 
 	return nil

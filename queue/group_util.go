@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
-	"github.com/tychoish/grip"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip/recovery"
 )
 
@@ -158,7 +158,7 @@ func (c *cacheImpl) getCacheIterSafe() <-chan *cacheItem {
 func (c *cacheImpl) Prune(ctx context.Context) error {
 	wg := &sync.WaitGroup{}
 	num := runtime.NumCPU()
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	work := c.getCacheIterSafe()
 	wg.Add(num)
 

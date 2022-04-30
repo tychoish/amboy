@@ -26,11 +26,11 @@ type dispatcherImpl struct {
 	queue amboy.Queue
 	mutex sync.Mutex
 	cache map[string]dispatcherInfo
-	log   grip.Journaler
+	log   grip.Logger
 }
 
 // NewDispatcher constructs a default dispatching implementation.
-func NewDispatcher(q amboy.Queue, log grip.Journaler) Dispatcher {
+func NewDispatcher(q amboy.Queue, log grip.Logger) Dispatcher {
 	return &dispatcherImpl{
 		queue: q,
 		cache: map[string]dispatcherInfo{},

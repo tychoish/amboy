@@ -16,14 +16,14 @@ import (
 type single struct {
 	canceler context.CancelFunc
 	queue    amboy.Queue
-	log      grip.Journaler
+	log      grip.Logger
 	wg       sync.WaitGroup
 	mu       sync.Mutex
 }
 
 // NewSingle returns an amboy.Runner implementation with single-worker
 // in the pool.
-func NewSingle(logger grip.Journaler) amboy.Runner { return &single{log: logger} }
+func NewSingle(logger grip.Logger) amboy.Runner { return &single{log: logger} }
 
 // Started returns true when the Runner has begun executing tasks. For
 // LocalWorkers this means that workers are running.

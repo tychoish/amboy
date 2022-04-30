@@ -10,7 +10,6 @@ import (
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 )
 
 type SingleRunnerSuite struct {
@@ -24,7 +23,7 @@ func TestSingleWorkerSuite(t *testing.T) {
 }
 
 func (s *SingleRunnerSuite) SetupTest() {
-	s.pool = NewSingle(logging.MakeGrip(grip.GetSender())).(*single)
+	s.pool = NewSingle(grip.NewLogger(grip.Sender())).(*single)
 	s.queue = NewQueueTester(s.pool)
 }
 

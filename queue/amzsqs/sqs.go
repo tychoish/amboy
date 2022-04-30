@@ -20,8 +20,8 @@ import (
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/amboy/registry"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
 )
@@ -47,7 +47,7 @@ type sqsFIFOQueue struct {
 		all       map[string]amboy.Job
 	}
 	runner amboy.Runner
-	log    grip.Journaler
+	log    grip.Logger
 	mutex  sync.RWMutex
 }
 
@@ -58,19 +58,19 @@ type Options struct {
 	Name       string
 	Region     string
 	NumWorkers int
-	Logger     grip.Journaler
+	Logger     grip.Logger
 }
 
 func (opts *Options) Validate() error {
-	if opts.Logger == nil {
-		opts.Logger = logging.MakeGrip(grip.GetSender())
+	if opts.Logger.Sender() == nil {
+		opts.Logger = grip.NewLogger(grip.Sender())
 	}
 
 	if opts.Region == "" {
 		opts.Region = defaultRegion
 	}
 
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	catcher.NewWhen(opts.Name == "", "must specify a name")
 	catcher.NewWhen(opts.NumWorkers <= 0, "must specify > 1 workers")
 	return catcher.Resolve()

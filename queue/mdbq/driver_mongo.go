@@ -30,7 +30,7 @@ type mongoDriver struct {
 	instanceID string
 	mu         sync.RWMutex
 	canceler   context.CancelFunc
-	log        grip.Journaler
+	log        grip.Logger
 	dispatcher queue.Dispatcher
 }
 

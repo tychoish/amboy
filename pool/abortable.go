@@ -18,7 +18,7 @@ type abortablePool struct {
 	mu       sync.RWMutex
 	canceler context.CancelFunc
 	queue    amboy.Queue
-	log      grip.Journaler
+	log      grip.Logger
 	jobs     map[string]context.CancelFunc
 }
 
@@ -58,7 +58,7 @@ func (p *abortablePool) SetQueue(q amboy.Queue) error {
 func (p *abortablePool) Close(ctx context.Context) {
 	var (
 		wg  *sync.WaitGroup
-		log grip.Journaler
+		log grip.Logger
 	)
 
 	func() {

@@ -14,7 +14,6 @@ import (
 
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
 )
@@ -22,7 +21,7 @@ import (
 // WorkerOptions describes the arguments passed to the constructors of
 // worker pools. Queue must not be nil.
 type WorkerOptions struct {
-	Logger     grip.Journaler
+	Logger     grip.Logger
 	Queue      amboy.Queue
 	NumWorkers int
 }
@@ -32,8 +31,8 @@ func (opts *WorkerOptions) setDefaults() {
 		opts.NumWorkers = 1
 	}
 
-	if opts.Logger == nil {
-		opts.Logger = logging.MakeGrip(grip.GetSender())
+	if opts.Logger.Sender() == nil {
+		opts.Logger = grip.NewLogger(grip.Sender())
 	}
 
 	opts.Logger.CriticalWhen(opts.Queue == nil, "cannot construct a pool without a queue")
@@ -60,7 +59,7 @@ type localWorkers struct {
 	wg       sync.WaitGroup
 	canceler context.CancelFunc
 	queue    amboy.Queue
-	log      grip.Journaler
+	log      grip.Logger
 	mu       sync.RWMutex
 }
 
@@ -135,7 +134,7 @@ func (r *localWorkers) Close(ctx context.Context) {
 			r.started = false
 		}
 
-		go func(wg *sync.WaitGroup, log grip.Journaler) {
+		go func(wg *sync.WaitGroup, log grip.Logger) {
 			defer recovery.SendStackTraceAndContinue(log, "waiting for close")
 			defer close(wait)
 			r.mu.Lock()

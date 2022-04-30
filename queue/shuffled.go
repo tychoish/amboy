@@ -40,7 +40,7 @@ type shuffledLocal struct {
 	starter    *sync.Once
 	scopes     ScopeManager
 	dispatcher Dispatcher
-	log        grip.Journaler
+	log        grip.Logger
 	runner     amboy.Runner
 }
 

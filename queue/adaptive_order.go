@@ -23,7 +23,7 @@ type adaptiveLocalOrdering struct {
 	id         string
 	dispatcher Dispatcher
 	runner     amboy.Runner
-	log        grip.Journaler
+	log        grip.Logger
 }
 
 // NewAdaptiveOrderedLocalQueue provides a queue implementation that

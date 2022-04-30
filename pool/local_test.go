@@ -12,7 +12,6 @@ import (
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 )
 
 type LocalWorkersSuite struct {
@@ -54,7 +53,7 @@ func (s *LocalWorkersSuite) TestPanicJobsDoNotPanicHarness() {
 	wg := &sync.WaitGroup{}
 
 	s.queue.toProcess = jobsChanWithPanicingJobs(ctx, s.size)
-	s.NotPanics(func() { worker(ctx, logging.MakeGrip(grip.GetSender()), "test-local", s.queue, wg) })
+	s.NotPanics(func() { worker(ctx, grip.NewLogger(grip.Sender()), "test-local", s.queue, wg) })
 }
 
 func (s *LocalWorkersSuite) TestConstructedInstanceImplementsInterface() {

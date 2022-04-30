@@ -23,7 +23,7 @@ func jitterNilJobWait() time.Duration {
 
 }
 
-func executeJob(ctx context.Context, logger grip.Journaler, id string, job amboy.Job, q amboy.Queue) {
+func executeJob(ctx context.Context, logger grip.Logger, id string, job amboy.Job, q amboy.Queue) {
 	job.Run(ctx)
 
 	if stat := job.Status(); stat.Canceled {
@@ -60,7 +60,7 @@ func executeJob(ctx context.Context, logger grip.Journaler, id string, job amboy
 	}
 }
 
-func worker(bctx context.Context, logger grip.Journaler, id string, q amboy.Queue, wg *sync.WaitGroup) {
+func worker(bctx context.Context, logger grip.Logger, id string, q amboy.Queue, wg *sync.WaitGroup) {
 	var (
 		err    error
 		job    amboy.Job

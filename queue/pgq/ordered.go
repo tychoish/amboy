@@ -35,7 +35,7 @@ func (q orderedQueue) Next(ctx context.Context) (amboy.Job, error) {
 
 			return nil, false
 		case dependency.Unresolved:
-			q.log.Warning(message.MakeFieldsMessage("detected a dependency error",
+			q.log.Warning(message.MakeAnnotated("detected a dependency error",
 				message.Fields{
 					"job":   id,
 					"edges": dep.Edges(),
@@ -84,7 +84,7 @@ func (q orderedQueue) Next(ctx context.Context) (amboy.Job, error) {
 			// mark this job stuck (complete? maybe
 			// deleted?) in some way that will prevent it
 			// from slowing down dispatching.
-			q.log.Warning(message.MakeFieldsMessage("detected invalid dependency",
+			q.log.Warning(message.MakeAnnotated("detected invalid dependency",
 				message.Fields{
 					"job_id": id,
 					"edges":  dep.Edges(),

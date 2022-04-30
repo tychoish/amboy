@@ -10,11 +10,11 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/queue/testutil"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 )
@@ -52,20 +52,20 @@ func MakeTestDatabase(bctx context.Context, name string) (*sqlx.DB, func() error
 
 	closer := func() error {
 		cancel()
-		catcher := grip.NewBasicCatcher()
-		catcher.Wrap(db.Close(), "problem closing test database")
+		catcher := emt.NewBasicCatcher()
+		catcher.Add(db.Close())
 
 		_, err = tdb.Exec("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1;", dbName)
-		catcher.Wrap(err, "problem killing connections")
+		catcher.ErrorfWhen(err != nil, "problem killing connections: %w", err)
 
 		_, err = tdb.Exec("DROP DATABASE " + dbName)
 		if perr, ok := err.(*pq.Error); ok && perr.Code == "3D000" {
-			grip.Debug(errors.Wrap(err, "error dropping database"))
+			grip.Debug(fmt.Errorf("dropping database: %w", err))
 		} else {
-			catcher.Wrap(err, "error dropping database")
+			catcher.Add(err)
 		}
 
-		catcher.Wrap(tdb.Close(), "problem closing connection")
+		catcher.Add(tdb.Close())
 		grip.Critical(message.WrapError(catcher.Resolve(), "problem cleaning up test database"))
 		return nil
 	}
@@ -125,7 +125,7 @@ func TestQueueSmoke(t *testing.T) {
 				}
 
 				return q, func(ctx context.Context) error {
-					catcher := grip.NewCatcher()
+					catcher := emt.NewCatcher()
 					go func() {
 
 						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -163,7 +163,7 @@ func TestQueueSmoke(t *testing.T) {
 					return nil, nil, err
 				}
 				return q, func(ctx context.Context) error {
-					catcher := grip.NewCatcher()
+					catcher := emt.NewCatcher()
 					go func() {
 
 						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -206,7 +206,7 @@ func TestQueueSmoke(t *testing.T) {
 				}
 
 				return q, func(ctx context.Context) error {
-					catcher := grip.NewCatcher()
+					catcher := emt.NewCatcher()
 					go func() {
 
 						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -249,7 +249,7 @@ func TestQueueSmoke(t *testing.T) {
 				}
 
 				return q, func(ctx context.Context) error {
-					catcher := grip.NewCatcher()
+					catcher := emt.NewCatcher()
 					go func() {
 
 						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)

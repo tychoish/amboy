@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 )
@@ -14,7 +15,7 @@ import (
 // completeness of this operation depends on the implementation of a
 // the queue implementation's Results() method.
 func ResolveErrors(ctx context.Context, q Queue) error {
-	catcher := grip.NewCatcher()
+	catcher := emt.NewCatcher()
 
 	for result := range q.Jobs(ctx) {
 		if !result.Status().Completed {
@@ -34,7 +35,7 @@ func ResolveErrors(ctx context.Context, q Queue) error {
 // PopulateQueue adds jobs from a channel to a queue and returns an
 // error with the aggregated results of these operations.
 func PopulateQueue(ctx context.Context, q Queue, jobs <-chan Job) error {
-	catcher := grip.NewCatcher()
+	catcher := emt.NewCatcher()
 
 	for j := range jobs {
 		if err := ctx.Err(); err != nil {

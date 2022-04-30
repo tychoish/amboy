@@ -61,7 +61,7 @@ func NewMovingAverageRateLimitedWorkers(targetNum int, period time.Duration, opt
 
 type ewmaRateLimiting struct {
 	period   time.Duration
-	log      grip.Journaler
+	log      grip.Logger
 	target   int
 	ewma     ewma.MovingAverage
 	size     int
@@ -239,7 +239,7 @@ func (p *ewmaRateLimiting) SetQueue(q amboy.Queue) error {
 func (p *ewmaRateLimiting) Close(ctx context.Context) {
 	var (
 		wg  *sync.WaitGroup
-		log grip.Journaler
+		log grip.Logger
 	)
 
 	if func() bool {

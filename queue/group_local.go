@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
 )
@@ -17,14 +16,14 @@ type localQueueGroup struct {
 	canceler context.CancelFunc
 	opts     LocalQueueGroupOptions
 	cache    GroupCache
-	log      grip.Journaler
+	log      grip.Logger
 }
 
 // LocalQueueGroupOptions describe options passed to NewLocalQueueGroup.
 type LocalQueueGroupOptions struct {
 	Constructor func(ctx context.Context) (amboy.Queue, error)
 	TTL         time.Duration
-	Logger      grip.Journaler
+	Logger      grip.Logger
 }
 
 // NewLocalQueueGroup constructs a new local queue group. If ttl is 0, the queues will not be
@@ -44,8 +43,8 @@ func NewLocalQueueGroup(ctx context.Context, opts LocalQueueGroupOptions) (amboy
 		cache: NewGroupCache(opts.TTL),
 		log:   opts.Logger,
 	}
-	if g.log == nil {
-		g.log = logging.MakeGrip(grip.GetSender())
+	if g.log.Sender() == nil {
+		g.log = grip.NewLogger(grip.Sender())
 	}
 	return g, nil
 }

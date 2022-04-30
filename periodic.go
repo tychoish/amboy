@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/timing"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
@@ -49,7 +50,7 @@ func ScheduleJobFactory(op func() Job) QueueOperation {
 // all errors encountered.
 func ScheduleManyJobsFactory(op func() []Job) QueueOperation {
 	return func(ctx context.Context, q Queue) error {
-		catcher := grip.NewCatcher()
+		catcher := emt.NewCatcher()
 		for _, j := range op() {
 			catcher.Add(q.Put(ctx, j))
 		}
@@ -65,7 +66,7 @@ func ScheduleManyJobsFactory(op func() []Job) QueueOperation {
 // all errors encountered.
 func ScheduleJobsFromGeneratorFactory(op func() <-chan Job) QueueOperation {
 	return func(ctx context.Context, q Queue) error {
-		catcher := grip.NewCatcher()
+		catcher := emt.NewCatcher()
 
 		jobs := op()
 	waitLoop:
@@ -89,7 +90,7 @@ func ScheduleJobsFromGeneratorFactory(op func() <-chan Job) QueueOperation {
 // QueueOperations before propagating errors.
 func GroupQueueOperationFactory(first QueueOperation, ops ...QueueOperation) QueueOperation {
 	return func(ctx context.Context, q Queue) error {
-		catcher := grip.NewCatcher()
+		catcher := emt.NewCatcher()
 
 		catcher.Add(first(ctx, q))
 

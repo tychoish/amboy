@@ -11,7 +11,7 @@ import (
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/amboy/queue/testutil"
-	"github.com/tychoish/grip"
+	"github.com/tychoish/emt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -239,7 +239,7 @@ func TestQueueGroup(t *testing.T) {
 					}
 
 					closer := func(cctx context.Context) error {
-						catcher := grip.NewBasicCatcher()
+						catcher := emt.NewBasicCatcher()
 						catcher.Add(client.Database(mopts.DB).Drop(cctx))
 						return catcher.Resolve()
 					}

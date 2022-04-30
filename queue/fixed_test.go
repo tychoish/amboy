@@ -11,7 +11,6 @@ import (
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 )
 
 // LocalLimitedSizeQueue suite tests the queue implementation that
@@ -88,7 +87,7 @@ func (s *LimitedSizeQueueSuite) TestCallingStartMultipleTimesDoesNotImpactState(
 }
 
 func (s *LimitedSizeQueueSuite) TestCannotSetRunnerAfterQueueIsOpened() {
-	secondRunner := pool.NewSingle(logging.MakeGrip(grip.GetSender()))
+	secondRunner := pool.NewSingle(grip.NewLogger(grip.Sender()))
 	runner := s.queue.runner
 
 	s.False(s.queue.Info().Started)

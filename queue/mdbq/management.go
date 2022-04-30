@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/management"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 	"go.mongodb.org/mongo-driver/bson"
@@ -17,7 +18,7 @@ import (
 type dbQueueManager struct {
 	client     *mongo.Client
 	collection *mongo.Collection
-	log        grip.Journaler
+	log        grip.Logger
 	opts       DBQueueManagerOptions
 }
 
@@ -45,10 +46,10 @@ func (o *DBQueueManagerOptions) collName() string {
 // Validate checks the state of the manager configuration, preventing logically
 // invalid options.
 func (o *DBQueueManagerOptions) Validate() error {
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	catcher.NewWhen(o.SingleGroup && o.ByGroups, "cannot specify conflicting group options")
 	catcher.NewWhen(o.Name == "", "must specify queue name")
-	catcher.Wrap(o.Options.Validate(), "invalid mongo options")
+	catcher.Add(o.Options.Validate())
 
 	return catcher.Resolve()
 }
@@ -110,7 +111,7 @@ func (db *dbQueueManager) aggregateCounters(ctx context.Context, stages ...bson.
 		return nil, errors.Wrap(err, "problem running aggregation")
 	}
 
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	out := []management.JobCounters{}
 	for cursor.Next(ctx) {
 		val := management.JobCounters{}
@@ -135,7 +136,7 @@ func (db *dbQueueManager) aggregateRuntimes(ctx context.Context, stages ...bson.
 		return nil, errors.Wrap(err, "problem running aggregation")
 	}
 
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	out := []management.JobRuntimes{}
 	for cursor.Next(ctx) {
 		val := management.JobRuntimes{}
@@ -160,7 +161,7 @@ func (db *dbQueueManager) aggregateErrors(ctx context.Context, stages ...bson.M)
 		return nil, errors.Wrap(err, "problem running aggregation")
 	}
 
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	out := []management.JobErrorsForType{}
 	for cursor.Next(ctx) {
 		val := management.JobErrorsForType{}

@@ -15,7 +15,6 @@ import (
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
-	"github.com/tychoish/grip/logging"
 )
 
 type ShuffledQueueSuite struct {
@@ -37,9 +36,9 @@ func (s *ShuffledQueueSuite) SetupTest() {
 		capacity: defaultLocalQueueCapcity,
 		scopes:   NewLocalScopeManager(),
 		starter:  &sync.Once{},
-		log:      logging.MakeGrip(grip.GetSender()),
+		log:      grip.NewLogger(grip.Sender()),
 	}
-	s.queue.dispatcher = NewDispatcher(s.queue, logging.MakeGrip(grip.GetSender()))
+	s.queue.dispatcher = NewDispatcher(s.queue, grip.NewLogger(grip.Sender()))
 
 }
 
@@ -55,7 +54,7 @@ func (s *ShuffledQueueSuite) TestCannotStartQueueWithNilRunner() {
 	s.False(s.queue.Info().Started)
 
 	// now validate the inverse
-	s.NoError(s.queue.SetRunner(pool.NewSingle(logging.MakeGrip(grip.GetSender()))))
+	s.NoError(s.queue.SetRunner(pool.NewSingle(grip.NewLogger(grip.Sender()))))
 	s.NotNil(s.queue.runner)
 	s.NoError(s.queue.Start(ctx))
 	s.True(s.queue.Info().Started)
@@ -69,7 +68,7 @@ func (s *ShuffledQueueSuite) TestPutFailsWithUnstartedQueue() {
 	s.Error(s.queue.Put(ctx, job.NewShellJob("echo 1", "")))
 
 	// now validate the inverse
-	s.NoError(s.queue.SetRunner(pool.NewSingle(logging.MakeGrip(grip.GetSender()))))
+	s.NoError(s.queue.SetRunner(pool.NewSingle(grip.NewLogger(grip.Sender()))))
 	s.NoError(s.queue.Start(ctx))
 	s.True(s.queue.Info().Started)
 
@@ -79,7 +78,7 @@ func (s *ShuffledQueueSuite) TestPutFailsWithUnstartedQueue() {
 func (s *ShuffledQueueSuite) TestPutFailsIfJobIsTracked() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	s.NoError(s.queue.SetRunner(pool.NewSingle(logging.MakeGrip(grip.GetSender()))))
+	s.NoError(s.queue.SetRunner(pool.NewSingle(grip.NewLogger(grip.Sender()))))
 	s.NoError(s.queue.Start(ctx))
 
 	j := job.NewShellJob("echo 1", "")
@@ -106,11 +105,11 @@ func (s *ShuffledQueueSuite) TestStatsShouldReturnNilObjectifQueueIsNotRunning()
 func (s *ShuffledQueueSuite) TestSetRunnerReturnsErrorIfRunnerHasStarted() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	s.NoError(s.queue.SetRunner(pool.NewSingle(logging.MakeGrip(grip.GetSender()))))
+	s.NoError(s.queue.SetRunner(pool.NewSingle(grip.NewLogger(grip.Sender()))))
 	s.NoError(s.queue.Start(ctx))
 	origRunner := s.queue.Runner()
 
-	s.Error(s.queue.SetRunner(pool.NewSingle(logging.MakeGrip(grip.GetSender()))))
+	s.Error(s.queue.SetRunner(pool.NewSingle(grip.NewLogger(grip.Sender()))))
 
 	s.Exactly(origRunner, s.queue.Runner())
 }
@@ -125,7 +124,7 @@ func (s *ShuffledQueueSuite) TestGetMethodRetrieves() {
 	s.Error(ok)
 	s.Nil(jReturn)
 
-	s.NoError(s.queue.SetRunner(pool.NewSingle(logging.MakeGrip(grip.GetSender()))))
+	s.NoError(s.queue.SetRunner(pool.NewSingle(grip.NewLogger(grip.Sender()))))
 	s.NoError(s.queue.Start(ctx))
 
 	jReturn, ok = s.queue.Get(ctx, j.ID())
@@ -161,7 +160,7 @@ func (s *ShuffledQueueSuite) TestResultsOperationReturnsEmptyChannelIfQueueIsNot
 func (s *ShuffledQueueSuite) TestCompleteReturnsIfContextisCanceled() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	s.NoError(s.queue.SetRunner(pool.NewSingle(logging.MakeGrip(grip.GetSender()))))
+	s.NoError(s.queue.SetRunner(pool.NewSingle(grip.NewLogger(grip.Sender()))))
 	s.NoError(s.queue.Start(ctx))
 
 	ctx2, cancel2 := context.WithCancel(ctx)

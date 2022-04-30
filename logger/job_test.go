@@ -46,7 +46,7 @@ func (s *MsgJobSuite) TestWithNilOpts() {
 }
 
 func (s *MsgJobSuite) TestWithNilMessage() {
-	sender := send.MakeNative()
+	sender := send.MakePlain()
 	sender.SetName("test")
 	job := s.constructor(nil, sender)
 
@@ -56,7 +56,7 @@ func (s *MsgJobSuite) TestWithNilMessage() {
 }
 
 func (s *MsgJobSuite) TestWithNilSender() {
-	job := s.constructor(message.NewString("foo"), nil)
+	job := s.constructor(message.MakeString("foo"), nil)
 
 	s.NoError(job.Error())
 	job.Run(context.Background())
@@ -66,7 +66,7 @@ func (s *MsgJobSuite) TestWithNilSender() {
 func (s *MsgJobSuite) TestMessgeSends() {
 	sender, err := send.NewInternalLogger("test", send.LevelInfo{Default: level.Debug, Threshold: level.Info})
 	s.NoError(err)
-	job := s.constructor(message.NewDefaultMessage(level.Alert, "foo"), sender)
+	job := s.constructor(message.NewString(level.Alert, "foo"), sender)
 
 	s.False(sender.HasMessage())
 	s.NoError(job.Error())

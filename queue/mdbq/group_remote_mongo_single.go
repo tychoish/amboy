@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
+	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
@@ -18,7 +19,7 @@ type remoteMongoQueueGroupSingle struct {
 	canceler context.CancelFunc
 	client   *mongo.Client
 	opts     MongoDBQueueGroupOptions
-	log      grip.Journaler
+	log      grip.Logger
 	dbOpts   MongoDBOptions
 	cache    queue.GroupCache
 	started  bool // reflects background prune/create threads active
@@ -134,7 +135,7 @@ func (g *remoteMongoQueueGroupSingle) getQueues(ctx context.Context) ([]string, 
 		Groups []string `bson:"groups"`
 	}{}
 
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	for cursor.Next(ctx) {
 		if err = cursor.Decode(&out); err != nil {
 			catcher.Add(err)
@@ -154,7 +155,7 @@ func (g *remoteMongoQueueGroupSingle) startQueues(ctx context.Context) error {
 		return errors.WithStack(err)
 	}
 
-	catcher := grip.NewBasicCatcher()
+	catcher := emt.NewBasicCatcher()
 	for _, id := range queues {
 		_, err := g.Get(ctx, id)
 		catcher.Add(err)

@@ -10,12 +10,11 @@ import (
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/level"
-	"github.com/tychoish/grip/logging"
 	"github.com/tychoish/grip/send"
 )
 
 func init() {
-	sender := grip.GetSender()
+	sender := grip.Sender()
 	lvl := send.LevelInfo{
 		Threshold: level.Alert,
 		Default:   level.Warning,
@@ -36,7 +35,7 @@ func makeTestQueue(pool amboy.Runner) amboy.Queue {
 }
 
 func TestRunnerImplementations(t *testing.T) {
-	logger := logging.MakeGrip(grip.GetSender())
+	logger := grip.NewLogger(grip.Sender())
 	pools := map[string]func() amboy.Runner{
 		"Local":  func() amboy.Runner { return &localWorkers{log: logger} },
 		"Single": func() amboy.Runner { return &single{log: logger} },

@@ -31,7 +31,7 @@ type remoteBase struct {
 	dispatched map[string]struct{}
 	runner     amboy.Runner
 	mutex      sync.RWMutex
-	log        grip.Journaler
+	log        grip.Logger
 }
 
 func newRemoteBase() *remoteBase {
