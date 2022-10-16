@@ -17,7 +17,8 @@ func TestWaitUntil(t *testing.T) {
 	t.Run("PastStartAt", func(t *testing.T) {
 		tsa := time.Now().Round(time.Second)
 		waitUntilInterval(ctx, time.Now().Round(time.Second).Add(-interval), interval)
-		assert.Equal(t, tsa.Add(interval), time.Now().Round(time.Second))
+		delta := time.Since(tsa.Add(interval)).Abs()
+		assert.True(t, delta < interval, "%s", delta)
 		assert.True(t, tsa.Before(time.Now()))
 	})
 	t.Run("FutureStartAt", func(t *testing.T) {

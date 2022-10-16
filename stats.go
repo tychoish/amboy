@@ -26,6 +26,11 @@ type QueueStats struct {
 	priority level.Priority
 }
 
+var _ message.Composer = &QueueStats{}
+
+// Schema definese a version schema for the messages.
+func (QueueStats) Schema() string { return "amboy.queueStats.0" }
+
 // String prints a long form report of the queue for human consumption.
 func (s QueueStats) String() string {
 	return fmt.Sprintf("running='%d', completed='%d', pending='%d', blocked='%d', total='%d'",
@@ -76,6 +81,10 @@ func (s QueueStats) Raw() interface{} { return s }
 // Priority is part of the grip/message.Composer interface and returns
 // the priority of the message.
 func (s QueueStats) Priority() level.Priority { return s.priority }
+
+// Structured indicates that the message type is structured and can be
+// handled using structured logging methods
+func (QueueStats) Structured() bool { return true }
 
 // SetPriority  is part of the grip/message.Composer interface and
 // allows the caller to configure the piroity of the message.

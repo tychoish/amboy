@@ -51,7 +51,8 @@ func IsDuplicateJobError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return errors.As(err, &duplJobError{})
+	var dje *duplJobError
+	return errors.As(err, &dje)
 }
 
 type jobNotDefinedError struct {
@@ -87,5 +88,6 @@ func IsJobNotDefinedError(err error) bool {
 		return false
 	}
 
-	return errors.As(err, &jobNotDefinedError{})
+	var jnde *jobNotDefinedError
+	return errors.As(err, &jnde)
 }

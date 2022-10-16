@@ -58,8 +58,8 @@ func IsVersionResolutionError(err error) bool {
 		return false
 	}
 
-	re := &resolutionError{}
-	if errors.As(err, re) {
+	var re *resolutionError
+	if errors.As(err, &re) {
 		return re.RegisteredVersion != re.RecordVersion
 	}
 
