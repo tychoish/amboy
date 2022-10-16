@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 // JobInterchangeSuite tests the JobInterchange format and
@@ -28,13 +27,6 @@ func TestJobInterchangeSuiteJSON(t *testing.T) {
 	s := new(JobInterchangeSuite)
 	s.unmarshaler = json.Unmarshal
 	s.marshaler = json.Marshal
-	suite.Run(t, s)
-}
-
-func TestJobInterchangeSuiteLegacyBSON(t *testing.T) {
-	s := new(JobInterchangeSuite)
-	s.unmarshaler = bson.Unmarshal
-	s.marshaler = bson.Marshal
 	suite.Run(t, s)
 }
 
@@ -174,13 +166,6 @@ type DependencyInterchangeSuite struct {
 	marshaler   Marshaler
 
 	suite.Suite
-}
-
-func TestDependencyInterchangeBSONSuite(t *testing.T) {
-	s := new(DependencyInterchangeSuite)
-	s.unmarshaler = bson.Unmarshal
-	s.marshaler = bson.Marshal
-	suite.Run(t, s)
 }
 
 func TestDependencyInterchangeJSONSuite(t *testing.T) {

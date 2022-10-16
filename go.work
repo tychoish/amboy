@@ -1,0 +1,10 @@
+go 1.19
+
+use (
+	.
+	./x/amzsqs
+	./x/cli
+	./x/mdbq
+	./x/pgq
+	./x/rest
+)
