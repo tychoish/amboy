@@ -19,13 +19,13 @@ package queue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/pool"
@@ -104,13 +104,13 @@ func (q *depGraphOrderedLocal) Put(ctx context.Context, j amboy.Job) error {
 	})
 
 	if err := j.TimeInfo().Validate(); err != nil {
-		return errors.Wrap(err, "invalid job timeinfo")
+		return fmt.Errorf("invalid job timeinfo: %w", err)
 	}
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
 	if q.started {
-		return errors.Errorf("cannot add %s because ordered task dispatching has begun", name)
+		return fmt.Errorf("cannot add %s because ordered task dispatching has begun", name)
 	}
 
 	if _, ok := q.tasks.m[name]; ok {
@@ -135,11 +135,11 @@ func (q *depGraphOrderedLocal) Save(ctx context.Context, j amboy.Job) error {
 	defer q.mutex.Unlock()
 
 	if !q.started {
-		return errors.Errorf("cannot save %s because dispatching has not begun", name)
+		return fmt.Errorf("cannot save %s because dispatching has not begun", name)
 	}
 
 	if _, ok := q.tasks.m[name]; !ok {
-		return errors.Errorf("cannot add %s because job does not exist", name)
+		return fmt.Errorf("cannot add %s because job does not exist", name)
 	}
 
 	q.tasks.m[name] = j
@@ -179,7 +179,7 @@ func (q *depGraphOrderedLocal) Info() amboy.QueueInfo {
 func (q *depGraphOrderedLocal) Next(ctx context.Context) (amboy.Job, error) {
 	select {
 	case <-ctx.Done():
-		return nil, errors.WithStack(ctx.Err())
+		return nil, ctx.Err()
 	case job := <-q.channel:
 		err := q.dispatcher.Dispatch(ctx, job)
 		if err != nil {
@@ -190,7 +190,7 @@ func (q *depGraphOrderedLocal) Next(ctx context.Context) (amboy.Job, error) {
 					"impact": "possible duplicate execution",
 					"queue":  q.ID(),
 				}))
-			return nil, errors.Wrap(err, "could not dispatch job")
+			return nil, fmt.Errorf("could not dispatch job: %w", err)
 		}
 		return job, nil
 	}
@@ -257,7 +257,7 @@ func (q *depGraphOrderedLocal) buildGraph() error {
 	for name, job := range q.tasks.m {
 		id, ok := q.tasks.ids[name]
 		if !ok {
-			return errors.Errorf("problem building a graph for job %s", name)
+			return fmt.Errorf("problem building a graph for job %s", name)
 		}
 
 		edges := job.Dependency().Edges()
@@ -274,7 +274,7 @@ func (q *depGraphOrderedLocal) buildGraph() error {
 		for _, dep := range edges {
 			edgeID, ok := q.tasks.ids[dep]
 			if !ok {
-				return errors.Errorf("for job %s, the %s dependency is not resolvable [%s]",
+				return fmt.Errorf("for job %s, the %s dependency is not resolvable [%s]",
 					name, dep, strings.Join(edges, ", "))
 			}
 			edge := simple.Edge{
@@ -297,19 +297,19 @@ func (q *depGraphOrderedLocal) Start(ctx context.Context) error {
 
 	err := q.runner.Start(ctx)
 	if err != nil {
-		return errors.Wrap(err, "problem starting worker pool")
+		return fmt.Errorf("problem starting worker pool: %w", err)
 	}
 
 	q.started = true
 
 	err = q.buildGraph()
 	if err != nil {
-		return errors.Wrap(err, "problem building dependency graph")
+		return fmt.Errorf("problem building dependency graph: %w", err)
 	}
 
 	ordered, err := topo.Sort(q.tasks.graph)
 	if err != nil {
-		return errors.Wrap(err, "error ordering dependencies")
+		return fmt.Errorf("error ordering dependencies: %w", err)
 	}
 
 	go q.jobDispatch(ctx, ordered)
@@ -402,7 +402,7 @@ func (q *depGraphOrderedLocal) jobDispatch(ctx context.Context, orderedJobs []gr
 // Complete marks a job as complete in the context of this queue instance.
 func (q *depGraphOrderedLocal) Complete(ctx context.Context, j amboy.Job) error {
 	if err := ctx.Err(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	if stat := j.Status(); stat.Canceled {
@@ -412,7 +412,7 @@ func (q *depGraphOrderedLocal) Complete(ctx context.Context, j amboy.Job) error 
 
 	q.log.Debugf("marking job (%s) as complete", j.ID())
 	if err := q.dispatcher.Complete(ctx, j); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	q.mutex.Lock()
 	defer q.mutex.Unlock()

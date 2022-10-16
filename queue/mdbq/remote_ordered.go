@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/pool"
@@ -54,7 +53,7 @@ func (q *remoteSimpleOrdered) Next(ctx context.Context) (amboy.Job, error) {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil, errors.WithStack(ctx.Err())
+			return nil, ctx.Err()
 		case job := <-q.channel:
 			ti := amboy.JobTimeInfo{
 				Start: time.Now(),

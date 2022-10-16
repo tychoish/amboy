@@ -2,8 +2,8 @@ package mdbq
 
 import (
 	"context"
+	"errors"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/amboy/queue"
@@ -41,7 +41,7 @@ func (q *remoteUnordered) Next(ctx context.Context) (amboy.Job, error) {
 		count++
 		select {
 		case <-ctx.Done():
-			return nil, errors.WithStack(ctx.Err())
+			return nil, ctx.Err()
 		case job := <-q.channel:
 			if job == nil {
 				return nil, errors.New("no dispatchable job")

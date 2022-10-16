@@ -2,10 +2,11 @@ package queue
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
@@ -68,11 +69,11 @@ func (d *dispatcherImpl) Dispatch(ctx context.Context, job amboy.Job) error {
 	}
 
 	if err := job.Lock(d.queue.ID(), d.queue.Info().LockTimeout); err != nil {
-		return errors.Wrap(err, "problem locking job")
+		return fmt.Errorf("problem locking job: %w", err)
 	}
 
 	if err := d.queue.Save(ctx, job); err != nil {
-		return errors.Wrap(err, "problem saving job state")
+		return fmt.Errorf("problem saving job state: %w", err)
 	}
 
 	info := dispatcherInfo{
@@ -112,12 +113,12 @@ func (d *dispatcherImpl) Dispatch(ctx context.Context, job amboy.Job) error {
 				return
 			case <-ticker.C:
 				if err := job.Lock(d.queue.ID(), d.queue.Info().LockTimeout); err != nil {
-					job.AddError(errors.Wrapf(err, "problem pinging job lock on cycle #%d", iters))
+					job.AddError(fmt.Errorf("problem pinging job lock on cycle #%d: %w", iters, err))
 					info.jobCancel()
 					return
 				}
 				if err := d.queue.Save(ctx, job); err != nil {
-					job.AddError(errors.Wrapf(err, "problem saving job for lock ping on cycle #%d", iters))
+					job.AddError(fmt.Errorf("problem saving job for lock ping on cycle #%d: %w", iters, err))
 					info.jobCancel()
 					return
 				}

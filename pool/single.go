@@ -2,9 +2,9 @@ package pool
 
 import (
 	"context"
+	"errors"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/recovery"

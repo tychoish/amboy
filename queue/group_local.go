@@ -2,9 +2,10 @@ package queue
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
@@ -92,7 +93,7 @@ func (g *localQueueGroup) Get(ctx context.Context, id string) (amboy.Queue, erro
 
 	queue, err := g.opts.Constructor(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem starting queue")
+		return nil, fmt.Errorf("problem starting queue: %w", err)
 	}
 
 	if err = g.cache.Set(id, queue, g.opts.TTL); err != nil {
@@ -102,11 +103,11 @@ func (g *localQueueGroup) Get(ctx context.Context, id string) (amboy.Queue, erro
 			return q, nil
 		}
 
-		return nil, errors.Wrap(err, "problem caching queue")
+		return nil, fmt.Errorf("problem caching queue: %w", err)
 	}
 
 	if err = queue.Start(ctx); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	return queue, nil
@@ -114,7 +115,7 @@ func (g *localQueueGroup) Get(ctx context.Context, id string) (amboy.Queue, erro
 
 // Put a queue at the given index.
 func (g *localQueueGroup) Put(ctx context.Context, id string, queue amboy.Queue) error {
-	return errors.WithStack(g.cache.Set(id, queue, g.opts.TTL))
+	return g.cache.Set(id, queue, g.opts.TTL)
 }
 
 // Prune old queues.

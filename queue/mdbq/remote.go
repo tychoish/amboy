@@ -2,8 +2,8 @@ package mdbq
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
@@ -32,7 +32,7 @@ func NewMongoDBQueue(ctx context.Context, opts MongoDBQueueCreationOptions) (amb
 	opts.MDB.logger = opts.Logger
 
 	if err := opts.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	return opts.build(ctx)
@@ -58,12 +58,12 @@ func (opts *MongoDBQueueCreationOptions) build(ctx context.Context) (amboy.Queue
 		if opts.MDB.UseGroups {
 			driver, err = newMongoGroupDriver(opts.Name, opts.MDB, opts.MDB.GroupName)
 			if err != nil {
-				return nil, errors.Wrap(err, "problem creating group driver")
+				return nil, fmt.Errorf("problem creating group driver: %w", err)
 			}
 		} else {
 			driver, err = newMongoDriver(opts.Name, opts.MDB)
 			if err != nil {
-				return nil, errors.Wrap(err, "problem creating driver")
+				return nil, fmt.Errorf("problem creating driver: %w", err)
 			}
 		}
 
@@ -77,7 +77,7 @@ func (opts *MongoDBQueueCreationOptions) build(ctx context.Context) (amboy.Queue
 	}
 
 	if err != nil {
-		return nil, errors.Wrap(err, "problem building driver")
+		return nil, fmt.Errorf("problem building driver: %w", err)
 	}
 
 	var q remoteQueue
@@ -88,7 +88,7 @@ func (opts *MongoDBQueueCreationOptions) build(ctx context.Context) (amboy.Queue
 	}
 
 	if err = q.SetDriver(driver); err != nil {
-		return nil, errors.Wrap(err, "problem configuring queue")
+		return nil, fmt.Errorf("problem configuring queue: %w", err)
 	}
 
 	return q, nil

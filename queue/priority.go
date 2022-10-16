@@ -2,12 +2,12 @@ package queue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
@@ -62,7 +62,7 @@ func (q *priorityLocalQueue) Put(ctx context.Context, j amboy.Job) error {
 	})
 
 	if err := j.TimeInfo().Validate(); err != nil {
-		return errors.Wrap(err, "invalid job timeinfo")
+		return fmt.Errorf("invalid job timeinfo: %w", err)
 	}
 
 	return q.storage.Insert(j)
@@ -91,7 +91,7 @@ func (q *priorityLocalQueue) Next(ctx context.Context) (amboy.Job, error) {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil, errors.WithStack(ctx.Err())
+			return nil, ctx.Err()
 		case job := <-q.channel:
 			ti := job.TimeInfo()
 			if ti.IsStale() {
@@ -195,7 +195,7 @@ func (q *priorityLocalQueue) Stats(ctx context.Context) amboy.QueueStats {
 // this implementation.
 func (q *priorityLocalQueue) Complete(ctx context.Context, j amboy.Job) error {
 	if err := ctx.Err(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	if stat := j.Status(); stat.Canceled {
@@ -222,7 +222,7 @@ func (q *priorityLocalQueue) Complete(ctx context.Context, j amboy.Job) error {
 		}))
 
 	if err := q.dispatcher.Complete(ctx, j); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	if num := q.fixed.Oversize(); num > 0 {
@@ -262,7 +262,7 @@ func (q *priorityLocalQueue) Delete(ctx context.Context, id string) error {
 	q.storage.Remove(id)
 
 	if num := q.fixed.Delete(id); num == 0 {
-		return errors.Errorf("job %s does not exist and cannot be removed", id)
+		return fmt.Errorf("job %s does not exist and cannot be removed", id)
 	}
 	return nil
 }

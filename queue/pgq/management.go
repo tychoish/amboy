@@ -3,12 +3,12 @@ package pgq
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/management"
 	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
@@ -48,7 +48,7 @@ func (m *sqlManager) processQueryString(query string) string {
 
 func (m *sqlManager) JobStatus(ctx context.Context, filter management.StatusFilter) (*management.JobStatusReport, error) {
 	if err := filter.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	var where []string
@@ -97,7 +97,7 @@ func (m *sqlManager) JobStatus(ctx context.Context, filter management.StatusFilt
 
 	stmt, err := m.db.PrepareNamedContext(ctx, query)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem preparing query")
+		return nil, fmt.Errorf("problem preparing query: %w", err)
 	}
 
 	args := struct {
@@ -109,7 +109,7 @@ func (m *sqlManager) JobStatus(ctx context.Context, filter management.StatusFilt
 	}
 	out := []management.JobCounters{}
 	if err := stmt.SelectContext(ctx, &out, args); err != nil {
-		return nil, errors.Wrap(err, "problem finding job output")
+		return nil, fmt.Errorf("problem finding job output: %w", err)
 	}
 
 	return &management.JobStatusReport{
@@ -120,7 +120,7 @@ func (m *sqlManager) JobStatus(ctx context.Context, filter management.StatusFilt
 
 func (m *sqlManager) JobIDsByState(ctx context.Context, jobType string, filter management.StatusFilter) (*management.JobReportIDs, error) {
 	if err := filter.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	var where []string
@@ -154,7 +154,7 @@ func (m *sqlManager) JobIDsByState(ctx context.Context, jobType string, filter m
 	query := fmt.Sprintln(m.processQueryString(findJobIDsByStateTemplate), "  AND ", strings.Join(where, "\n   AND "))
 	stmt, err := m.db.PrepareNamedContext(ctx, query)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem preparing query")
+		return nil, fmt.Errorf("problem preparing query: %w", err)
 	}
 
 	args := struct {
@@ -169,7 +169,7 @@ func (m *sqlManager) JobIDsByState(ctx context.Context, jobType string, filter m
 
 	var out []string
 	if err := stmt.SelectContext(ctx, &out, args); err != nil {
-		return nil, errors.Wrap(err, "problem finding job output")
+		return nil, fmt.Errorf("problem finding job output: %w", err)
 	}
 	return &management.JobReportIDs{
 		Filter: string(filter),
@@ -180,7 +180,7 @@ func (m *sqlManager) JobIDsByState(ctx context.Context, jobType string, filter m
 
 func (m *sqlManager) RecentTiming(ctx context.Context, window time.Duration, filter management.RuntimeFilter) (*management.JobRuntimeReport, error) {
 	if err := filter.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	if window <= time.Second {
@@ -234,7 +234,7 @@ func (m *sqlManager) RecentTiming(ctx context.Context, window time.Duration, fil
 	stmt, err := m.db.PrepareNamedContext(ctx, query)
 	if err != nil {
 		fmt.Println(query)
-		return nil, errors.Wrap(err, "problem preparing query")
+		return nil, fmt.Errorf("problem preparing query: %w", err)
 	}
 
 	now := time.Now()
@@ -248,7 +248,7 @@ func (m *sqlManager) RecentTiming(ctx context.Context, window time.Duration, fil
 
 	out := []management.JobRuntimes{}
 	if err := stmt.SelectContext(ctx, &out, args); err != nil {
-		return nil, errors.Wrap(err, "problem finding job output")
+		return nil, fmt.Errorf("problem finding job output: %w", err)
 	}
 
 	return &management.JobRuntimeReport{
@@ -268,7 +268,7 @@ func (m *sqlManager) RecentJobErrors(ctx context.Context, jobType string, window
 
 func (m *sqlManager) doRecentErrors(ctx context.Context, jobType string, window time.Duration, filter management.ErrorFilter) (*management.JobErrorsReport, error) {
 	if err := filter.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	if window <= time.Second {
@@ -323,12 +323,12 @@ func (m *sqlManager) doRecentErrors(ctx context.Context, jobType string, window 
 
 	stmt, err := m.db.PrepareNamedContext(ctx, query)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem preparing query")
+		return nil, fmt.Errorf("problem preparing query: %w", err)
 	}
 
 	var out []management.JobErrorsForType
 	if err := stmt.SelectContext(ctx, &out, args); err != nil {
-		return nil, errors.Wrap(err, "problem finding job output")
+		return nil, fmt.Errorf("problem finding job output: %w", err)
 	}
 
 	return &management.JobErrorsReport{
@@ -345,36 +345,36 @@ func (m *sqlManager) CompleteJob(ctx context.Context, id string) error {
 
 	tx, err := m.db.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
-		return errors.Wrap(err, "problem starting transaction")
+		return fmt.Errorf("problem starting transaction: %w", err)
 	}
 	defer tx.Rollback() //nolint:errcheck
 
 	if _, err = tx.ExecContext(ctx, m.processQueryString(completeSinglePendingJob), id); err != nil {
-		return errors.Wrap(err, "problem clearing scopes")
+		return fmt.Errorf("problem clearing scopes: %w", err)
 	}
 
 	if _, err = tx.ExecContext(ctx, m.processQueryString(removeJobScopes), id); err != nil {
-		return errors.Wrap(err, "problem clearing scopes")
+		return fmt.Errorf("problem clearing scopes: %w", err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return errors.Wrap(err, "problem committing")
+		return fmt.Errorf("problem committing: %w", err)
 	}
 
 	return nil
 }
 
 func (m *sqlManager) CompleteJobs(ctx context.Context, filter management.StatusFilter) error {
-	return errors.WithStack(m.doCompleteJobs(ctx, filter, ""))
+	return m.doCompleteJobs(ctx, filter, "")
 }
 
 func (m *sqlManager) CompleteJobsByType(ctx context.Context, filter management.StatusFilter, jobType string) error {
-	return errors.WithStack(m.doCompleteJobs(ctx, filter, jobType))
+	return m.doCompleteJobs(ctx, filter, jobType)
 }
 
 func (m *sqlManager) doCompleteJobs(ctx context.Context, filter management.StatusFilter, typeName string) error {
 	if err := filter.Validate(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	var clauses []string
@@ -424,7 +424,7 @@ func (m *sqlManager) doCompleteJobs(ctx context.Context, filter management.Statu
 	var toDelete []string
 	tx, err := m.db.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
-		return errors.Wrap(err, "problem starting transaction")
+		return fmt.Errorf("problem starting transaction: %w", err)
 	}
 	defer tx.Rollback() //nolint:errcheck
 
@@ -432,37 +432,37 @@ func (m *sqlManager) doCompleteJobs(ctx context.Context, filter management.Statu
 
 	stmt, err := tx.PrepareNamedContext(ctx, query)
 	if err != nil {
-		return errors.Wrap(err, "problem preparing query")
+		return fmt.Errorf("problem preparing query: %w", err)
 	}
 	if err = stmt.SelectContext(ctx, &toDelete, args); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}
-		return errors.Wrap(err, "problem finding job output")
+		return fmt.Errorf("problem finding job output: %w", err)
 	}
 
 	toDeleteArgs := convertStringsToInterfaces(toDelete)
 
 	query, inargs, err := sqlx.In(m.processQueryString(completeManyPendingJobs), toDeleteArgs)
 	if err != nil {
-		return errors.Wrap(err, "problem building delete jobs query")
+		return fmt.Errorf("problem building delete jobs query: %w", err)
 	}
 
 	if _, err = tx.ExecContext(ctx, m.db.Rebind(query), inargs...); err != nil {
-		return errors.Wrap(err, "problem clearing jobs")
+		return fmt.Errorf("problem clearing jobs: %w", err)
 	}
 
 	query, inargs, err = sqlx.In(m.processQueryString(removeManyJobScopes), toDeleteArgs)
 	if err != nil {
-		return errors.Wrap(err, "problem building delete jobs scopes")
+		return fmt.Errorf("problem building delete jobs scopes: %w", err)
 	}
 
 	if _, err = tx.ExecContext(ctx, m.db.Rebind(query), inargs...); err != nil {
-		return errors.Wrap(err, "problem clearing job s copes")
+		return fmt.Errorf("problem clearing job s copes: %w", err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return errors.Wrap(err, "problem committing")
+		return fmt.Errorf("problem committing: %w", err)
 	}
 
 	return nil
@@ -470,7 +470,7 @@ func (m *sqlManager) doCompleteJobs(ctx context.Context, filter management.Statu
 
 func (m *sqlManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f management.StatusFilter) (int, error) {
 	if err := f.Validate(); err != nil {
-		return 0, errors.WithStack(err)
+		return 0, err
 	}
 
 	where := []string{}
@@ -524,7 +524,7 @@ func (m *sqlManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f m
 
 	stmt, err := m.db.PrepareNamedContext(ctx, query)
 	if err != nil {
-		return 0, errors.Wrap(err, "problem preparing query")
+		return 0, fmt.Errorf("problem preparing query: %w", err)
 	}
 
 	args := struct {
@@ -539,12 +539,12 @@ func (m *sqlManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f m
 
 	res, err := stmt.ExecContext(ctx, args)
 	if err != nil {
-		return 0, errors.WithStack(err)
+		return 0, err
 	}
 
 	num, err := res.RowsAffected()
 	if err != nil {
-		return 0, errors.WithStack(err)
+		return 0, err
 	}
 
 	return int(num), nil

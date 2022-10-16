@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
@@ -219,7 +218,7 @@ func TestQueueGroup(t *testing.T) {
 					}
 
 					if err := client.Ping(ctx, nil); err != nil {
-						return nil, closer, errors.Wrap(err, "server not pingable")
+						return nil, closer, fmt.Errorf("server not pingable: %w", err)
 					}
 
 					qg, err := NewMongoDBQueueGroup(ctx, opts, client, mopts)
@@ -259,7 +258,7 @@ func TestQueueGroup(t *testing.T) {
 					}
 
 					if err := client.Ping(ctx, nil); err != nil {
-						return nil, closer, errors.Wrap(err, "server not pingable")
+						return nil, closer, fmt.Errorf("server not pingable: %w", err)
 					}
 
 					qg, err := NewMongoDBSingleQueueGroup(ctx, opts, client, mopts)

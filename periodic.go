@@ -2,9 +2,9 @@ package amboy
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/timing"
 	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
@@ -176,11 +176,12 @@ func scheduleOp(ctx context.Context, q Queue, op QueueOperation, conf QueueOpera
 		return nil
 	}
 
-	if err := errors.Wrap(op(ctx, q), "problem encountered during periodic job scheduling"); err != nil {
+	if err := op(ctx, q); err != nil {
 		if !conf.EnableDuplicateJobReporting && IsDuplicateJobError(err) {
 			return nil
 		}
 
+		err = fmt.Errorf("problem encountered during periodic job scheduling: %w", err)
 		if conf.ContinueOnError {
 			grip.WarningWhen(conf.LogErrors, err)
 		} else {

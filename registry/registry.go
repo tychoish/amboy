@@ -1,9 +1,9 @@
 package registry
 
 import (
+	"fmt"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/grip"
 )
 
@@ -51,7 +51,7 @@ func (r *typeRegistry) getJobFactory(name string) (JobFactory, error) {
 
 	factory, ok := r.job.m[name]
 	if !ok {
-		return nil, errors.Errorf("there is no job type named '%s' registered", name)
+		return nil, fmt.Errorf("there is no job type named '%s' registered", name)
 	}
 
 	return factory, nil

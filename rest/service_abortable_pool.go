@@ -1,9 +1,9 @@
 package rest
 
 import (
+	"fmt"
 	"net/http"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/gimlet"
 )
@@ -88,8 +88,8 @@ func (s *AbortablePoolManagementService) AbortRunningJob(rw http.ResponseWriter,
 	ctx := r.Context()
 	err := s.pool.Abort(ctx, name)
 	if err != nil {
-		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(errors.Wrapf(err,
-			"problem aborting job '%s'", name)))
+		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(fmt.Errorf(
+			"problem aborting job %q: %w", name, err)))
 	}
 
 	gimlet.WriteJSON(rw, map[string]string{

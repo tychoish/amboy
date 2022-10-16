@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/grip/level"
 	"github.com/tychoish/grip/message"
 )
@@ -82,7 +81,7 @@ func (s QueueStats) Priority() level.Priority { return s.priority }
 // allows the caller to configure the piroity of the message.
 func (s *QueueStats) SetPriority(l level.Priority) error {
 	if !l.IsValid() {
-		return errors.Errorf("%s (%d) is not a valid level", l, l)
+		return fmt.Errorf("%s (%d) is not a valid level", l, l)
 	}
 	s.priority = l
 	return nil

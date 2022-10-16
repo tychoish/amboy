@@ -1,9 +1,9 @@
 package registry
 
 import (
+	"errors"
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 )
@@ -58,7 +58,8 @@ func IsVersionResolutionError(err error) bool {
 		return false
 	}
 
-	if re, ok := errors.Cause(err).(*resolutionError); ok {
+	re := &resolutionError{}
+	if errors.As(err, re) {
 		return re.RegisteredVersion != re.RecordVersion
 	}
 

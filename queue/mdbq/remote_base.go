@@ -2,12 +2,12 @@ package mdbq
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/grip"
@@ -62,7 +62,7 @@ func (q *remoteBase) Put(ctx context.Context, j amboy.Job) error {
 	}
 
 	if err := j.TimeInfo().Validate(); err != nil {
-		return errors.Wrap(err, "invalid job timeinfo")
+		return fmt.Errorf("invalid job timeinfo: %w", err)
 	}
 
 	return q.driver.Put(ctx, j)
@@ -81,7 +81,7 @@ func (q *remoteBase) Get(ctx context.Context, name string) (amboy.Job, error) {
 			"type":   q.driverType,
 			"name":   name,
 		}))
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	return job, nil
@@ -129,7 +129,7 @@ func (q *remoteBase) Save(ctx context.Context, j amboy.Job) error {
 // complete, in the queue.
 func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) error {
 	if err := ctx.Err(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	if stat := j.Status(); stat.Canceled {
@@ -138,7 +138,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) error {
 	}
 
 	if err := q.dispatcher.Complete(ctx, j); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	const retryInterval = time.Second
@@ -154,7 +154,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) error {
 		count++
 		select {
 		case <-ctx.Done():
-			return errors.WithStack(ctx.Err())
+			return ctx.Err()
 		case <-timer.C:
 			stat := j.Status()
 			stat.InProgress = false
@@ -176,7 +176,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) error {
 						"driver_id":   q.driver.ID(),
 						"message":     "job took too long to mark complete",
 					}))
-					return errors.Wrapf(err, "encountered timeout marking %q complete ", id)
+					return fmt.Errorf("encountered timeout marking %q complete : %w", id, err)
 				} else if count > 10 {
 					q.log.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
@@ -186,7 +186,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) error {
 						"retry_count": count,
 						"message":     "after 10 retries, aborting marking job complete",
 					}))
-					return errors.Wrapf(err, "failed to mark %q complete 10 times", id)
+					return fmt.Errorf("failed to mark %q complete 10 times: %w", id, err)
 				} else if isMongoDupKey(err) {
 					q.log.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
@@ -196,7 +196,7 @@ func (q *remoteBase) Complete(ctx context.Context, j amboy.Job) error {
 						"retry_count": count,
 						"message":     "attempting to complete job without lock",
 					}))
-					return errors.Wrapf(err, "failed to mark %q without holding the lock", id)
+					return fmt.Errorf("failed to mark %q without holding the lock: %w", id, err)
 				} else {
 					timer.Reset(retryInterval)
 					continue
@@ -302,11 +302,11 @@ func (q *remoteBase) Start(ctx context.Context) error {
 	}
 
 	if err := q.runner.Start(ctx); err != nil {
-		return errors.Wrap(err, "problem starting runner in remote queue")
+		return fmt.Errorf("problem starting runner in remote queue: %w", err)
 	}
 
 	if err := q.driver.Open(ctx); err != nil {
-		return errors.Wrap(err, "problem starting driver in remote queue")
+		return fmt.Errorf("problem starting driver in remote queue: %w", err)
 	}
 
 	go q.jobServer(ctx)
@@ -345,7 +345,7 @@ func jobCanRestart(stat amboy.JobStatusInfo, lockTimeout time.Duration) bool {
 }
 
 func (q *remoteBase) Delete(ctx context.Context, id string) error {
-	return errors.WithStack(q.driver.Delete(ctx, id))
+	return q.driver.Delete(ctx, id)
 }
 
 func (q *remoteBase) Close(ctx context.Context) error {

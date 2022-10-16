@@ -2,9 +2,8 @@ package management
 
 import (
 	"context"
+	"fmt"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // Manager is an interface that describes queue introspection tools and
@@ -46,7 +45,7 @@ func (t StatusFilter) Validate() error {
 	case InProgress, Pending, Stale, Completed, All:
 		return nil
 	default:
-		return errors.Errorf("%s is not a valid counter filter type", t)
+		return fmt.Errorf("%s is not a valid counter filter type", t)
 	}
 }
 
@@ -67,7 +66,7 @@ func (t RuntimeFilter) Validate() error {
 	case Duration, Latency, Running:
 		return nil
 	default:
-		return errors.Errorf("%s is not a valid runtime filter type", t)
+		return fmt.Errorf("%s is not a valid runtime filter type", t)
 	}
 }
 
@@ -88,6 +87,6 @@ func (t ErrorFilter) Validate() error {
 	case UniqueErrors, AllErrors, StatsOnly:
 		return nil
 	default:
-		return errors.Errorf("%s is not a valid error filter", t)
+		return fmt.Errorf("%s is not a valid error filter", t)
 	}
 }

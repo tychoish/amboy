@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/amboy/queue"
@@ -82,7 +82,7 @@ func (opts *Options) Validate() error {
 // restarts.
 func NewFifoQueue(opts *Options) (amboy.Queue, error) {
 	if err := opts.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	q := &sqsFIFOQueue{
@@ -103,7 +103,7 @@ func NewFifoQueue(opts *Options) (amboy.Queue, error) {
 		},
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "creating queue: %s", opts.Name)
+		return nil, fmt.Errorf("creating queue: %s: %w", opts.Name, err)
 	}
 	q.sqsURL = *result.QueueUrl
 	return q, nil
@@ -124,14 +124,14 @@ func (q *sqsFIFOQueue) Put(ctx context.Context, j amboy.Job) error {
 	})
 
 	if err := j.TimeInfo().Validate(); err != nil {
-		return errors.Wrap(err, "invalid job timeinfo")
+		return fmt.Errorf("invalid job timeinfo: %w", err)
 	}
 
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
 	if !q.started {
-		return errors.Errorf("cannot put job %s; queue not started", name)
+		return fmt.Errorf("cannot put job %s; queue not started", name)
 	}
 
 	if _, ok := q.tasks.all[name]; ok {
@@ -144,11 +144,11 @@ func (q *sqsFIFOQueue) Put(ctx context.Context, j amboy.Job) error {
 	j.SetStatus(curStatus)
 	jobItem, err := registry.MakeJobInterchange(j, json.Marshal)
 	if err != nil {
-		return errors.Wrap(err, "Error converting job in Put")
+		return fmt.Errorf("Error converting job in Put: %w", err)
 	}
 	job, err := json.Marshal(jobItem)
 	if err != nil {
-		return errors.Wrap(err, "Error marshalling job to JSON in Put")
+		return fmt.Errorf("Error marshalling job to JSON in Put: %w", err)
 	}
 	input := &sqs.SendMessageInput{
 		MessageBody:            aws.String(string(job)),
@@ -159,7 +159,7 @@ func (q *sqsFIFOQueue) Put(ctx context.Context, j amboy.Job) error {
 	_, err = q.sqsClient.SendMessageWithContext(ctx, input)
 
 	if err != nil {
-		return errors.Wrap(err, "Error sending message in Put")
+		return fmt.Errorf("Error sending message in Put: %w", err)
 	}
 	q.tasks.all[name] = j
 	return nil
@@ -172,11 +172,11 @@ func (q *sqsFIFOQueue) Save(ctx context.Context, j amboy.Job) error {
 	defer q.mutex.Unlock()
 
 	if !q.started {
-		return errors.Errorf("cannot save job %s; queue not started", name)
+		return fmt.Errorf("cannot save job %s; queue not started", name)
 	}
 
 	if _, ok := q.tasks.all[name]; !ok {
-		return errors.Errorf("cannot save '%s' because a job does not exist with that name", name)
+		return fmt.Errorf("cannot save '%s' because a job does not exist with that name", name)
 	}
 
 	q.tasks.all[name] = j
@@ -190,14 +190,14 @@ func (q *sqsFIFOQueue) Next(ctx context.Context) (amboy.Job, error) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 	if err := ctx.Err(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	messageOutput, err := q.sqsClient.ReceiveMessageWithContext(ctx, &sqs.ReceiveMessageInput{
 		QueueUrl: aws.String(q.sqsURL),
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	} else if len(messageOutput.Messages) == 0 {
 		q.log.Debugf("No messages received in Next from %s", q.sqsURL)
 		return nil, errors.New("no dispatchable jobs")
@@ -208,22 +208,22 @@ func (q *sqsFIFOQueue) Next(ctx context.Context) (amboy.Job, error) {
 		ReceiptHandle: message.ReceiptHandle,
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	var jobItem *registry.JobInterchange
 	err = json.Unmarshal([]byte(*message.Body), jobItem)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	job, err := jobItem.Resolve(json.Unmarshal)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	if err := q.dispatcher.Dispatch(ctx, job); err != nil {
 		_ = q.Put(ctx, job)
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	if job.TimeInfo().IsStale() {
@@ -259,7 +259,7 @@ func (q *sqsFIFOQueue) Info() amboy.QueueInfo {
 // work of the queue.
 func (q *sqsFIFOQueue) Complete(ctx context.Context, job amboy.Job) error {
 	if err := ctx.Err(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	if stat := job.Status(); stat.Canceled {
@@ -273,7 +273,7 @@ func (q *sqsFIFOQueue) Complete(ctx context.Context, job amboy.Job) error {
 
 	name := job.ID()
 	if err := q.dispatcher.Complete(ctx, job); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
@@ -284,7 +284,7 @@ func (q *sqsFIFOQueue) Complete(ctx context.Context, job amboy.Job) error {
 			"id":        name,
 			"operation": "Complete",
 		})
-		return errors.WithStack(err)
+		return err
 	}
 
 	q.tasks.completed[name] = true
@@ -375,7 +375,7 @@ func (q *sqsFIFOQueue) Start(ctx context.Context) error {
 	q.started = true
 	err := q.runner.Start(ctx)
 	if err != nil {
-		return errors.Wrap(err, "problem starting runner")
+		return fmt.Errorf("problem starting runner: %w", err)
 	}
 	return nil
 }

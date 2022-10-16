@@ -2,11 +2,11 @@ package rest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/gimlet"
 	"github.com/tychoish/grip"
@@ -119,7 +119,7 @@ func parseTimeout(r *http.Request) (time.Duration, error) {
 		}
 	}
 
-	return timeout, errors.Wrapf(err, "problem parsing timeout from %s", timeoutInput)
+	return timeout, fmt.Errorf("problem parsing timeout from %s: %w", timeoutInput, err)
 }
 
 func (s *QueueService) waitForJob(ctx context.Context, name string) (*jobStatusResponse, int, error) {
@@ -128,11 +128,11 @@ func (s *QueueService) waitForJob(ctx context.Context, name string) (*jobStatusR
 		response, err2 := s.getJobStatusResponse(ctx, name)
 		grip.Error(err2)
 		if amboy.IsJobNotDefinedError(err) {
-			return response, http.StatusNotFound, errors.Errorf(
+			return response, http.StatusNotFound, fmt.Errorf(
 				"problem finding job: %s", name)
 		}
 
-		return response, http.StatusInternalServerError, errors.Errorf(
+		return response, http.StatusInternalServerError, fmt.Errorf(
 			"problem retrieving job: %s", name)
 	}
 
@@ -140,12 +140,11 @@ func (s *QueueService) waitForJob(ctx context.Context, name string) (*jobStatusR
 
 	response, err := s.getJobStatusResponse(ctx, name)
 	if err != nil {
-		return response, http.StatusInternalServerError, errors.Wrapf(err,
-			"problem constructing response for while waiting for job %s", name)
+		return response, http.StatusInternalServerError, fmt.Errorf("problem constructing response for while waiting for job %s: %w", name, err)
 	}
 
 	if !ok {
-		return response, http.StatusRequestTimeout, errors.Errorf(
+		return response, http.StatusRequestTimeout, fmt.Errorf(
 			"reached timeout waiting for job: %s", name)
 	}
 

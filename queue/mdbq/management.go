@@ -2,10 +2,10 @@ package mdbq
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/management"
 	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
@@ -64,16 +64,16 @@ func NewDBQueueManager(ctx context.Context, opts DBQueueManagerOptions) (managem
 
 	client, err := mongo.NewClient(options.Client().ApplyURI(opts.Options.URI).SetConnectTimeout(time.Second))
 	if err != nil {
-		return nil, errors.Wrap(err, "problem constructing mongodb client")
+		return nil, fmt.Errorf("problem constructing mongodb client: %w", err)
 	}
 
 	if err = client.Connect(ctx); err != nil {
-		return nil, errors.Wrap(err, "problem connecting to database")
+		return nil, fmt.Errorf("problem connecting to database: %w", err)
 	}
 
 	db, err := MakeDBQueueManager(ctx, opts, client)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem building reporting interface")
+		return nil, fmt.Errorf("problem building reporting interface: %w", err)
 	}
 
 	return db, nil
@@ -92,7 +92,7 @@ func MakeDBQueueManager(ctx context.Context, opts DBQueueManagerOptions, client 
 	}
 
 	if err := client.Ping(ctx, nil); err != nil {
-		return nil, errors.Wrap(err, "could not establish a connection with the database")
+		return nil, fmt.Errorf("could not establish a connection with the database: %w", err)
 	}
 
 	db := &dbQueueManager{
@@ -108,7 +108,7 @@ func MakeDBQueueManager(ctx context.Context, opts DBQueueManagerOptions, client 
 func (db *dbQueueManager) aggregateCounters(ctx context.Context, stages ...bson.M) ([]management.JobCounters, error) {
 	cursor, err := db.collection.Aggregate(ctx, stages, options.Aggregate().SetAllowDiskUse(true))
 	if err != nil {
-		return nil, errors.Wrap(err, "problem running aggregation")
+		return nil, fmt.Errorf("problem running aggregation: %w", err)
 	}
 
 	catcher := emt.NewBasicCatcher()
@@ -124,7 +124,7 @@ func (db *dbQueueManager) aggregateCounters(ctx context.Context, stages ...bson.
 	}
 	catcher.Add(cursor.Err())
 	if catcher.HasErrors() {
-		return nil, errors.Wrap(catcher.Resolve(), "problem running job counters aggregation")
+		return nil, catcher.Resolve()
 	}
 
 	return out, nil
@@ -133,7 +133,7 @@ func (db *dbQueueManager) aggregateCounters(ctx context.Context, stages ...bson.
 func (db *dbQueueManager) aggregateRuntimes(ctx context.Context, stages ...bson.M) ([]management.JobRuntimes, error) {
 	cursor, err := db.collection.Aggregate(ctx, stages, options.Aggregate().SetAllowDiskUse(true))
 	if err != nil {
-		return nil, errors.Wrap(err, "problem running aggregation")
+		return nil, fmt.Errorf("problem running aggregation: %w", err)
 	}
 
 	catcher := emt.NewBasicCatcher()
@@ -149,7 +149,7 @@ func (db *dbQueueManager) aggregateRuntimes(ctx context.Context, stages ...bson.
 	}
 	catcher.Add(cursor.Err())
 	if catcher.HasErrors() {
-		return nil, errors.Wrap(catcher.Resolve(), "problem running job runtimes aggregation")
+		return nil, catcher.Resolve()
 	}
 
 	return out, nil
@@ -158,7 +158,7 @@ func (db *dbQueueManager) aggregateRuntimes(ctx context.Context, stages ...bson.
 func (db *dbQueueManager) aggregateErrors(ctx context.Context, stages ...bson.M) ([]management.JobErrorsForType, error) {
 	cursor, err := db.collection.Aggregate(ctx, stages, options.Aggregate().SetAllowDiskUse(true))
 	if err != nil {
-		return nil, errors.Wrap(err, "problem running aggregation")
+		return nil, fmt.Errorf("problem running aggregation: %w", err)
 	}
 
 	catcher := emt.NewBasicCatcher()
@@ -174,7 +174,7 @@ func (db *dbQueueManager) aggregateErrors(ctx context.Context, stages ...bson.M)
 	}
 	catcher.Add(cursor.Err())
 	if catcher.HasErrors() {
-		return nil, errors.Wrap(catcher.Resolve(), "problem running job counters aggregation")
+		return nil, catcher.Resolve()
 	}
 
 	return out, nil
@@ -201,12 +201,12 @@ func (db *dbQueueManager) findJobs(ctx context.Context, match bson.M) ([]string,
 
 	cursor, err := db.collection.Aggregate(ctx, stages, options.Aggregate().SetAllowDiskUse(true))
 	if err != nil {
-		return nil, errors.Wrap(err, "problem running query")
+		return nil, fmt.Errorf("problem running query: %w", err)
 	}
 
 	if cursor.Next(ctx) {
 		if err := cursor.Decode(&out); err != nil {
-			return nil, errors.Wrap(err, "problem decoding result")
+			return nil, fmt.Errorf("problem decoding result: %w", err)
 		}
 	}
 
@@ -216,13 +216,13 @@ func (db *dbQueueManager) findJobs(ctx context.Context, match bson.M) ([]string,
 	case 1:
 		return out[0].Jobs, nil
 	default:
-		return nil, errors.Errorf("job results malformed with %d results", len(out))
+		return nil, fmt.Errorf("job results malformed with %d results", len(out))
 	}
 }
 
 func (db *dbQueueManager) JobStatus(ctx context.Context, f management.StatusFilter) (*management.JobStatusReport, error) {
 	if err := f.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	match := bson.M{}
@@ -274,7 +274,7 @@ func (db *dbQueueManager) JobStatus(ctx context.Context, f management.StatusFilt
 	counters, err := db.aggregateCounters(ctx, stages...)
 
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	return &management.JobStatusReport{
@@ -289,7 +289,7 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 	}
 
 	if err := f.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	var match bson.M
@@ -363,7 +363,7 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 
 	runtimes, err := db.aggregateRuntimes(ctx, stages...)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return &management.JobRuntimeReport{
 		Filter: string(f),
@@ -374,7 +374,7 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 
 func (db *dbQueueManager) JobIDsByState(ctx context.Context, jobType string, f management.StatusFilter) (*management.JobReportIDs, error) {
 	if err := f.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	query := bson.M{
@@ -403,7 +403,7 @@ func (db *dbQueueManager) JobIDsByState(ctx context.Context, jobType string, f m
 
 	ids, err := db.findJobs(ctx, query)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	return &management.JobReportIDs{
@@ -419,7 +419,7 @@ func (db *dbQueueManager) RecentErrors(ctx context.Context, window time.Duration
 	}
 
 	if err := f.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 
 	}
 	now := time.Now()
@@ -487,7 +487,7 @@ func (db *dbQueueManager) RecentErrors(ctx context.Context, window time.Duration
 
 	reports, err := db.aggregateErrors(ctx, stages...)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	return &management.JobErrorsReport{
@@ -503,7 +503,7 @@ func (db *dbQueueManager) RecentJobErrors(ctx context.Context, jobType string, w
 	}
 
 	if err := f.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	now := time.Now()
@@ -576,7 +576,7 @@ func (db *dbQueueManager) RecentJobErrors(ctx context.Context, jobType string, w
 
 	reports, err := db.aggregateErrors(ctx, stages...)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	return &management.JobErrorsReport{
@@ -624,7 +624,7 @@ func (db *dbQueueManager) completeJobs(ctx context.Context, query bson.M, f mana
 		"filter":     f,
 		"modified":   res.ModifiedCount,
 	})
-	return errors.Wrap(err, "problem marking jobs complete")
+	return fmt.Errorf("problem marking jobs complete: %w", err)
 }
 
 func (db *dbQueueManager) CompleteJob(ctx context.Context, name string) error {
@@ -636,8 +636,10 @@ func (db *dbQueueManager) CompleteJob(ctx context.Context, name string) error {
 		"status.completed": false,
 	}
 
-	_, err := db.collection.UpdateOne(ctx, query, db.getUpdateStatement())
-	return errors.Wrapf(err, "problem marking job with name '%s' complete", name)
+	if _, err := db.collection.UpdateOne(ctx, query, db.getUpdateStatement()); err != nil {
+		return fmt.Errorf("problem marking job with name '%s' complete: %w", name, err)
+	}
+	return nil
 }
 
 func (db *dbQueueManager) CompleteJobsByType(ctx context.Context, f management.StatusFilter, jobType string) error {
@@ -650,7 +652,7 @@ func (db *dbQueueManager) CompleteJobs(ctx context.Context, f management.StatusF
 
 func (db *dbQueueManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f management.StatusFilter) (int, error) {
 	if err := f.Validate(); err != nil {
-		return 0, errors.WithStack(err)
+		return 0, err
 	}
 
 	if limit > 1 {
@@ -699,7 +701,7 @@ func (db *dbQueueManager) PruneJobs(ctx context.Context, ts time.Time, limit int
 	}
 
 	if err != nil {
-		return 0, errors.WithStack(err)
+		return 0, err
 	}
 
 	return int(res.DeletedCount), nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -15,7 +16,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/amboy/queue"
@@ -103,11 +103,11 @@ func (opts *Options) Validate() error {
 // configuration and construction queue objects.
 func PrepareDatabase(ctx context.Context, db *sqlx.DB, schemaName string) error {
 	if _, err := db.ExecContext(ctx, fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", schemaName)); err != nil {
-		return errors.Wrapf(err, "creating schema '%s'", schemaName)
+		return fmt.Errorf("creating schema '%s': %w", schemaName, err)
 	}
 
 	if _, err := db.ExecContext(ctx, strings.ReplaceAll(bootstrapDB, "{schemaName}", schemaName)); err != nil {
-		return errors.Wrapf(err, "bootstrapping tables and indexes schema '%s'", schemaName)
+		return fmt.Errorf("bootstrapping tables and indexes schema '%s': %w", schemaName, err)
 	}
 
 	return nil
@@ -117,7 +117,7 @@ func PrepareDatabase(ctx context.Context, db *sqlx.DB, schemaName string) error 
 // table in the specified schema.
 func CleanDatabase(ctx context.Context, db *sqlx.DB, schemaName string) error {
 	if _, err := db.ExecContext(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s.jobs CASCADE;", schemaName)); err != nil {
-		return errors.Wrapf(err, "dropping job tables in '%s'", schemaName)
+		return fmt.Errorf("dropping job tables in '%s': %w", schemaName, err)
 	}
 
 	return nil
@@ -144,7 +144,7 @@ func CleanDatabase(ctx context.Context, db *sqlx.DB, schemaName string) error {
 // set longer maxtimes results in an error.
 func NewQueue(ctx context.Context, db *sqlx.DB, opts Options) (amboy.Queue, error) {
 	if err := opts.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	q := &sqlQueue{
@@ -159,12 +159,12 @@ func NewQueue(ctx context.Context, db *sqlx.DB, opts Options) (amboy.Queue, erro
 		NumWorkers: opts.PoolSize,
 		Queue:      q,
 	})); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	if !opts.SkipBootstrap {
 		if err := PrepareDatabase(context.TODO(), db, opts.SchemaName); err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 	}
 
@@ -193,7 +193,7 @@ func (q *sqlQueue) Start(ctx context.Context) error {
 	}
 
 	if err := q.runner.Start(ctx); err != nil {
-		return errors.Wrap(err, "problem starting runner in remote queue")
+		return fmt.Errorf("problem starting runner in remote queue: %w", err)
 	}
 
 	q.started = true
@@ -205,7 +205,8 @@ func isPgDuplicateError(err error) bool {
 		return false
 	}
 
-	if pgerr, ok := errors.Cause(err).(*pq.Error); ok && pgerr.Code == "23505" {
+	pgerr := &pq.Error{}
+	if errors.As(err, pgerr) && pgerr.Code == "23505" {
 		return true
 	}
 
@@ -219,15 +220,15 @@ func (q *sqlQueue) processQueryString(query string) string {
 func (q *sqlQueue) prepareForDB(j *registry.JobInterchange) error {
 	truncMaxTime := time.Duration(j.TimeInfo.MaxTime.Milliseconds())
 	if truncMaxTime > time.Duration(math.MaxInt32) {
-		return errors.Errorf("maxTime must be less than %s, [%s]", time.Duration(math.MaxInt32), j.TimeInfo.MaxTime)
+		return fmt.Errorf("maxTime must be less than %s, [%s]", time.Duration(math.MaxInt32), j.TimeInfo.MaxTime)
 	}
 	j.TimeInfo.MaxTime = truncMaxTime
 
 	if j.Status.ModificationCount > math.MaxInt32 {
-		return errors.Errorf("modification count exceeded maxint32 [%d]", j.Status.ModificationCount)
+		return fmt.Errorf("modification count exceeded maxint32 [%d]", j.Status.ModificationCount)
 	}
 	if j.Version > math.MaxInt32 {
-		return errors.Errorf("version exceeded maxint32 [%d]", j.Version)
+		return fmt.Errorf("version exceeded maxint32 [%d]", j.Version)
 	}
 
 	if j.Priority > math.MaxInt32 {
@@ -266,21 +267,21 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 	}
 
 	if err := j.TimeInfo().Validate(); err != nil {
-		return errors.Wrap(err, "invalid job timeinfo")
+		return fmt.Errorf("invalid job timeinfo: %w", err)
 	}
 
 	payload, err := registry.MakeJobInterchange(j, json.Marshal)
 	if err != nil {
-		return errors.Wrap(err, "problem converting job to interchange format")
+		return fmt.Errorf("problem converting job to interchange format: %w", err)
 	}
 	if err = q.prepareForDB(payload); err != nil {
-		return errors.Wrap(err, "problem preparing job for database")
+		return fmt.Errorf("problem preparing job for database: %w", err)
 	}
 	q.processJobForGroup(payload)
 
 	tx, err := q.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return errors.Wrap(err, "problem starting transaction")
+		return fmt.Errorf("problem starting transaction: %w", err)
 	}
 	defer tx.Rollback() //nolint:errcheck
 
@@ -305,11 +306,11 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 			return amboy.NewDuplicateJobErrorf("job '%s' already exists", j.ID())
 		}
 
-		return errors.Wrap(err, "insert job")
+		return fmt.Errorf("insert job: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return errors.Wrap(err, "commit txn")
+		return fmt.Errorf("commit txn: %w", err)
 	}
 
 	return nil
@@ -318,7 +319,7 @@ func (q *sqlQueue) Put(ctx context.Context, j amboy.Job) error {
 func (q *sqlQueue) Get(ctx context.Context, id string) (amboy.Job, error) {
 	tx, err := q.db.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
-		return nil, errors.Wrapf(err, "problem starting transaction to resolve job %s from %s", id, q.id)
+		return nil, fmt.Errorf("problem starting transaction to resolve job %s from %s: %w", id, q.id, err)
 	}
 	defer tx.Rollback() //nolint:errcheck
 
@@ -340,10 +341,10 @@ func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.
 
 	id = q.getIDFromName(id)
 	if err := tx.GetContext(ctx, &payload, q.processQueryString(getJobByID), id); err != nil {
-		if errors.Cause(err) == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, amboy.NewJobNotDefinedError(q, id)
 		}
-		return nil, errors.Wrapf(err, "problem getting job %q", id)
+		return nil, fmt.Errorf("problem getting job %q: %w", id, err)
 	}
 
 	payload.JobInterchange.Name = id
@@ -367,7 +368,7 @@ func (q *sqlQueue) getJobTx(ctx context.Context, tx *sqlx.Tx, id string) (amboy.
 			}))
 		}
 
-		return nil, errors.Wrap(err, "failed to resolve job")
+		return nil, fmt.Errorf("failed to resolve job: %w", err)
 	}
 
 	return job, nil
@@ -428,17 +429,17 @@ func (q *sqlQueue) Save(ctx context.Context, j amboy.Job) error {
 
 	job, err := registry.MakeJobInterchange(j, json.Marshal)
 	if err != nil {
-		return errors.Wrap(err, "problem converting job to interchange format")
+		return fmt.Errorf("problem converting job to interchange format: %w", err)
 	}
 
 	job.Scopes = j.Scopes()
 
-	return errors.WithStack(q.doUpdate(ctx, job))
+	return q.doUpdate(ctx, job)
 }
 
 func (q *sqlQueue) Complete(ctx context.Context, j amboy.Job) error {
 	if err := q.dispatcher.Complete(ctx, j); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	stat := j.Status()
@@ -454,7 +455,7 @@ func (q *sqlQueue) Complete(ctx context.Context, j amboy.Job) error {
 
 	job, err := registry.MakeJobInterchange(j, json.Marshal)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	job.Scopes = nil
 
@@ -471,7 +472,7 @@ RETRY:
 		count++
 		select {
 		case <-ctx.Done():
-			return errors.WithStack(ctx.Err())
+			return ctx.Err()
 		case <-timer.C:
 			if err := q.doUpdate(ctx, job); err != nil {
 				if time.Since(startAt) > time.Minute+q.opts.LockTimeout {
@@ -483,7 +484,7 @@ RETRY:
 						"queue_id":    q.id,
 						"message":     "job took too long to mark complete",
 					}))
-					return errors.Wrapf(err, "encountered timeout marking %q complete ", id)
+					return fmt.Errorf("encountered timeout marking %q complete : %w", id, err)
 				} else if count > q.opts.CompleteRetries {
 					q.log.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
@@ -493,7 +494,7 @@ RETRY:
 						"queue_id":    q.id,
 						"message":     "after 10 retries, aborting marking job complete",
 					}))
-					return errors.Wrapf(err, "failed to mark %q complete 10 times", id)
+					return fmt.Errorf("failed to mark %q complete 10 times: %w", id, err)
 				} else if isPgDuplicateError(err) {
 					q.log.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
@@ -503,8 +504,8 @@ RETRY:
 						"queue_id":    q.id,
 						"message":     "attempting to mark job complete without lock",
 					}))
-					return errors.Errorf("problem marking job %q complete without the lock", id)
-				} else if errors.Cause(err) == errLockNotHeld {
+					return fmt.Errorf("problem marking job %q complete without the lock", id)
+				} else if errors.Is(err, errLockNotHeld) {
 					q.log.Warning(message.WrapError(err, message.Fields{
 						"job_id":      id,
 						"service":     "amboy.queue.pgq",
@@ -513,7 +514,7 @@ RETRY:
 						"queue_id":    q.id,
 						"message":     "cannot complete a job without lock",
 					}))
-					return errors.Errorf("problem marking job %q complete without the lock", id)
+					return fmt.Errorf("problem marking job %q complete without the lock", id)
 				} else {
 					timer.Reset(retryInterval)
 					continue RETRY
@@ -530,12 +531,12 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 	q.processJobForGroup(job)
 	defer func() { q.processNameForUsers(job) }()
 	if err := q.prepareForDB(job); err != nil {
-		return errors.Wrap(err, "fatal error with job")
+		return fmt.Errorf("fatal error with job: %w", err)
 	}
 
 	tx, err := q.db.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
-		return errors.Wrap(err, "problem starting transaction")
+		return fmt.Errorf("problem starting transaction: %w", err)
 	}
 	defer tx.Rollback() //nolint:errcheck
 
@@ -550,15 +551,15 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 		time.Now().Add(-q.opts.LockTimeout),
 	)
 	if err != nil {
-		return errors.Wrapf(err, "problem reading count for lock query for %s", job.Name)
+		return fmt.Errorf("problem reading count for lock query for %s: %w", job.Name, err)
 	}
 
 	if count == 0 {
-		return errors.Wrapf(errLockNotHeld, "job='%s' num=%d", job.Name, count)
+		return fmt.Errorf("job='%s' num=%d: %w", job.Name, count, errLockNotHeld)
 	}
 
 	if _, err = tx.ExecContext(ctx, q.processQueryString(removeJobScopes), job.Name); err != nil {
-		return errors.Wrap(err, "problem clearing scopes")
+		return fmt.Errorf("problem clearing scopes: %w", err)
 	}
 
 	for _, s := range job.Scopes {
@@ -570,7 +571,7 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 				Scope string `db:"scope"`
 			}{ID: job.Name, Scope: s})
 		if err != nil {
-			return errors.Wrapf(err, "problem inserting scope %s", s)
+			return fmt.Errorf("problem inserting scope %s: %w", s, err)
 		}
 	}
 
@@ -589,11 +590,11 @@ func (q *sqlQueue) doUpdate(ctx context.Context, job *registry.JobInterchange) e
 		DependencyInterchange: job.Dependency,
 		DependencyEdges:       pq.StringArray(append([]string{}, job.Dependency.Edges...)),
 	}); err != nil {
-		return errors.Wrap(err, "problem updating job data")
+		return fmt.Errorf("problem updating job data: %w", err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return errors.Wrap(err, "committing job save transaction")
+		return fmt.Errorf("committing job save transaction: %w", err)
 	}
 
 	return nil
@@ -736,7 +737,7 @@ func (q *sqlQueue) getNext(ctx context.Context, check func(j amboy.Job) (amboy.J
 	for {
 		select {
 		case <-ctx.Done():
-			return nil, errors.WithStack(ctx.Err())
+			return nil, ctx.Err()
 		case <-timer.C:
 			misses++
 			rows, err := q.db.NamedQueryContext(ctx, query, struct {
@@ -759,14 +760,14 @@ func (q *sqlQueue) getNext(ctx context.Context, check func(j amboy.Job) (amboy.J
 					"group":         q.opts.GroupName,
 					"duration_secs": time.Since(startAt).Seconds(),
 				}))
-				return nil, errors.Wrap(err, "generating next job query")
+				return nil, fmt.Errorf("generating next job query: %w", err)
 			}
 			defer rows.Close()
 		CURSOR:
 			for rows.Next() {
 
 				if err = ctx.Err(); err != nil {
-					return nil, errors.WithStack(err)
+					return nil, err
 				}
 				var id string
 				if err = rows.Scan(&id); err != nil {
@@ -945,11 +946,11 @@ func (q *sqlQueue) SetRunner(r amboy.Runner) error {
 func (q *sqlQueue) Delete(ctx context.Context, id string) error {
 	num, err := q.deleteMaybe(ctx, id)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	if num == 0 {
-		return errors.Errorf("did not delete job %s", id)
+		return fmt.Errorf("did not delete job %s", id)
 	}
 
 	return nil
@@ -958,12 +959,12 @@ func (q *sqlQueue) Delete(ctx context.Context, id string) error {
 func (q *sqlQueue) deleteMaybe(ctx context.Context, id string) (int, error) {
 	res, err := q.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s.jobs WHERE id = $1", q.opts.SchemaName), id)
 	if err != nil {
-		return 0, errors.WithStack(err)
+		return 0, err
 	}
 
 	num, err := res.RowsAffected()
 	if err != nil {
-		return 0, errors.WithStack(err)
+		return 0, err
 	}
 
 	return int(num), nil
@@ -971,7 +972,7 @@ func (q *sqlQueue) deleteMaybe(ctx context.Context, id string) (int, error) {
 
 func (q *sqlQueue) tryDelete(ctx context.Context, id string) error {
 	_, err := q.deleteMaybe(ctx, id)
-	return errors.WithStack(err)
+	return err
 }
 
 func (q *sqlQueue) Close(ctx context.Context) error {

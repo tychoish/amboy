@@ -16,12 +16,12 @@ package queue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
@@ -106,7 +106,7 @@ func (q *shuffledLocal) Put(ctx context.Context, j amboy.Job) error {
 	id := j.ID()
 
 	if !q.Info().Started {
-		return errors.Errorf("cannot put job %s; queue not started", id)
+		return fmt.Errorf("cannot put job %s; queue not started", id)
 	}
 
 	j.UpdateTimeInfo(amboy.JobTimeInfo{
@@ -114,7 +114,7 @@ func (q *shuffledLocal) Put(ctx context.Context, j amboy.Job) error {
 	})
 
 	if err := j.TimeInfo().Validate(); err != nil {
-		return errors.Wrap(err, "invalid job timeinfo")
+		return fmt.Errorf("invalid job timeinfo: %w", err)
 	}
 
 	ret := make(chan error)
@@ -139,7 +139,7 @@ func (q *shuffledLocal) Put(ctx context.Context, j amboy.Job) error {
 
 	select {
 	case <-ctx.Done():
-		return errors.WithStack(ctx.Err())
+		return ctx.Err()
 	case q.operations <- op:
 		return <-ret
 	}
@@ -149,7 +149,7 @@ func (q *shuffledLocal) Save(ctx context.Context, j amboy.Job) error {
 	id := j.ID()
 
 	if !q.Info().Started {
-		return errors.Errorf("cannot save job %s; queue not started", id)
+		return fmt.Errorf("cannot save job %s; queue not started", id)
 	}
 
 	ret := make(chan error)
@@ -175,12 +175,12 @@ func (q *shuffledLocal) Save(ctx context.Context, j amboy.Job) error {
 			return
 		}
 
-		ret <- errors.Errorf("job '%s' does not exist", id)
+		ret <- fmt.Errorf("job '%s' does not exist", id)
 	}
 
 	select {
 	case <-ctx.Done():
-		return errors.WithStack(ctx.Err())
+		return ctx.Err()
 	case q.operations <- op:
 		return <-ret
 	}
@@ -220,7 +220,7 @@ func (q *shuffledLocal) Get(ctx context.Context, name string) (amboy.Job, error)
 
 	select {
 	case <-ctx.Done():
-		return nil, errors.WithStack(ctx.Err())
+		return nil, ctx.Err()
 	case q.operations <- op:
 		job, ok := <-ret
 		if !ok {
@@ -355,7 +355,7 @@ func (q *shuffledLocal) Next(ctx context.Context) (amboy.Job, error) {
 
 	select {
 	case <-ctx.Done():
-		return nil, errors.WithStack(ctx.Err())
+		return nil, ctx.Err()
 	case q.operations <- op:
 		j := <-ret
 		if j == nil {
@@ -363,7 +363,7 @@ func (q *shuffledLocal) Next(ctx context.Context) (amboy.Job, error) {
 		}
 		if err := q.dispatcher.Dispatch(ctx, j); err != nil {
 			_ = q.Put(ctx, j)
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 
 		return j, nil
@@ -375,7 +375,7 @@ func (q *shuffledLocal) Next(ctx context.Context) (amboy.Job, error) {
 // executes, no change occurs.
 func (q *shuffledLocal) Complete(ctx context.Context, j amboy.Job) error {
 	if err := ctx.Err(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	var op func(map[string]amboy.Job, map[string]amboy.Job, map[string]amboy.Job, *fixedStorage)
@@ -394,7 +394,7 @@ func (q *shuffledLocal) Complete(ctx context.Context, j amboy.Job) error {
 		}
 
 	} else if err := q.dispatcher.Complete(ctx, j); err != nil {
-		return errors.WithStack(err)
+		return err
 	} else {
 		op = func(
 			pending map[string]amboy.Job,
@@ -428,7 +428,7 @@ func (q *shuffledLocal) Complete(ctx context.Context, j amboy.Job) error {
 
 	select {
 	case <-ctx.Done():
-		return errors.WithStack(ctx.Err())
+		return ctx.Err()
 	case q.operations <- op:
 		return nil
 	}
@@ -467,7 +467,7 @@ func (q *shuffledLocal) Delete(ctx context.Context, id string) error {
 
 	select {
 	case <-ctx.Done():
-		return errors.WithStack(ctx.Err())
+		return ctx.Err()
 	case q.operations <- op:
 		return <-res
 	}

@@ -1,7 +1,9 @@
 package registry
 
 import (
-	"github.com/pkg/errors"
+	"errors"
+	"fmt"
+
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 )
@@ -82,17 +84,17 @@ func (j *JobInterchange) Resolve(convertFrom Unmarshaler) (amboy.Job, error) {
 
 	job := factory()
 	if err = NewJobResolutionError(job.Type(), j.Version); err != nil {
-		return nil, errors.Wrapf(err, "job version problem for '%s'", j.Name)
+		return nil, fmt.Errorf("job version problem for '%s': %w", j.Name, err)
 	}
 
 	if err = convertFrom(j.Job, job); err != nil {
-		return nil, errors.Wrap(err, "converting job body")
+		return nil, fmt.Errorf("converting job body: %w", err)
 	}
 
 	if j.Dependency != nil {
 		dep, err := convertToDependency(convertFrom, j.Dependency)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 
 		job.SetDependency(dep)
@@ -154,7 +156,7 @@ func convertToDependency(convertFrom Unmarshaler, d *DependencyInterchange) (dep
 	dep := factory()
 
 	if err = NewDependencyResolutionError(dep.Type(), d.Version); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	// this works, because we want to use all the data from the
@@ -162,7 +164,7 @@ func convertToDependency(convertFrom Unmarshaler, d *DependencyInterchange) (dep
 	// associated with the object that we produced with the
 	// factory.
 	if err := convertFrom(d.Dependency, dep); err != nil {
-		return nil, errors.Wrap(err, "converting dependency")
+		return nil, fmt.Errorf("converting dependency: %w", err)
 	}
 
 	return dep, nil

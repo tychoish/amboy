@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/registry"
 	"github.com/tychoish/gimlet"
@@ -81,7 +81,7 @@ func (c *QueueClient) initClient(host string, port int, prefix string) (*QueueCl
 // does not start with "http".
 func (c *QueueClient) SetHost(h string) error {
 	if !strings.HasPrefix(h, "http") {
-		return errors.Errorf("host '%s' is malformed. must start with 'http'", h)
+		return fmt.Errorf("host '%s' is malformed. must start with 'http'", h)
 	}
 
 	if strings.HasSuffix(h, "/") {
@@ -104,7 +104,7 @@ func (c *QueueClient) Host() string {
 func (c *QueueClient) SetPort(p int) error {
 	if p <= 0 || p >= maxClientPort {
 		c.port = defaultClientPort
-		return errors.Errorf("cannot set the port to %d, using %d instead", p, defaultClientPort)
+		return fmt.Errorf("cannot set the port to %d, using %d instead", p, defaultClientPort)
 	}
 
 	c.port = p
@@ -231,7 +231,7 @@ func (c *QueueClient) SubmitJob(ctx context.Context, j amboy.Job) (string, error
 	}
 
 	if cjr.Error != "" {
-		return "", errors.Errorf("service reported error: '%s'", cjr.Error)
+		return "", fmt.Errorf("service reported error: '%s'", cjr.Error)
 	}
 
 	return cjr.ID, nil
@@ -350,13 +350,13 @@ func (c *QueueClient) WaitAll(ctx context.Context) bool {
 func (c *QueueClient) MarkJobComplete(ctx context.Context, id string) error {
 	req, err := http.NewRequest(http.MethodPost, c.getURL(fmt.Sprintf("/v1/job/%s", id)), nil)
 	if err != nil {
-		return errors.Wrap(err, "problem with request")
+		return fmt.Errorf("problem with request: %w", err)
 	}
 	req = req.WithContext(ctx)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "error processing request")
+		return fmt.Errorf("error processing request: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -367,7 +367,7 @@ func (c *QueueClient) MarkJobComplete(ctx context.Context, id string) error {
 		} else {
 			msg = string(data)
 		}
-		return errors.Errorf("status code '%s' returned with message: '%s'", resp.Status, msg)
+		return fmt.Errorf("status code '%s' returned with message: '%s'", resp.Status, msg)
 	}
 
 	return nil

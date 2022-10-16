@@ -2,12 +2,12 @@ package queue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
@@ -78,7 +78,7 @@ func (q *limitedSizeLocal) ID() string {
 // queue is at capacity.
 func (q *limitedSizeLocal) Put(ctx context.Context, j amboy.Job) error {
 	if !q.Info().Started {
-		return errors.Errorf("queue not open. could not add %s", j.ID())
+		return fmt.Errorf("queue not open. could not add %s", j.ID())
 	}
 
 	j.UpdateTimeInfo(amboy.JobTimeInfo{
@@ -86,7 +86,7 @@ func (q *limitedSizeLocal) Put(ctx context.Context, j amboy.Job) error {
 	})
 
 	if err := j.TimeInfo().Validate(); err != nil {
-		return errors.Wrap(err, "invalid job timeinfo")
+		return fmt.Errorf("invalid job timeinfo: %w", err)
 	}
 
 	name := j.ID()
@@ -100,7 +100,7 @@ func (q *limitedSizeLocal) Put(ctx context.Context, j amboy.Job) error {
 
 	select {
 	case <-ctx.Done():
-		return errors.Wrapf(ctx.Err(), "queue full, cannot add %s", name)
+		return fmt.Errorf("queue full, cannot add %q: %w", name, ctx.Err())
 	case q.channel <- j:
 		q.storage[name] = j
 		return nil
@@ -109,7 +109,7 @@ func (q *limitedSizeLocal) Put(ctx context.Context, j amboy.Job) error {
 
 func (q *limitedSizeLocal) Save(ctx context.Context, j amboy.Job) error {
 	if !q.Info().Started {
-		return errors.Errorf("queue not open. could not add %s", j.ID())
+		return fmt.Errorf("queue not open. could not add %s", j.ID())
 	}
 
 	name := j.ID()
@@ -117,7 +117,7 @@ func (q *limitedSizeLocal) Save(ctx context.Context, j amboy.Job) error {
 	defer q.mu.Unlock()
 
 	if _, ok := q.storage[name]; !ok {
-		return errors.Errorf("cannot save '%s', which is not tracked", name)
+		return fmt.Errorf("cannot save '%s', which is not tracked", name)
 	}
 
 	q.storage[name] = j
@@ -191,7 +191,7 @@ func (q *limitedSizeLocal) Next(ctx context.Context) (amboy.Job, error) {
 
 			return job, nil
 		case <-ctx.Done():
-			return nil, errors.WithStack(ctx.Err())
+			return nil, ctx.Err()
 		}
 	}
 }
@@ -269,7 +269,7 @@ func (q *limitedSizeLocal) Stats(ctx context.Context) amboy.QueueStats {
 // Complete marks a job complete in the queue.
 func (q *limitedSizeLocal) Complete(ctx context.Context, j amboy.Job) error {
 	if err := ctx.Err(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	if stat := j.Status(); stat.Canceled {
@@ -278,7 +278,7 @@ func (q *limitedSizeLocal) Complete(ctx context.Context, j amboy.Job) error {
 	}
 
 	if err := q.dispatcher.Complete(ctx, j); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	q.mu.Lock()

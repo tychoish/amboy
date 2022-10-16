@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/management"
 	"github.com/tychoish/amboy/rest"
 	"github.com/urfave/cli"
@@ -75,7 +74,7 @@ func (o *ServiceOptions) withManagementClient(ctx context.Context, c *cli.Contex
 
 	client := rest.NewManagementClientFromExisting(o.Client, getCLIPath(c))
 
-	return errors.WithStack(op(client))
+	return op(client)
 }
 
 func (o *ServiceOptions) withAbortablePoolManagementClient(ctx context.Context, c *cli.Context, op func(client *rest.AbortablePoolManagementClient) error) error {
@@ -85,7 +84,7 @@ func (o *ServiceOptions) withAbortablePoolManagementClient(ctx context.Context, 
 
 	client := rest.NewAbortablePoolManagementClientFromExisting(o.Client, getCLIPath(c))
 
-	return errors.WithStack(op(client))
+	return op(client)
 }
 
 func getCLIPath(c *cli.Context) string {

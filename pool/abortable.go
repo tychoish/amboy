@@ -2,10 +2,11 @@ package pool
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/recovery"
@@ -224,14 +225,14 @@ func (p *abortablePool) Abort(ctx context.Context, id string) error {
 
 	cancel, ok := p.jobs[id]
 	if !ok {
-		return errors.Errorf("job '%s' is not defined", id)
+		return fmt.Errorf("job '%s' is not defined", id)
 	}
 	cancel()
 	delete(p.jobs, id)
 
 	job, err := p.queue.Get(ctx, id)
 	if err != nil {
-		return errors.Wrapf(err, "could not find '%s' in the queue", id)
+		return fmt.Errorf("could not find '%s' in the queue: %w", id, err)
 	}
 
 	stat := job.Status()
@@ -239,7 +240,7 @@ func (p *abortablePool) Abort(ctx context.Context, id string) error {
 	stat.Completed = true
 	job.SetStatus(stat)
 
-	return errors.WithStack(p.queue.Complete(ctx, job))
+	return p.queue.Complete(ctx, job)
 }
 
 func (p *abortablePool) AbortAll(ctx context.Context) {

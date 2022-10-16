@@ -2,8 +2,8 @@ package pool
 
 import (
 	"context"
+	"errors"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 )
 
@@ -21,7 +21,7 @@ func (p *noopPool) Started() bool { return p.isStarted }
 
 func (p *noopPool) Start(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	if p.queue == nil {

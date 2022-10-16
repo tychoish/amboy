@@ -1,9 +1,9 @@
 package dependency
 
 import (
+	"fmt"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/grip"
 )
 
@@ -67,7 +67,7 @@ func (r *registryCache) getManager(name string) (ManagerFactory, error) {
 	defer r.mmu.RUnlock()
 	f, ok := r.m[name]
 	if !ok {
-		return nil, errors.Errorf("no factory named '%s' is registered", name)
+		return nil, fmt.Errorf("no factory named '%s' is registered", name)
 	}
 	return f, nil
 }
@@ -89,7 +89,7 @@ func (r *registryCache) getCheck(name string) (CheckFactory, error) {
 
 	f, ok := r.c[name]
 	if !ok {
-		return nil, errors.Errorf("no factory named '%s' is registered", name)
+		return nil, fmt.Errorf("no factory named '%s' is registered", name)
 	}
 
 	return f, nil

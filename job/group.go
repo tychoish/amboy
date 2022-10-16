@@ -3,9 +3,9 @@ package job
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 	"github.com/tychoish/amboy/registry"
@@ -58,7 +58,7 @@ func (g *Group) Add(j amboy.Job) error {
 	defer g.mutex.Unlock()
 	_, exists := g.Jobs[name]
 	if exists {
-		return errors.Errorf("job named '%s', already exists in Group %s",
+		return fmt.Errorf("job named '%s', already exists in Group %s",
 			name, g.ID())
 	}
 
@@ -79,7 +79,7 @@ func (g *Group) Run(ctx context.Context) {
 	defer g.MarkComplete()
 
 	if g.Status().Completed {
-		g.AddError(errors.Errorf("Group '%s' has already executed", g.ID()))
+		g.AddError(fmt.Errorf("Group '%s' has already executed", g.ID()))
 		return
 	}
 

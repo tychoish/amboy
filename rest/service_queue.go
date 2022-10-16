@@ -2,9 +2,10 @@ package rest
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/amboy/registry"
@@ -67,7 +68,7 @@ func (s *QueueService) Open(ctx context.Context) error {
 	}
 
 	if err := s.OpenWithOptions(ctx, opts); err != nil {
-		return errors.Wrap(err, "could not open queue.")
+		return fmt.Errorf("could not open queue.: %w", err)
 	}
 
 	return nil
@@ -97,7 +98,7 @@ type QueueServiceOptions struct {
 // service. Use the Close() method on the service to terminate the queue.
 func (s *QueueService) OpenWithOptions(ctx context.Context, opts QueueServiceOptions) error {
 	if opts.NumWorkers == 0 || opts.QueueSize == 0 {
-		return errors.Errorf("cannot build service with specified options: %+v", opts)
+		return fmt.Errorf("cannot build service with specified options: %+v", opts)
 	}
 
 	if s.closer != nil {

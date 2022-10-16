@@ -2,13 +2,13 @@ package mdbq
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/emt"
@@ -123,7 +123,7 @@ type listCollectionsOutput struct {
 // caching mechanism may be more responsive in some situations.
 func NewMongoDBQueueGroup(ctx context.Context, opts MongoDBQueueGroupOptions, client *mongo.Client, mdbopts MongoDBOptions) (amboy.QueueGroup, error) {
 	if err := opts.validate(); err != nil {
-		return nil, errors.Wrap(err, "invalid remote queue options")
+		return nil, fmt.Errorf("invalid remote queue options: %w", err)
 	}
 
 	if mdbopts.DB == "" {
@@ -156,7 +156,7 @@ func (g *remoteMongoQueueGroup) Start(ctx context.Context) error {
 
 		if g.opts.PruneFrequency > 0 && g.opts.TTL > 0 {
 			if err := g.Prune(ctx); err != nil {
-				return errors.Wrap(err, "problem pruning queue")
+				return fmt.Errorf("problem pruning queue: %w", err)
 			}
 		}
 
@@ -195,11 +195,11 @@ func (g *remoteMongoQueueGroup) Start(ctx context.Context) error {
 	}()
 
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	if err := g.startQueues(ctx); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	return nil
 }
@@ -210,14 +210,14 @@ func (g *remoteMongoQueueGroup) startQueues(ctx context.Context) error {
 
 	colls, err := g.getExistingCollections(ctx, g.client, g.dbOpts.DB, g.opts.Prefix)
 	if err != nil {
-		return errors.Wrap(err, "problem getting existing collections")
+		return fmt.Errorf("problem getting existing collections: %w", err)
 	}
 
 	catcher := emt.NewBasicCatcher()
 	for _, coll := range colls {
 		q, err := g.startProcessingRemoteQueue(ctx, coll)
 		if err != nil {
-			catcher.Add(errors.Wrap(err, "problem starting queue"))
+			catcher.Add(fmt.Errorf("problem starting queue: %w", err))
 		} else {
 			g.queues[g.idFromCollection(coll)] = q
 			g.ttlMap[g.idFromCollection(coll)] = time.Now()
@@ -249,13 +249,13 @@ func (g *remoteMongoQueueGroup) startProcessingRemoteQueue(ctx context.Context, 
 
 	d, err := openNewMongoDriver(ctx, coll, g.dbOpts, g.client)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem opening driver")
+		return nil, fmt.Errorf("problem opening driver: %w", err)
 	}
 	if err := q.SetDriver(d); err != nil {
-		return nil, errors.Wrap(err, "problem setting driver")
+		return nil, fmt.Errorf("problem setting driver: %w", err)
 	}
 	if err := q.Start(ctx); err != nil {
-		return nil, errors.Wrap(err, "problem starting queue")
+		return nil, fmt.Errorf("problem starting queue: %w", err)
 	}
 	return q, nil
 }
@@ -263,22 +263,22 @@ func (g *remoteMongoQueueGroup) startProcessingRemoteQueue(ctx context.Context, 
 func (g *remoteMongoQueueGroup) getExistingCollections(ctx context.Context, client *mongo.Client, db, prefix string) ([]string, error) {
 	c, err := client.Database(db).ListCollections(ctx, bson.M{"name": bson.M{"$regex": fmt.Sprintf("^%s.*", prefix)}})
 	if err != nil {
-		return nil, errors.Wrap(err, "problem calling listCollections")
+		return nil, fmt.Errorf("problem calling listCollections: %w", err)
 	}
 	defer c.Close(ctx)
 	var collections []string
 	for c.Next(ctx) {
 		elem := listCollectionsOutput{}
 		if err := c.Decode(&elem); err != nil {
-			return nil, errors.Wrap(err, "problem parsing listCollections output")
+			return nil, fmt.Errorf("problem parsing listCollections output: %w", err)
 		}
 		collections = append(collections, elem.Name)
 	}
 	if err := c.Err(); err != nil {
-		return nil, errors.Wrap(err, "problem iterating over list collections cursor")
+		return nil, fmt.Errorf("problem iterating over list collections cursor: %w", err)
 	}
 	if err := c.Close(ctx); err != nil {
-		return nil, errors.Wrap(err, "problem closing cursor")
+		return nil, fmt.Errorf("problem closing cursor: %w", err)
 	}
 	return collections, nil
 }
@@ -304,7 +304,7 @@ func (g *remoteMongoQueueGroup) Get(ctx context.Context, id string) (amboy.Queue
 
 	queue, err := g.startProcessingRemoteQueue(ctx, g.collectionFromID(id))
 	if err != nil {
-		return nil, errors.Wrap(err, "problem starting queue")
+		return nil, fmt.Errorf("problem starting queue: %w", err)
 	}
 	g.queues[id] = queue
 	g.ttlMap[id] = time.Now()
@@ -341,7 +341,7 @@ func (g *remoteMongoQueueGroup) Prune(ctx context.Context) error {
 
 	colls, err := g.getExistingCollections(ctx, g.client, g.dbOpts.DB, g.opts.Prefix)
 	if err != nil {
-		return errors.Wrap(err, "problem getting collections")
+		return fmt.Errorf("problem getting collections: %w", err)
 	}
 	collsToCheck := []string{}
 	for _, coll := range colls {
@@ -469,7 +469,7 @@ func (g *remoteMongoQueueGroup) Close(ctx context.Context) error {
 	case <-waitCh:
 		return nil
 	case <-ctx.Done():
-		return errors.WithStack(ctx.Err())
+		return ctx.Err()
 	}
 }
 

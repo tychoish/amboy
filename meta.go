@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
@@ -109,7 +108,7 @@ func RunJob(ctx context.Context, job Job) error {
 		"job_type":      job.Type().Name,
 		"duration_secs": ti.Duration().Seconds(),
 	}
-	err := errors.WithStack(job.Error())
+	err := job.Error()
 	if err != nil {
 		grip.Error(message.WrapError(err, msg))
 	} else {

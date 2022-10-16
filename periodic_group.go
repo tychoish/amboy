@@ -2,9 +2,9 @@ package amboy
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
@@ -97,15 +97,18 @@ func IntervalGroupQueueOperation(ctx context.Context, qg QueueGroup, interval ti
 func scheduleGroupOp(ctx context.Context, group QueueGroup, op GroupQueueOperation, conf QueueOperationConfig) error {
 	if op.Check == nil || op.Check(ctx) {
 		q, err := group.Get(ctx, op.Queue)
-		if conf.ContinueOnError {
-			grip.WarningWhen(conf.LogErrors, err)
-		} else {
-			grip.CriticalWhen(conf.LogErrors, err)
-			return errors.Wrapf(err, "problem getting queue '%s' from group", op.Queue)
+		if err != nil {
+			if conf.ContinueOnError {
+				grip.WarningWhen(conf.LogErrors, err)
+			} else {
+				grip.CriticalWhen(conf.LogErrors, err)
+
+				return fmt.Errorf("problem getting queue '%s' from group: %w", op.Queue, err)
+			}
 		}
 
 		if err = scheduleOp(ctx, q, op.Operation, conf); err != nil {
-			return errors.Wrapf(err, "problem scheduling job on group queue '%s'", op.Queue)
+			return fmt.Errorf("problem scheduling job on group queue '%s': %w", op.Queue, err)
 		}
 	}
 	return nil

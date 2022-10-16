@@ -3,11 +3,12 @@ package pgq
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/emt"
@@ -99,11 +100,11 @@ func (opts *GroupOptions) validate() error {
 // could never happen with multiple group queues.)
 func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions) (amboy.QueueGroup, error) {
 	if err := gopts.validate(); err != nil {
-		return nil, errors.Wrap(err, "invalid queue group options")
+		return nil, fmt.Errorf("invalid queue group options: %w", err)
 	}
 
 	if err := opts.Validate(); err != nil {
-		return nil, errors.Wrap(err, "invalid queue options")
+		return nil, fmt.Errorf("invalid queue options: %w", err)
 	}
 
 	opts.UseGroups = true
@@ -118,7 +119,7 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 
 	if !opts.SkipBootstrap {
 		if err := PrepareDatabase(ctx, db, opts.SchemaName); err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 	}
 
@@ -127,7 +128,7 @@ func NewGroup(ctx context.Context, db *sqlx.DB, opts Options, gopts GroupOptions
 
 func (g *sqlGroup) Start(ctx context.Context) error {
 	if g.started {
-		return errors.WithStack(g.startQueues(ctx))
+		return g.startQueues(ctx)
 	}
 	ctx, g.canceler = context.WithCancel(ctx)
 
@@ -186,7 +187,7 @@ func (g *sqlGroup) Start(ctx context.Context) error {
 	g.started = true
 
 	if err := g.startQueues(ctx); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	return nil
 }
@@ -194,7 +195,7 @@ func (g *sqlGroup) Start(ctx context.Context) error {
 func (g *sqlGroup) startQueues(ctx context.Context) error {
 	queues, err := g.getQueues(ctx)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	catcher := emt.NewBasicCatcher()
@@ -217,7 +218,7 @@ func (g *sqlGroup) getQueues(ctx context.Context) ([]string, error) {
 		if err == sql.ErrNoRows {
 			return []string{}, nil
 		}
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	return groups, nil
@@ -238,7 +239,7 @@ func (g *sqlGroup) Get(ctx context.Context, id string) (amboy.Queue, error) {
 
 	q, err = NewQueue(ctx, g.db, opts)
 	if err != nil {
-		return nil, errors.Wrapf(err, "problem creating new queue for '%s'", id)
+		return nil, fmt.Errorf("problem creating new queue for '%s': %w", id, err)
 	}
 
 	if err = g.cache.Set(id, q, g.opts.TTL); err != nil {
@@ -249,11 +250,11 @@ func (g *sqlGroup) Get(ctx context.Context, id string) (amboy.Queue, error) {
 			return q, nil
 		}
 
-		return nil, errors.Wrap(err, "problem caching queue")
+		return nil, fmt.Errorf("problem caching queue: %w", err)
 	}
 
 	if err := q.Start(ctx); err != nil {
-		return nil, errors.Wrap(err, "problem starting queue")
+		return nil, fmt.Errorf("problem starting queue: %w", err)
 	}
 
 	return q, nil

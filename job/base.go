@@ -22,11 +22,12 @@ package job
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/dependency"
 )
@@ -69,7 +70,7 @@ func (b *Base) AddError(err error) {
 		b.mutex.Lock()
 		defer b.mutex.Unlock()
 
-		if errors.Cause(err) == context.Canceled || errors.Is(err, context.Canceled) {
+		if errors.Is(err, context.Canceled) {
 			b.status.Canceled = true
 		}
 
@@ -123,7 +124,7 @@ func (b *Base) Lock(id string, lockTimeout time.Duration) error {
 	defer b.mutex.Unlock()
 
 	if b.status.InProgress && time.Since(b.status.ModificationTime) < lockTimeout && b.status.Owner != id {
-		return errors.Errorf("cannot take lock for '%s' because lock has been held for %s by %s",
+		return fmt.Errorf("cannot take lock for '%s' because lock has been held for %s by %s",
 			id, time.Since(b.status.ModificationTime), b.status.Owner)
 	}
 	b.status.InProgress = true

@@ -2,11 +2,11 @@ package pool
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/job"
 )
@@ -141,7 +141,7 @@ func (q *QueueTester) Start(ctx context.Context) error {
 
 	err := q.pool.Start(ctx)
 	if err != nil {
-		return errors.Wrap(err, "problem starting worker pool")
+		return fmt.Errorf("problem starting worker pool: %w", err)
 	}
 
 	q.mutex.Lock()

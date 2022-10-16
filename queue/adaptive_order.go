@@ -2,13 +2,13 @@ package queue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/grip"
@@ -157,7 +157,7 @@ func (q *adaptiveLocalOrdering) Get(ctx context.Context, name string) (amboy.Job
 
 	select {
 	case <-ctx.Done():
-		return nil, errors.WithStack(ctx.Err())
+		return nil, ctx.Err()
 	case q.operations <- op:
 		job, ok := <-ret
 
@@ -276,7 +276,7 @@ func (q *adaptiveLocalOrdering) Next(ctx context.Context) (amboy.Job, error) {
 
 	select {
 	case <-ctx.Done():
-		return nil, errors.WithStack(ctx.Err())
+		return nil, ctx.Err()
 	case q.operations <- op:
 		j := <-ret
 		if j == nil {
@@ -284,7 +284,7 @@ func (q *adaptiveLocalOrdering) Next(ctx context.Context) (amboy.Job, error) {
 		}
 		if err := q.dispatcher.Dispatch(ctx, j); err != nil {
 			_ = q.Put(ctx, j)
-			return nil, errors.Wrapf(err, "dispatching %q", j.ID())
+			return nil, fmt.Errorf("dispatching %q: %w", j.ID(), err)
 		}
 
 		return j, nil
@@ -293,7 +293,7 @@ func (q *adaptiveLocalOrdering) Next(ctx context.Context) (amboy.Job, error) {
 
 func (q *adaptiveLocalOrdering) Complete(ctx context.Context, j amboy.Job) error {
 	if err := ctx.Err(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	wait := make(chan struct{})
@@ -307,7 +307,7 @@ func (q *adaptiveLocalOrdering) Complete(ctx context.Context, j amboy.Job) error
 		}
 	} else if err := q.dispatcher.Complete(ctx, j); err != nil {
 		close(wait)
-		return errors.WithStack(err)
+		return err
 	} else {
 		op = func(ctx context.Context, items *adaptiveOrderItems, fixed *fixedStorage) {
 			id := j.ID()
@@ -327,7 +327,7 @@ func (q *adaptiveLocalOrdering) Complete(ctx context.Context, j amboy.Job) error
 
 	select {
 	case <-ctx.Done():
-		return errors.WithStack(ctx.Err())
+		return ctx.Err()
 	case q.operations <- op:
 		<-wait
 		return nil

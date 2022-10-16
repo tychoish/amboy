@@ -1,11 +1,11 @@
 package rest
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/management"
 	"github.com/tychoish/gimlet"
 )
@@ -92,8 +92,8 @@ func (s *ManagementService) GetRecentTimings(rw http.ResponseWriter, r *http.Req
 	vars := gimlet.GetVars(r)
 	dur, err := time.ParseDuration(vars["seconds"])
 	if err != nil {
-		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(errors.Wrapf(err,
-			"problem parsing duration from %s", vars["seconds"])))
+		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(fmt.Errorf(
+			"problem parsing duration from %q: %w", vars["seconds"], err)))
 		return
 	}
 
@@ -122,8 +122,7 @@ func (s *ManagementService) GetRecentErrors(rw http.ResponseWriter, r *http.Requ
 
 	dur, err := time.ParseDuration(vars["seconds"])
 	if err != nil {
-		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(errors.Wrapf(err,
-			"problem parsing duration from %s", vars["seconds"])))
+		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(fmt.Errorf("problem parsing duration from %s: %w", vars["seconds"], err)))
 		return
 	}
 
@@ -151,8 +150,7 @@ func (s *ManagementService) GetRecentErrorsByType(rw http.ResponseWriter, r *htt
 
 	dur, err := time.ParseDuration(vars["seconds"])
 	if err != nil {
-		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(errors.Wrapf(err,
-			"problem parsing duration from %s", vars["seconds"])))
+		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(fmt.Errorf("problem parsing duration from %s: %w", vars["seconds"], err)))
 		return
 	}
 
@@ -179,8 +177,7 @@ func (s *ManagementService) MarkComplete(rw http.ResponseWriter, r *http.Request
 
 	ctx := r.Context()
 	if err := s.manager.CompleteJob(ctx, name); err != nil {
-		gimlet.WriteResponse(rw, gimlet.MakeTextErrorResponder(errors.Wrapf(err,
-			"problem complete job '%s'", name)))
+		gimlet.WriteResponse(rw, gimlet.MakeTextErrorResponder(fmt.Errorf("problem complete job '%s': %w", name, err)))
 		return
 	}
 
@@ -202,8 +199,7 @@ func (s *ManagementService) MarkCompleteByType(rw http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 	if err := s.manager.CompleteJobsByType(ctx, management.StatusFilter(filter), jobType); err != nil {
-		gimlet.WriteResponse(rw, gimlet.MakeTextErrorResponder(errors.Wrapf(err,
-			"problem completing jobs by type '%s'", jobType)))
+		gimlet.WriteResponse(rw, gimlet.MakeTextErrorResponder(fmt.Errorf("problem completing jobs by type '%s': %w", jobType, err)))
 		return
 	}
 
@@ -224,8 +220,7 @@ func (s *ManagementService) MarkManyComplete(rw http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 	if err := s.manager.CompleteJobs(ctx, management.StatusFilter(filter)); err != nil {
-		gimlet.WriteResponse(rw, gimlet.MakeTextErrorResponder(errors.Wrapf(err,
-			"problem completing jobs with filter '%s'", filter)))
+		gimlet.WriteResponse(rw, gimlet.MakeTextErrorResponder(fmt.Errorf("problem completing jobs with filter '%s': %w", filter, err)))
 		return
 	}
 
@@ -241,23 +236,20 @@ func (s *ManagementService) PruneJobs(rw http.ResponseWriter, r *http.Request) {
 	filter := vars["filter"]
 	ts, err := time.Parse(vars["time_stamp"], time.RFC3339)
 	if err != nil {
-		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(errors.Wrapf(err,
-			"problem time duration from %s", vars["time_stamp"])))
+		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(fmt.Errorf("problem time duration from %s: %w", vars["time_stamp"], err)))
 		return
 	}
 
 	limit, err := strconv.Atoi(vars["limit"])
 	if err != nil {
-		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(errors.Wrapf(err,
-			"problem limit from %s", vars["limit"])))
+		gimlet.WriteResponse(rw, gimlet.MakeJSONErrorResponder(fmt.Errorf("problem limit from %s: %w", vars["limit"], err)))
 		return
 	}
 
 	ctx := r.Context()
 	num, err := s.manager.PruneJobs(ctx, ts, limit, management.StatusFilter(filter))
 	if err != nil {
-		gimlet.WriteResponse(rw, gimlet.MakeTextErrorResponder(errors.Wrapf(err,
-			"problem completing jobs with filter '%s'", filter)))
+		gimlet.WriteResponse(rw, gimlet.MakeTextErrorResponder(fmt.Errorf("problem completing jobs with filter '%s': %w", filter, err)))
 		return
 	}
 

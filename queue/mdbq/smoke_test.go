@@ -2,10 +2,10 @@ package mdbq
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue/testutil"

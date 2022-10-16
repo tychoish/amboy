@@ -2,9 +2,10 @@ package mdbq
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/emt"
@@ -29,7 +30,7 @@ type remoteMongoQueueGroupSingle struct {
 // TTLed except when the client explicitly calls Prune.
 func NewMongoDBSingleQueueGroup(ctx context.Context, opts MongoDBQueueGroupOptions, client *mongo.Client, mdbopts MongoDBOptions) (amboy.QueueGroup, error) {
 	if err := opts.validate(); err != nil {
-		return nil, errors.Wrap(err, "invalid queue group options")
+		return nil, fmt.Errorf("invalid queue group options: %w", err)
 	}
 
 	if mdbopts.DB == "" {
@@ -56,7 +57,7 @@ func NewMongoDBSingleQueueGroup(ctx context.Context, opts MongoDBQueueGroupOptio
 
 func (g *remoteMongoQueueGroupSingle) Start(ctx context.Context) error {
 	if g.started {
-		return errors.WithStack(g.startQueues(ctx))
+		return g.startQueues(ctx)
 	}
 
 	if g.opts.PruneFrequency > 0 && g.opts.TTL > 0 {
@@ -94,7 +95,7 @@ func (g *remoteMongoQueueGroupSingle) Start(ctx context.Context) error {
 	g.started = true
 
 	if err := g.startQueues(ctx); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	return nil
@@ -128,7 +129,7 @@ func (g *remoteMongoQueueGroupSingle) getQueues(ctx context.Context) ([]string, 
 		},
 	)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	out := struct {
@@ -152,7 +153,7 @@ func (g *remoteMongoQueueGroupSingle) getQueues(ctx context.Context) ([]string, 
 func (g *remoteMongoQueueGroupSingle) startQueues(ctx context.Context) error {
 	queues, err := g.getQueues(ctx)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	catcher := emt.NewBasicCatcher()
@@ -178,11 +179,11 @@ func (g *remoteMongoQueueGroupSingle) Get(ctx context.Context, id string) (amboy
 
 	driver, err := openNewMongoGroupDriver(ctx, g.opts.Prefix, g.dbOpts, id, g.client)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem opening driver for queue")
+		return nil, fmt.Errorf("problem opening driver for queue: %w", err)
 	}
 
 	if err = queue.SetDriver(driver); err != nil {
-		return nil, errors.Wrap(err, "problem setting driver")
+		return nil, fmt.Errorf("problem setting driver: %w", err)
 	}
 
 	if err = g.cache.Set(id, queue, g.opts.TTL); err != nil {
@@ -193,11 +194,11 @@ func (g *remoteMongoQueueGroupSingle) Get(ctx context.Context, id string) (amboy
 			return q, nil
 		}
 
-		return nil, errors.Wrap(err, "problem caching queue")
+		return nil, fmt.Errorf("problem caching queue: %w", err)
 	}
 
 	if err := queue.Start(ctx); err != nil {
-		return nil, errors.Wrap(err, "problem starting queue")
+		return nil, fmt.Errorf("problem starting queue: %w", err)
 	}
 
 	return queue, nil

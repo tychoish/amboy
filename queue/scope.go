@@ -1,9 +1,8 @@
 package queue
 
 import (
+	"fmt"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 // ScopeManager provides a service to queue implementation to support
@@ -45,7 +44,7 @@ func (s *scopeManagerImpl) Acquire(id string, scopes []string) error {
 		if holder == id {
 			continue
 		}
-		return errors.Errorf("could not acquire lock scope '%s' held by '%s' not '%s'", sc, holder, id)
+		return fmt.Errorf("could not acquire lock scope '%s' held by '%s' not '%s'", sc, holder, id)
 	}
 
 	return nil
@@ -68,7 +67,7 @@ func (s *scopeManagerImpl) Release(id string, scopes []string) error {
 			delete(s.scopes, sc)
 			continue
 		}
-		return errors.Errorf("could not release lock scope '%s', held by '%s' not '%s'", sc, holder, id)
+		return fmt.Errorf("could not release lock scope '%s', held by '%s' not '%s'", sc, holder, id)
 	}
 
 	return nil

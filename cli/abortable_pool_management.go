@@ -2,9 +2,9 @@ package cli
 
 import (
 	"context"
+	"errors"
 
 	"github.com/cheynewallace/tabby"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/rest"
 	"github.com/urfave/cli"
 )
@@ -32,7 +32,7 @@ func manageListJobs(opts *ServiceOptions) cli.Command {
 			return opts.withAbortablePoolManagementClient(ctx, c, func(client *rest.AbortablePoolManagementClient) error {
 				jobs, err := client.ListJobs(ctx)
 				if err != nil {
-					return errors.WithStack(err)
+					return err
 				}
 
 				t := tabby.New()
@@ -58,7 +58,7 @@ func manageAbortAllJobs(opts *ServiceOptions) cli.Command {
 			defer cancel()
 
 			return opts.withAbortablePoolManagementClient(ctx, c, func(client *rest.AbortablePoolManagementClient) error {
-				return errors.WithStack(client.AbortAllJobs(ctx))
+				return client.AbortAllJobs(ctx)
 			})
 
 		},
@@ -86,7 +86,7 @@ func manageCheckJob(opts *ServiceOptions) cli.Command {
 				for _, j := range c.StringSlice(jobIDFlagName) {
 					isRunning, err := client.IsRunning(ctx, j)
 					if err != nil {
-						return errors.WithStack(err)
+						return err
 					}
 
 					t.AddLine(j, isRunning)

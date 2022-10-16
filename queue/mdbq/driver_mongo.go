@@ -2,6 +2,7 @@ package mdbq
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -10,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/amboy/registry"
@@ -41,7 +41,7 @@ func newMongoDriver(name string, opts MongoDBOptions) (remoteQueueDriver, error)
 	host, _ := os.Hostname() // nolint
 
 	if err := opts.Validate(); err != nil {
-		return nil, errors.Wrap(err, "invalid mongo driver options")
+		return nil, fmt.Errorf("invalid mongo driver options: %w", err)
 	}
 
 	return &mongoDriver{
@@ -58,7 +58,7 @@ func newMongoDriver(name string, opts MongoDBOptions) (remoteQueueDriver, error)
 func openNewMongoDriver(ctx context.Context, name string, opts MongoDBOptions, client *mongo.Client) (remoteQueueDriver, error) {
 	d, err := newMongoDriver(name, opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create driver")
+		return nil, fmt.Errorf("could not create driver: %w", err)
 	}
 	md, ok := d.(*mongoDriver)
 	if !ok {
@@ -66,7 +66,7 @@ func openNewMongoDriver(ctx context.Context, name string, opts MongoDBOptions, c
 	}
 
 	if err := md.start(ctx, client); err != nil {
-		return nil, errors.Wrap(err, "problem starting driver")
+		return nil, fmt.Errorf("problem starting driver: %w", err)
 	}
 
 	return d, nil
@@ -80,7 +80,7 @@ func newMongoGroupDriver(name string, opts MongoDBOptions, group string) (remote
 	host, _ := os.Hostname() // nolint
 
 	if err := opts.Validate(); err != nil {
-		return nil, errors.Wrap(err, "invalid mongo driver options")
+		return nil, fmt.Errorf("invalid mongo driver options: %w", err)
 	}
 	opts.UseGroups = true
 	opts.GroupName = group
@@ -98,7 +98,7 @@ func newMongoGroupDriver(name string, opts MongoDBOptions, group string) (remote
 func openNewMongoGroupDriver(ctx context.Context, name string, opts MongoDBOptions, group string, client *mongo.Client) (remoteQueueDriver, error) {
 	d, err := newMongoGroupDriver(name, opts, group)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create driver")
+		return nil, fmt.Errorf("could not create driver: %w", err)
 	}
 	md, ok := d.(*mongoDriver)
 	if !ok {
@@ -109,7 +109,7 @@ func openNewMongoGroupDriver(ctx context.Context, name string, opts MongoDBOptio
 	opts.GroupName = group
 
 	if err := md.start(ctx, client); err != nil {
-		return nil, errors.Wrap(err, "problem starting driver")
+		return nil, fmt.Errorf("problem starting driver: %w", err)
 	}
 
 	return d, nil
@@ -129,10 +129,10 @@ func (d *mongoDriver) Open(ctx context.Context) error {
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(d.opts.URI))
 	if err != nil {
-		return errors.Wrapf(err, "problem opening connection to mongodb at '%s", d.opts.URI)
+		return fmt.Errorf("problem opening connection to mongodb at '%s: %w", d.opts.URI, err)
 	}
 
-	return errors.Wrap(d.start(ctx, client), "problem starting driver")
+	return d.start(ctx, client)
 }
 
 func (d *mongoDriver) start(ctx context.Context, client *mongo.Client) error {
@@ -158,7 +158,7 @@ func (d *mongoDriver) start(ctx context.Context, client *mongo.Client) error {
 	}()
 
 	if err := d.setupDB(ctx); err != nil {
-		return errors.Wrap(err, "problem setting up database")
+		return fmt.Errorf("problem setting up database: %w", err)
 	}
 
 	return nil
@@ -184,7 +184,7 @@ func (d *mongoDriver) setupDB(ctx context.Context) error {
 
 	if len(indexes) > 0 {
 		_, err := d.getCollection().Indexes().CreateMany(ctx, indexes)
-		return errors.Wrap(err, "problem building indexes")
+		return fmt.Errorf("problem building indexes: %w", err)
 	}
 
 	return nil
@@ -414,23 +414,22 @@ func (d *mongoDriver) Get(ctx context.Context, name string) (amboy.Job, error) {
 
 	res := d.getCollection().FindOne(ctx, bson.M{"_id": d.getIDFromName(name)})
 	if err := res.Err(); err != nil {
-		if errors.Cause(err) == mongo.ErrNoDocuments {
-			return nil, errors.WithStack(amboy.MakeJobNotDefinedError(d.name, name))
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, amboy.MakeJobNotDefinedError(d.name, name)
 		}
 
-		return nil, errors.Wrapf(err, "GET problem fetching '%s'", name)
+		return nil, fmt.Errorf("GET problem fetching '%s': %w", name, err)
 	}
 
 	if err := res.Decode(j); err != nil {
-		return nil, errors.Wrapf(err, "GET problem decoding '%s'", name)
+		return nil, fmt.Errorf("GET problem decoding '%s': %w", name, err)
 	}
 
 	d.processNameForUsers(j)
 
 	output, err := j.Resolve(d.opts.Unmarshaler)
 	if err != nil {
-		return nil, errors.Wrapf(err,
-			"GET problem converting '%s' to job object", name)
+		return nil, fmt.Errorf("GET problem converting '%s' to job object: %w", name, err)
 	}
 
 	return output, nil
@@ -439,7 +438,7 @@ func (d *mongoDriver) Get(ctx context.Context, name string) (amboy.Job, error) {
 func (d *mongoDriver) Put(ctx context.Context, j amboy.Job) error {
 	job, err := registry.MakeJobInterchange(j, d.opts.Marshler)
 	if err != nil {
-		return errors.Wrap(err, "problem converting job to interchange format")
+		return fmt.Errorf("problem converting job to interchange format: %w", err)
 	}
 
 	d.processJobForGroup(job)
@@ -449,7 +448,7 @@ func (d *mongoDriver) Put(ctx context.Context, j amboy.Job) error {
 			return amboy.NewDuplicateJobErrorf("job '%s' already exists", j.ID())
 		}
 
-		return errors.Wrapf(err, "problem saving new job %s", j.ID())
+		return fmt.Errorf("problem saving new job %s: %w", j.ID(), err)
 	}
 
 	return nil
@@ -484,8 +483,8 @@ func (d *mongoDriver) getAtomicQuery(jobName string, modCount int) bson.M {
 }
 
 func isMongoDupKey(err error) bool {
-	we, ok := errors.Cause(err).(mongo.WriteException)
-	if !ok {
+	we := &mongo.WriteException{}
+	if !errors.As(err, we) {
 		return false
 	}
 	if we.WriteConcernError != nil {
@@ -505,23 +504,23 @@ func isMongoDupKey(err error) bool {
 func (d *mongoDriver) Save(ctx context.Context, j amboy.Job) error {
 	job, err := d.prepareInterchange(j)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	job.Scopes = j.Scopes()
 
-	return errors.WithStack(d.doUpdate(ctx, job))
+	return d.doUpdate(ctx, job)
 }
 
 func (d *mongoDriver) Complete(ctx context.Context, j amboy.Job) error {
 	job, err := d.prepareInterchange(j)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	job.Scopes = nil
 
-	return errors.WithStack(d.doUpdate(ctx, job))
+	return d.doUpdate(ctx, job)
 }
 
 func (d *mongoDriver) prepareInterchange(j amboy.Job) (*registry.JobInterchange, error) {
@@ -532,7 +531,7 @@ func (d *mongoDriver) prepareInterchange(j amboy.Job) (*registry.JobInterchange,
 
 	job, err := registry.MakeJobInterchange(j, d.opts.Marshler)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem converting job to interchange format")
+		return nil, fmt.Errorf("problem converting job to interchange format: %w", err)
 	}
 	return job, nil
 }
@@ -542,11 +541,11 @@ func (d *mongoDriver) doUpdate(ctx context.Context, job *registry.JobInterchange
 	query := d.getAtomicQuery(job.Name, job.Status.ModificationCount)
 	res, err := d.getCollection().ReplaceOne(ctx, query, job)
 	if err != nil {
-		return errors.Wrapf(err, "problem saving document %s: %+v", job.Name, res)
+		return fmt.Errorf("problem saving document %s: %+v: %w", job.Name, res, err)
 	}
 
 	if res.MatchedCount == 0 {
-		return errors.Errorf("problem saving job [id=%s, matched=%d, modified=%d]", job.Name, res.MatchedCount, res.ModifiedCount)
+		return fmt.Errorf("problem saving job [id=%s, matched=%d, modified=%d]", job.Name, res.MatchedCount, res.ModifiedCount)
 	}
 	return nil
 }
@@ -927,11 +926,11 @@ func (d *mongoDriver) SetDispatcher(disp queue.Dispatcher) {
 func (d *mongoDriver) Delete(ctx context.Context, id string) error {
 	res, err := d.getCollection().DeleteOne(ctx, bson.M{"_id": id})
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	if res.DeletedCount == 0 {
-		return errors.Errorf("did not delete job '%s'", id)
+		return fmt.Errorf("did not delete job '%s'", id)
 	}
 
 	return nil

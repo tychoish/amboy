@@ -2,10 +2,10 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/cheynewallace/tabby"
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/management"
 	"github.com/urfave/cli"
 )
@@ -47,13 +47,13 @@ func managementReportJobStatus(opts *ServiceOptions) cli.Command {
 
 			filter := management.StatusFilter(c.String(statusFilterFlagName))
 			if err := filter.Validate(); err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 
 			return opts.withManagementClient(ctx, c, func(client management.Manager) error {
 				report, err := client.JobStatus(ctx, filter)
 				if err != nil {
-					return errors.WithStack(err)
+					return err
 				}
 
 				t := tabby.New()
@@ -91,13 +91,13 @@ func managementReportRecentTiming(opts *ServiceOptions) cli.Command {
 			dur := c.Duration("duration")
 			filter := management.RuntimeFilter(c.String("filter"))
 			if err := filter.Validate(); err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 
 			return opts.withManagementClient(ctx, c, func(client management.Manager) error {
 				report, err := client.RecentTiming(ctx, dur, filter)
 				if err != nil {
-					return errors.WithStack(err)
+					return err
 				}
 
 				t := tabby.New()
@@ -129,7 +129,7 @@ func managementReportJobIDs(opts *ServiceOptions) cli.Command {
 
 			filter := management.StatusFilter(c.String("filter"))
 			if err := filter.Validate(); err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 
 			jobTypes := c.StringSlice("type")
@@ -142,7 +142,7 @@ func managementReportJobIDs(opts *ServiceOptions) cli.Command {
 				for _, jt := range jobTypes {
 					report, err := client.JobIDsByState(ctx, jt, filter)
 					if err != nil {
-						return errors.WithStack(err)
+						return err
 					}
 					for _, j := range report.IDs {
 						t.AddLine(jt, j, report.Group)
@@ -179,7 +179,7 @@ func managementReportRecentErrors(opts *ServiceOptions) cli.Command {
 
 			filter := management.ErrorFilter(c.String("filter"))
 			if err := filter.Validate(); err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 
 			jobTypes := c.StringSlice("type")
@@ -190,14 +190,14 @@ func managementReportRecentErrors(opts *ServiceOptions) cli.Command {
 				if len(jobTypes) == 0 {
 					report, err := client.RecentErrors(ctx, dur, filter)
 					if err != nil {
-						return errors.WithStack(err)
+						return err
 					}
 					reports = append(reports, report)
 				} else {
 					for _, jt := range jobTypes {
 						report, err := client.RecentJobErrors(ctx, jt, dur, filter)
 						if err != nil {
-							return errors.WithStack(err)
+							return err
 						}
 						reports = append(reports, report)
 					}
@@ -239,7 +239,7 @@ func managementCompleteJob(opts *ServiceOptions) cli.Command {
 
 			return opts.withManagementClient(ctx, c, func(client management.Manager) error {
 				if err := client.CompleteJob(ctx, name); err != nil {
-					return errors.Wrap(err, "problem marking job complete")
+					return fmt.Errorf("problem marking job complete: %w", err)
 				}
 				return nil
 			})
@@ -266,7 +266,7 @@ func managementCompleteJobsByStatus(opts *ServiceOptions) cli.Command {
 
 			return opts.withManagementClient(ctx, c, func(client management.Manager) error {
 				if err := client.CompleteJobs(ctx, filter); err != nil {
-					return errors.Wrap(err, "problem marking job complete")
+					return fmt.Errorf("problem marking job complete: %w", err)
 				}
 				return nil
 			})
@@ -298,7 +298,7 @@ func managementCompleteJobByType(opts *ServiceOptions) cli.Command {
 
 			return opts.withManagementClient(ctx, c, func(client management.Manager) error {
 				if err := client.CompleteJobsByType(ctx, filter, jobType); err != nil {
-					return errors.Wrap(err, "problem marking job complete")
+					return fmt.Errorf("problem marking job complete: %w", err)
 				}
 				return nil
 			})

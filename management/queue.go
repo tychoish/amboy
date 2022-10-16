@@ -2,9 +2,10 @@ package management
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/emt"
 	"github.com/tychoish/grip"
@@ -31,7 +32,7 @@ func NewQueueManager(q amboy.Queue) Manager {
 
 func (m *queueManager) JobStatus(ctx context.Context, f StatusFilter) (*JobStatusReport, error) {
 	if err := f.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	var cancel context.CancelFunc
@@ -91,7 +92,7 @@ func (m *queueManager) RecentTiming(ctx context.Context, window time.Duration, f
 	var err error
 
 	if err = f.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	if window <= time.Second {
@@ -160,7 +161,7 @@ func (m *queueManager) RecentTiming(ctx context.Context, window time.Duration, f
 func (m *queueManager) JobIDsByState(ctx context.Context, jobType string, f StatusFilter) (*JobReportIDs, error) {
 	var err error
 	if err = f.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	// it might be the case that we shold use something with
@@ -227,7 +228,7 @@ func (m *queueManager) JobIDsByState(ctx context.Context, jobType string, f Stat
 func (m *queueManager) RecentErrors(ctx context.Context, window time.Duration, f ErrorFilter) (*JobErrorsReport, error) {
 	var err error
 	if err = f.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 
 	}
 	if window <= time.Second {
@@ -331,7 +332,7 @@ func (m *queueManager) RecentErrors(ctx context.Context, window time.Duration, f
 func (m *queueManager) RecentJobErrors(ctx context.Context, jobType string, window time.Duration, f ErrorFilter) (*JobErrorsReport, error) {
 	var err error
 	if err = f.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 
 	}
 	if window <= time.Second {
@@ -445,7 +446,7 @@ func (m *queueManager) RecentJobErrors(ctx context.Context, jobType string, wind
 func (m *queueManager) CompleteJob(ctx context.Context, name string) error {
 	j, err := m.queue.Get(ctx, name)
 	if err != nil {
-		return errors.Wrapf(err, "cannot recover job with name '%s'", name)
+		return fmt.Errorf("cannot recover job with name '%s': %w", name, err)
 	}
 
 	status := j.Status()
@@ -453,12 +454,12 @@ func (m *queueManager) CompleteJob(ctx context.Context, name string) error {
 	status.Completed = true
 	j.SetStatus(status)
 
-	return errors.WithStack(m.queue.Complete(ctx, j))
+	return m.queue.Complete(ctx, j)
 }
 
 func (m *queueManager) CompleteJobsByType(ctx context.Context, f StatusFilter, jobType string) error {
 	if err := f.Validate(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	if f == Completed {
@@ -504,7 +505,7 @@ func (m *queueManager) CompleteJobsByType(ctx context.Context, f StatusFilter, j
 
 func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 	if err := f.Validate(); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	if f == Completed {
 		return errors.New("invalid specification of completed job type")
@@ -556,7 +557,7 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 
 func (m queueManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f StatusFilter) (int, error) {
 	if err := f.Validate(); err != nil {
-		return 0, errors.WithStack(err)
+		return 0, err
 	}
 
 	grip.WarningWhen(f == InProgress || f == All, "deleting in progress has undefined implications")

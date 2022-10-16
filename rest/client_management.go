@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/amboy/management"
 	"github.com/tychoish/gimlet"
 )
@@ -39,23 +38,23 @@ func NewManagementClientFromExisting(client *http.Client, url string) management
 func (c *managementClient) doRequest(ctx context.Context, path string, out interface{}) error {
 	req, err := http.NewRequest(http.MethodGet, c.url+path, nil)
 	if err != nil {
-		return errors.Wrap(err, "problem building request")
+		return fmt.Errorf("problem building request: %w", err)
 	}
 
 	req = req.WithContext(ctx)
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "error processing request")
+		return fmt.Errorf("error processing request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.Errorf("found '%s' for request to '%s' on '%s'",
+		return fmt.Errorf("found '%s' for request to '%s' on '%s'",
 			http.StatusText(resp.StatusCode), path, c.url)
 	}
 
 	if err = gimlet.GetJSON(resp.Body, out); err != nil {
-		return errors.Wrap(err, "problem reading response")
+		return fmt.Errorf("problem reading response: %w", err)
 	}
 
 	return nil
@@ -67,7 +66,7 @@ func (c *managementClient) JobStatus(ctx context.Context, filter management.Stat
 	out := &management.JobStatusReport{}
 
 	if err := c.doRequest(ctx, "/status/"+string(filter), out); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	return out, nil
@@ -83,7 +82,7 @@ func (c *managementClient) RecentTiming(ctx context.Context, dur time.Duration, 
 	path := fmt.Sprintf("/timing/%s/%d", string(filter), int64(dur.Seconds()))
 
 	if err := c.doRequest(ctx, path, out); err != nil {
-		return nil, errors.Wrap(err, "problem with request")
+		return nil, fmt.Errorf("problem with request: %w", err)
 	}
 
 	return out, nil
@@ -96,7 +95,7 @@ func (c *managementClient) JobIDsByState(ctx context.Context, jobType string, fi
 	out := &management.JobReportIDs{}
 
 	if err := c.doRequest(ctx, fmt.Sprintf("/status/%s/%s", string(filter), jobType), out); err != nil {
-		return nil, errors.Wrap(err, "problem with request")
+		return nil, fmt.Errorf("problem with request: %w", err)
 	}
 
 	return out, nil
@@ -110,7 +109,7 @@ func (c *managementClient) RecentErrors(ctx context.Context, dur time.Duration, 
 
 	path := fmt.Sprintf("/errors/%s/%d", string(filter), int64(dur.Seconds()))
 	if err := c.doRequest(ctx, path, out); err != nil {
-		return nil, errors.Wrap(err, "problem with request")
+		return nil, fmt.Errorf("problem with request: %w", err)
 	}
 
 	return out, nil
@@ -124,7 +123,7 @@ func (c *managementClient) RecentJobErrors(ctx context.Context, jobType string, 
 
 	path := fmt.Sprintf("/errors/%s/%s/%d", string(filter), jobType, int64(dur.Seconds()))
 	if err := c.doRequest(ctx, path, out); err != nil {
-		return nil, errors.Wrap(err, "problem with request")
+		return nil, fmt.Errorf("problem with request: %w", err)
 	}
 
 	return out, nil
@@ -135,24 +134,24 @@ func (c *managementClient) CompleteJob(ctx context.Context, name string) error {
 	path := fmt.Sprintf("/jobs/mark_complete/%s", name)
 	req, err := http.NewRequest(http.MethodPost, c.url+path, nil)
 	if err != nil {
-		return errors.Wrap(err, "problem building request")
+		return fmt.Errorf("problem building request: %w", err)
 	}
 	req = req.WithContext(ctx)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "error processing request")
+		return fmt.Errorf("error processing request: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		var msg string
 		data, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			msg = errors.Wrap(err, "problem reading response body").Error()
+			msg = fmt.Errorf("problem reading response body: %w", err).Error()
 		} else {
 			msg = string(data)
 		}
-		return errors.Errorf("status code '%s' returned with message: '%s'", resp.Status, msg)
+		return fmt.Errorf("status code '%s' returned with message: '%s'", resp.Status, msg)
 	}
 
 	return nil
@@ -163,24 +162,24 @@ func (c *managementClient) CompleteJobsByType(ctx context.Context, f management.
 	path := fmt.Sprintf("/jobs/mark_complete_by_type/%s/%s", jobType, f)
 	req, err := http.NewRequest(http.MethodPost, c.url+path, nil)
 	if err != nil {
-		return errors.Wrap(err, "problem building request")
+		return fmt.Errorf("problem building request: %w", err)
 	}
 	req = req.WithContext(ctx)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "error processing request")
+		return fmt.Errorf("error processing request: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		var msg string
 		data, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			msg = errors.Wrap(err, "problem reading response body").Error()
+			msg = fmt.Errorf("problem reading response body: %w", err).Error()
 		} else {
 			msg = string(data)
 		}
-		return errors.Errorf("status code '%s' returned with message: '%s'", resp.Status, msg)
+		return fmt.Errorf("status code '%s' returned with message: '%s'", resp.Status, msg)
 	}
 
 	return nil
@@ -191,24 +190,24 @@ func (c *managementClient) CompleteJobs(ctx context.Context, f management.Status
 	path := fmt.Sprintf("/jobs/mark_many_complete/%s", f)
 	req, err := http.NewRequest(http.MethodPost, c.url+path, nil)
 	if err != nil {
-		return errors.Wrap(err, "problem building request")
+		return fmt.Errorf("problem building request: %w", err)
 	}
 	req = req.WithContext(ctx)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "error processing request")
+		return fmt.Errorf("error processing request: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		var msg string
 		data, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			msg = errors.Wrap(err, "problem reading response body").Error()
+			msg = fmt.Errorf("problem reading response body: %w", err).Error()
 		} else {
 			msg = string(data)
 		}
-		return errors.Errorf("status code '%s' returned with message: '%s'", resp.Status, msg)
+		return fmt.Errorf("status code '%s' returned with message: '%s'", resp.Status, msg)
 	}
 
 	return nil
@@ -218,24 +217,24 @@ func (c *managementClient) PruneJobs(ctx context.Context, ts time.Time, limit in
 	path := fmt.Sprintf("/jobs/prune/%s/%s/%d", f, ts.Format(time.RFC3339), limit)
 	req, err := http.NewRequest(http.MethodDelete, c.url+path, nil)
 	if err != nil {
-		return 0, errors.Wrap(err, "problem building request")
+		return 0, fmt.Errorf("problem building request: %w", err)
 	}
 	req = req.WithContext(ctx)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return 0, errors.Wrap(err, "error processing request")
+		return 0, fmt.Errorf("error processing request: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		var msg string
 		data, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			msg = errors.Wrap(err, "problem reading response body").Error()
+			msg = fmt.Errorf("problem reading response body: %w", err).Error()
 		} else {
 			msg = string(data)
 		}
-		return 0, errors.Errorf("status code '%s' returned with message: '%s'", resp.Status, msg)
+		return 0, fmt.Errorf("status code '%s' returned with message: '%s'", resp.Status, msg)
 	}
 
 	out := struct {
@@ -243,7 +242,7 @@ func (c *managementClient) PruneJobs(ctx context.Context, ts time.Time, limit in
 		Number  int    `json:"int"`
 	}{}
 	if err := gimlet.GetJSON(resp.Body, &out); err != nil {
-		return 0, errors.Wrap(err, "problem parsing result")
+		return 0, fmt.Errorf("problem parsing result: %w", err)
 	}
 
 	return out.Number, nil

@@ -2,9 +2,8 @@ package amboy
 
 import (
 	"context"
+	"errors"
 	"fmt"
-
-	"github.com/pkg/errors"
 )
 
 // EnqueueUniqueJob is a generic wrapper for adding jobs to queues
@@ -16,7 +15,7 @@ func EnqueueUniqueJob(ctx context.Context, queue Queue, job Job) error {
 		return nil
 	}
 
-	return errors.WithStack(err)
+	return err
 }
 
 type duplJobError struct {
@@ -52,9 +51,7 @@ func IsDuplicateJobError(err error) bool {
 	if err == nil {
 		return false
 	}
-
-	_, ok := errors.Cause(err).(*duplJobError)
-	return ok
+	return errors.As(err, &duplJobError{})
 }
 
 type jobNotDefinedError struct {
@@ -90,6 +87,5 @@ func IsJobNotDefinedError(err error) bool {
 		return false
 	}
 
-	_, ok := errors.Cause(err).(*jobNotDefinedError)
-	return ok
+	return errors.As(err, &jobNotDefinedError{})
 }

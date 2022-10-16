@@ -2,9 +2,10 @@ package rest
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 
-	"github.com/pkg/errors"
 	"github.com/tychoish/gimlet"
 )
 
@@ -35,18 +36,18 @@ func NewAbortablePoolManagementClientFromExisting(client *http.Client, url strin
 func (c *AbortablePoolManagementClient) ListJobs(ctx context.Context) ([]string, error) {
 	req, err := http.NewRequest(http.MethodGet, c.url+"/v1/jobs/list", nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem building request")
+		return nil, fmt.Errorf("problem building request: %w", err)
 	}
 
 	req = req.WithContext(ctx)
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "error processing request")
+		return nil, fmt.Errorf("error processing request: %w", err)
 	}
 	defer resp.Body.Close()
 	out := []string{}
 	if err = gimlet.GetJSON(resp.Body, &out); err != nil {
-		return nil, errors.Wrap(err, "problem reading response")
+		return nil, fmt.Errorf("problem reading response: %w", err)
 	}
 
 	return out, nil
@@ -57,13 +58,13 @@ func (c *AbortablePoolManagementClient) ListJobs(ctx context.Context) ([]string,
 func (c *AbortablePoolManagementClient) AbortAllJobs(ctx context.Context) error {
 	req, err := http.NewRequest(http.MethodDelete, c.url+"/v1/jobs/abort", nil)
 	if err != nil {
-		return errors.Wrap(err, "problem building request")
+		return fmt.Errorf("problem building request: %w", err)
 	}
 
 	req = req.WithContext(ctx)
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "error processing request")
+		return fmt.Errorf("error processing request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -81,13 +82,13 @@ func (c *AbortablePoolManagementClient) AbortAllJobs(ctx context.Context) error 
 func (c *AbortablePoolManagementClient) IsRunning(ctx context.Context, job string) (bool, error) {
 	req, err := http.NewRequest(http.MethodGet, c.url+"/v1/jobs/"+job, nil)
 	if err != nil {
-		return false, errors.Wrap(err, "problem building request")
+		return false, fmt.Errorf("problem building request: %w", err)
 	}
 
 	req = req.WithContext(ctx)
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return false, errors.Wrap(err, "error processing request")
+		return false, fmt.Errorf("error processing request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -104,24 +105,23 @@ func (c *AbortablePoolManagementClient) IsRunning(ctx context.Context, job strin
 func (c *AbortablePoolManagementClient) AbortJob(ctx context.Context, job string) error {
 	req, err := http.NewRequest(http.MethodDelete, c.url+"/v1/jobs/"+job, nil)
 	if err != nil {
-		return errors.Wrap(err, "problem building request")
+		return fmt.Errorf("problem building request: %w", err)
 	}
 
 	req = req.WithContext(ctx)
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "error processing request")
+		return fmt.Errorf("error processing request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		rerr := &gimlet.ErrorResponse{}
 		if err := gimlet.GetJSON(resp.Body, rerr); err != nil {
-			return errors.Wrapf(err, "problem reading error response with %s",
-				http.StatusText(resp.StatusCode))
+			return fmt.Errorf("problem reading error response with %s: %w", http.StatusText(resp.StatusCode), err)
 
 		}
-		return errors.Wrap(rerr, "remove server returned error")
+		return fmt.Errorf("remove server returned error: %w", rerr)
 	}
 
 	return nil
