@@ -15,7 +15,13 @@ import (
 // the queue implementation's Results() method.
 func ResolveErrors(ctx context.Context, q Queue) error {
 	catcher := emt.NewCatcher()
+	ExtractErrors(ctx, catcher, q)
+	return catcher.Resolve()
+}
 
+// ExtractErrors adds any errors in the completed jobs of the queue to
+// the specified catcher.
+func ExtractErrors(ctx context.Context, catcher emt.Catcher, q Queue) {
 	for result := range q.Jobs(ctx) {
 		if !result.Status().Completed {
 			continue
@@ -27,8 +33,6 @@ func ResolveErrors(ctx context.Context, q Queue) error {
 
 		catcher.Add(result.Error())
 	}
-
-	return catcher.Resolve()
 }
 
 // PopulateQueue adds jobs from a channel to a queue and returns an
@@ -103,6 +107,7 @@ func RunJob(ctx context.Context, job Job) error {
 
 	job.Run(ctx)
 	ti.End = time.Now()
+	job.UpdateTimeInfo(ti)
 	msg := message.Fields{
 		"job":           job.ID(),
 		"job_type":      job.Type().Name,
