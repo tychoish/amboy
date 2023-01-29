@@ -20,7 +20,7 @@ import (
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/amboy/registry"
-	"github.com/tychoish/emt"
+	"github.com/tychoish/fun/erc"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
@@ -70,9 +70,9 @@ func (opts *Options) Validate() error {
 		opts.Region = defaultRegion
 	}
 
-	catcher := emt.NewBasicCatcher()
-	catcher.NewWhen(opts.Name == "", "must specify a name")
-	catcher.NewWhen(opts.NumWorkers <= 0, "must specify > 1 workers")
+	catcher := &erc.Collector{}
+	erc.When(catcher, opts.Name == "", "must specify a name")
+	erc.When(catcher, opts.NumWorkers <= 0, "must specify > 1 workers")
 	return catcher.Resolve()
 }
 

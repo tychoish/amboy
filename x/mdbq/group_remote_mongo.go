@@ -11,7 +11,7 @@ import (
 
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
-	"github.com/tychoish/emt"
+	"github.com/tychoish/fun/erc"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
@@ -91,15 +91,15 @@ func (opts *MongoDBQueueGroupOptions) constructor(ctx context.Context, name stri
 }
 
 func (opts MongoDBQueueGroupOptions) validate() error {
-	catcher := emt.NewBasicCatcher()
-	catcher.NewWhen(opts.Prefix == "", "prefix must be set")
-	catcher.NewWhen(opts.TTL < 0, "ttl must be greater than or equal to 0")
-	catcher.NewWhen(opts.TTL > 0 && opts.TTL < time.Second, "ttl cannot be less than 1 second, unless it is 0")
-	catcher.NewWhen(opts.PruneFrequency < 0, "prune frequency must be greater than or equal to 0")
-	catcher.NewWhen(opts.PruneFrequency > 0 && opts.TTL < time.Second, "prune frequency cannot be less than 1 second, unless it is 0")
-	catcher.NewWhen((opts.TTL == 0 && opts.PruneFrequency != 0) || (opts.TTL != 0 && opts.PruneFrequency == 0),
+	catcher := &erc.Collector{}
+	erc.When(catcher, opts.Prefix == "", "prefix must be set")
+	erc.When(catcher, opts.TTL < 0, "ttl must be greater than or equal to 0")
+	erc.When(catcher, opts.TTL > 0 && opts.TTL < time.Second, "ttl cannot be less than 1 second, unless it is 0")
+	erc.When(catcher, opts.PruneFrequency < 0, "prune frequency must be greater than or equal to 0")
+	erc.When(catcher, opts.PruneFrequency > 0 && opts.TTL < time.Second, "prune frequency cannot be less than 1 second, unless it is 0")
+	erc.When(catcher, (opts.TTL == 0 && opts.PruneFrequency != 0) || (opts.TTL != 0 && opts.PruneFrequency == 0),
 		"ttl and prune frequency must both be 0 or both be not 0")
-	catcher.NewWhen(opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil,
+	erc.When(catcher, opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil,
 		"must specify either a default worker pool size or a WorkerPoolSize function")
 
 	if opts.Logger.Sender() == nil {
@@ -213,7 +213,7 @@ func (g *remoteMongoQueueGroup) startQueues(ctx context.Context) error {
 		return fmt.Errorf("problem getting existing collections: %w", err)
 	}
 
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 	for _, coll := range colls {
 		q, err := g.startProcessingRemoteQueue(ctx, coll)
 		if err != nil {
@@ -351,7 +351,7 @@ func (g *remoteMongoQueueGroup) Prune(ctx context.Context) error {
 			collsToCheck = append(collsToCheck, coll)
 		}
 	}
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 	wg := &sync.WaitGroup{}
 	collsDeleteChan := make(chan string, len(collsToCheck))
 	collsDropChan := make(chan string, len(collsToCheck))

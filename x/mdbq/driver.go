@@ -8,7 +8,7 @@ import (
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/amboy/registry"
-	"github.com/tychoish/emt"
+	"github.com/tychoish/fun/erc"
 	"github.com/tychoish/grip"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -86,12 +86,12 @@ func DefaultMongoDBOptions() MongoDBOptions {
 // Validate validates that the required options are given and sets fields that
 // are unspecified and have a default value.
 func (opts *MongoDBOptions) Validate() error {
-	catcher := emt.NewBasicCatcher()
-	catcher.NewWhen(opts.URI == "", "must specify connection URI")
-	catcher.NewWhen(opts.DB == "", "must specify database")
-	catcher.NewWhen(opts.LockTimeout < 0, "cannot have negative lock timeout")
-	catcher.NewWhen(opts.Marshler == nil, "must specify a bson marshaler")
-	catcher.NewWhen(opts.Unmarshaler == nil, "must specify a bson unmashlser")
+	catcher := &erc.Collector{}
+	erc.When(catcher, opts.URI == "", "must specify connection URI")
+	erc.When(catcher, opts.DB == "", "must specify database")
+	erc.When(catcher, opts.LockTimeout < 0, "cannot have negative lock timeout")
+	erc.When(catcher, opts.Marshler == nil, "must specify a bson marshaler")
+	erc.When(catcher, opts.Unmarshaler == nil, "must specify a bson unmashlser")
 
 	if opts.LockTimeout == 0 {
 		opts.LockTimeout = amboy.LockTimeout

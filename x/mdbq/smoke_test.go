@@ -38,7 +38,7 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 				}
 
 				closer := func(ctx context.Context) error {
-					catcher := emt.NewBasicCatcher()
+					catcher := &erc.Collector{}
 
 					catcher.Add(q.Close(ctx))
 
@@ -78,7 +78,7 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 				}
 
 				closer := func(ctx context.Context) error {
-					catcher := emt.NewBasicCatcher()
+					catcher := &erc.Collector{}
 
 					catcher.Add(q.Close(ctx))
 
@@ -116,7 +116,7 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 				}
 
 				closer := func(ctx context.Context) error {
-					catcher := emt.NewBasicCatcher()
+					catcher := &erc.Collector{}
 
 					catcher.Add(q.Close(ctx))
 

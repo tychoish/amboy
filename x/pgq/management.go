@@ -10,7 +10,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/tychoish/amboy/management"
-	"github.com/tychoish/emt"
+	"github.com/tychoish/fun/erc"
 	"github.com/tychoish/grip"
 )
 
@@ -30,8 +30,8 @@ type ManagerOptions struct {
 }
 
 func (o *ManagerOptions) Validate() error {
-	catcher := emt.NewBasicCatcher()
-	catcher.NewWhen(o.SingleGroup && o.ByGroups, "cannot specify conflicting group options")
+	catcher := &erc.Collector{}
+	erc.When(catcher, o.SingleGroup && o.ByGroups, "cannot specify conflicting group options")
 	catcher.Add(o.Options.Validate())
 	return catcher.Resolve()
 }

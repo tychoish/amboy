@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/tychoish/amboy/management"
-	"github.com/tychoish/emt"
+	"github.com/tychoish/fun/erc"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 	"go.mongodb.org/mongo-driver/bson"
@@ -46,9 +46,9 @@ func (o *DBQueueManagerOptions) collName() string {
 // Validate checks the state of the manager configuration, preventing logically
 // invalid options.
 func (o *DBQueueManagerOptions) Validate() error {
-	catcher := emt.NewBasicCatcher()
-	catcher.NewWhen(o.SingleGroup && o.ByGroups, "cannot specify conflicting group options")
-	catcher.NewWhen(o.Name == "", "must specify queue name")
+	catcher := &erc.Collector{}
+	erc.When(catcher, o.SingleGroup && o.ByGroups, "cannot specify conflicting group options")
+	erc.When(catcher, o.Name == "", "must specify queue name")
 	catcher.Add(o.Options.Validate())
 
 	return catcher.Resolve()
@@ -111,7 +111,7 @@ func (db *dbQueueManager) aggregateCounters(ctx context.Context, stages ...bson.
 		return nil, fmt.Errorf("problem running aggregation: %w", err)
 	}
 
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 	out := []management.JobCounters{}
 	for cursor.Next(ctx) {
 		val := management.JobCounters{}
@@ -136,7 +136,7 @@ func (db *dbQueueManager) aggregateRuntimes(ctx context.Context, stages ...bson.
 		return nil, fmt.Errorf("problem running aggregation: %w", err)
 	}
 
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 	out := []management.JobRuntimes{}
 	for cursor.Next(ctx) {
 		val := management.JobRuntimes{}
@@ -161,7 +161,7 @@ func (db *dbQueueManager) aggregateErrors(ctx context.Context, stages ...bson.M)
 		return nil, fmt.Errorf("problem running aggregation: %w", err)
 	}
 
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 	out := []management.JobErrorsForType{}
 	for cursor.Next(ctx) {
 		val := management.JobErrorsForType{}

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/tychoish/amboy"
-	"github.com/tychoish/emt"
+	"github.com/tychoish/fun/erc"
 	"github.com/tychoish/grip/recovery"
 )
 
@@ -159,7 +159,7 @@ func (c *cacheImpl) getCacheIterSafe() <-chan *cacheItem {
 func (c *cacheImpl) Prune(ctx context.Context) error {
 	wg := &sync.WaitGroup{}
 	num := runtime.NumCPU()
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 	work := c.getCacheIterSafe()
 	wg.Add(num)
 

@@ -136,7 +136,7 @@ func (g *remoteMongoQueueGroupSingle) getQueues(ctx context.Context) ([]string, 
 		Groups []string `bson:"groups"`
 	}{}
 
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 	for cursor.Next(ctx) {
 		if err = cursor.Decode(&out); err != nil {
 			catcher.Add(err)
@@ -156,7 +156,7 @@ func (g *remoteMongoQueueGroupSingle) startQueues(ctx context.Context) error {
 		return err
 	}
 
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 	for _, id := range queues {
 		_, err := g.Get(ctx, id)
 		catcher.Add(err)

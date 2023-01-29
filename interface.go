@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/tychoish/amboy/dependency"
-	"github.com/tychoish/emt"
+	"github.com/tychoish/fun/erc"
 )
 
 // LockTimeout describes the default period of time that a queue will respect
@@ -152,11 +152,11 @@ func (j JobTimeInfo) IsDispatchable() bool {
 
 // Validate ensures that the structure has reasonable values set.
 func (j JobTimeInfo) Validate() error {
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 
-	catcher.NewWhen(!j.DispatchBy.IsZero() && j.WaitUntil.After(j.DispatchBy), "invalid for wait_until to be after dispatch_by")
-	catcher.NewWhen(j.Created.IsZero(), "must specify non-zero created timestamp")
-	catcher.NewWhen(j.MaxTime < 0, "must specify 0 or positive max_time")
+	erc.When(catcher, !j.DispatchBy.IsZero() && j.WaitUntil.After(j.DispatchBy), "invalid for wait_until to be after dispatch_by")
+	erc.When(catcher, j.Created.IsZero(), "must specify non-zero created timestamp")
+	erc.When(catcher, j.MaxTime < 0, "must specify 0 or positive max_time")
 
 	return catcher.Resolve()
 }

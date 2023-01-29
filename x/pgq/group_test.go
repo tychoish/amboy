@@ -118,7 +118,7 @@ func TestGroup(t *testing.T) {
 
 				g, err := NewGroup(ctx, db, opts, groupOpts)
 				if err != nil {
-					catcher := emt.NewBasicCatcher()
+					catcher := &erc.Collector{}
 					catcher.Add(err)
 					catcher.Check(closer)
 					return nil, nil, catcher.Resolve()

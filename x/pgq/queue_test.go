@@ -14,7 +14,7 @@ import (
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/job"
 	"github.com/tychoish/amboy/queue/testutil"
-	"github.com/tychoish/emt"
+	"github.com/tychoish/fun/erc"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 )
@@ -52,7 +52,7 @@ func MakeTestDatabase(bctx context.Context, name string) (*sqlx.DB, func() error
 
 	closer := func() error {
 		cancel()
-		catcher := emt.NewBasicCatcher()
+		catcher := &erc.Collector{}
 		catcher.Add(db.Close())
 
 		_, err = tdb.Exec("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1;", dbName)
@@ -125,7 +125,7 @@ func TestQueueSmoke(t *testing.T) {
 				}
 
 				return q, func(ctx context.Context) error {
-					catcher := emt.NewCatcher()
+					catcher := &erc.Collector{}
 					go func() {
 
 						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -163,7 +163,7 @@ func TestQueueSmoke(t *testing.T) {
 					return nil, nil, err
 				}
 				return q, func(ctx context.Context) error {
-					catcher := emt.NewCatcher()
+					catcher := &erc.Collector{}
 					go func() {
 
 						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -206,7 +206,7 @@ func TestQueueSmoke(t *testing.T) {
 				}
 
 				return q, func(ctx context.Context) error {
-					catcher := emt.NewCatcher()
+					catcher := &erc.Collector{}
 					go func() {
 
 						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -249,7 +249,7 @@ func TestQueueSmoke(t *testing.T) {
 				}
 
 				return q, func(ctx context.Context) error {
-					catcher := emt.NewCatcher()
+					catcher := &erc.Collector{}
 					go func() {
 
 						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)

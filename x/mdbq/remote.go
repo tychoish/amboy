@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/tychoish/amboy"
-	"github.com/tychoish/emt"
+	"github.com/tychoish/fun/erc"
 	"github.com/tychoish/grip"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -40,11 +40,11 @@ func NewMongoDBQueue(ctx context.Context, opts MongoDBQueueCreationOptions) (amb
 
 // Validate ensure that the arguments defined are valid.
 func (opts *MongoDBQueueCreationOptions) Validate() error {
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 
-	catcher.NewWhen(opts.Name == "", "must specify a name")
+	erc.When(catcher, opts.Name == "", "must specify a name")
 
-	catcher.NewWhen(opts.Client == nil && (opts.MDB.URI == "" && opts.MDB.DB == ""),
+	erc.When(catcher, opts.Client == nil && (opts.MDB.URI == "" && opts.MDB.DB == ""),
 		"must specify database options")
 
 	return catcher.Resolve()

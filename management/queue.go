@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/tychoish/amboy"
-	"github.com/tychoish/emt"
+	"github.com/tychoish/fun/erc"
 	"github.com/tychoish/grip"
 )
 
@@ -466,7 +466,7 @@ func (m *queueManager) CompleteJobsByType(ctx context.Context, f StatusFilter, j
 		return errors.New("invalid specification of completed job type")
 	}
 
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 	for job := range m.queue.Jobs(ctx) {
 		if job.Type().Name != jobType {
 			continue
@@ -512,7 +512,7 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 	}
 
 	var err error
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 	for job := range m.queue.Jobs(ctx) {
 		stat := job.Status()
 
@@ -542,7 +542,7 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 
 		job, err = m.queue.Get(ctx, job.ID())
 		if err != nil {
-			catcher.Errorf("could not retrieve job %q: %w", job.ID(), err)
+			catcher.Add(fmt.Errorf("could not retrieve job %q: %w", job.ID(), err))
 			continue
 		}
 		status := job.Status()
@@ -575,7 +575,7 @@ func (m queueManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f 
 	ctx, cancel = context.WithCancel(ctx)
 	defer cancel()
 
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 	count := 0
 
 	for job := range dq.Jobs(ctx) {
@@ -588,35 +588,35 @@ func (m queueManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f 
 			if stat.Completed && ti.End.Before(ts) {
 				count++
 				if err := dq.Delete(ctx, id); err != nil {
-					catcher.Errorf("problem deleting stale job %q: %w", id, err)
+					catcher.Add(fmt.Errorf("problem deleting stale job %q: %w", id, err))
 				}
 			}
 		case Stale:
 			if stat.InProgress && time.Since(stat.ModificationTime) > m.queue.Info().LockTimeout && ti.Start.Before(ts) {
 				count++
 				if err := dq.Delete(ctx, id); err != nil {
-					catcher.Errorf("problem deleting stale job %q: %w", id, err)
+					catcher.Add(fmt.Errorf("problem deleting stale job %q: %w", id, err))
 				}
 			}
 		case InProgress:
 			if stat.InProgress && ti.Start.Before(ts) {
 				count++
 				if err := dq.Delete(ctx, id); err != nil {
-					catcher.Errorf("problem deleting in progress job %q: %w", id, err)
+					catcher.Add(fmt.Errorf("problem deleting in progress job %q: %w", id, err))
 				}
 			}
 		case Pending:
 			if !stat.Completed && !stat.InProgress && ti.Created.Before(ts) {
 				count++
 				if err := dq.Delete(ctx, id); err != nil {
-					catcher.Errorf("problem deleting pending job %q: %w", id, err)
+					catcher.Add(fmt.Errorf("problem deleting pending job %q: %w", id, err))
 				}
 			}
 		case All:
 			if !stat.Completed && !stat.InProgress && ti.Created.Before(ts) {
 				count++
 				if err := dq.Delete(ctx, id); err != nil {
-					catcher.Errorf("problem deleting pending job %q: %w", id, err)
+					catcher.Add(fmt.Errorf("problem deleting pending job %q: %w", id, err))
 				}
 			}
 		}

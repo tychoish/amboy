@@ -238,7 +238,7 @@ func TestQueueGroup(t *testing.T) {
 					}
 
 					closer := func(cctx context.Context) error {
-						catcher := emt.NewBasicCatcher()
+						catcher := &erc.Collector{}
 						catcher.Add(client.Database(mopts.DB).Drop(cctx))
 						return catcher.Resolve()
 					}

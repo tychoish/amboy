@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/tychoish/emt"
+	"github.com/tychoish/fun/erc"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 )
@@ -14,14 +14,14 @@ import (
 // completeness of this operation depends on the implementation of a
 // the queue implementation's Results() method.
 func ResolveErrors(ctx context.Context, q Queue) error {
-	catcher := emt.NewCatcher()
+	catcher := &erc.Collector{}
 	ExtractErrors(ctx, catcher, q)
 	return catcher.Resolve()
 }
 
 // ExtractErrors adds any errors in the completed jobs of the queue to
 // the specified catcher.
-func ExtractErrors(ctx context.Context, catcher emt.Catcher, q Queue) {
+func ExtractErrors(ctx context.Context, catcher *erc.Collector, q Queue) {
 	for result := range q.Jobs(ctx) {
 		if !result.Status().Completed {
 			continue
@@ -35,10 +35,31 @@ func ExtractErrors(ctx context.Context, catcher emt.Catcher, q Queue) {
 	}
 }
 
+// RetrieveErrors adds any errors in the completed jobs of the queue to
+// the specified error channel.
+func RetrieveErrors(ctx context.Context, errs chan<- error, q Queue) {
+	for result := range q.Jobs(ctx) {
+		if !result.Status().Completed {
+			continue
+		}
+		if err := ctx.Err(); err != nil {
+			return
+		}
+		if err := result.Error(); err != nil {
+			select {
+			case <-ctx.Done():
+				return
+			case errs <- err:
+				continue
+			}
+		}
+	}
+}
+
 // PopulateQueue adds jobs from a channel to a queue and returns an
 // error with the aggregated results of these operations.
 func PopulateQueue(ctx context.Context, q Queue, jobs <-chan Job) error {
-	catcher := emt.NewCatcher()
+	catcher := &erc.Collector{}
 
 	for j := range jobs {
 		if err := ctx.Err(); err != nil {

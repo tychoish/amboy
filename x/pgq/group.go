@@ -11,7 +11,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/queue"
-	"github.com/tychoish/emt"
+	"github.com/tychoish/fun/erc"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/level"
 	"github.com/tychoish/grip/message"
@@ -61,14 +61,14 @@ type GroupOptions struct {
 }
 
 func (opts *GroupOptions) validate() error {
-	catcher := emt.NewBasicCatcher()
-	catcher.NewWhen(opts.TTL < 0, "ttl must be greater than or equal to 0")
-	catcher.NewWhen(opts.TTL > 0 && opts.TTL < time.Second, "ttl cannot be less than 1 second, unless it is 0")
-	catcher.NewWhen(opts.PruneFrequency < 0, "prune frequency must be greater than or equal to 0")
-	catcher.NewWhen(opts.PruneFrequency > 0 && opts.TTL < time.Second, "prune frequency cannot be less than 1 second, unless it is 0")
-	catcher.NewWhen((opts.TTL == 0 && opts.PruneFrequency != 0) || (opts.TTL != 0 && opts.PruneFrequency == 0),
+	catcher := &erc.Collector{}
+	erc.When(catcher, opts.TTL < 0, "ttl must be greater than or equal to 0")
+	erc.When(catcher, opts.TTL > 0 && opts.TTL < time.Second, "ttl cannot be less than 1 second, unless it is 0")
+	erc.When(catcher, opts.PruneFrequency < 0, "prune frequency must be greater than or equal to 0")
+	erc.When(catcher, opts.PruneFrequency > 0 && opts.TTL < time.Second, "prune frequency cannot be less than 1 second, unless it is 0")
+	erc.When(catcher, (opts.TTL == 0 && opts.PruneFrequency != 0) || (opts.TTL != 0 && opts.PruneFrequency == 0),
 		"ttl and prune frequency must both be 0 or both be not 0")
-	catcher.NewWhen(opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil,
+	erc.When(catcher, opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil,
 		"must specify either a default worker pool size or a WorkerPoolSize function")
 
 	if opts.BackgroundOperationErrorLogLevel == 0 {
@@ -198,7 +198,7 @@ func (g *sqlGroup) startQueues(ctx context.Context) error {
 		return err
 	}
 
-	catcher := emt.NewBasicCatcher()
+	catcher := &erc.Collector{}
 	for _, id := range queues {
 		_, err := g.Get(ctx, id)
 		catcher.Add(err)
