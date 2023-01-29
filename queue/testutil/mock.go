@@ -98,7 +98,6 @@ func (e *mockJobRunEnv) Reset() {
 	e.runCount = 0
 }
 
-//
 type mockJob struct {
 	Test         string `bson:"test_name" json:"test_name" yaml:"test_name"`
 	ShouldCancel bool   `bson:"cancel" json:"cancel" yaml:"cancel"`
