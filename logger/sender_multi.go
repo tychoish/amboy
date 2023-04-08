@@ -62,7 +62,7 @@ func NewQueueMultiSender(ctx context.Context, workers, capacity int, senders ...
 }
 
 func (s *multiQueueSender) Send(m message.Composer) {
-	if !s.Level().Loggable(m.Priority()) {
+	if !send.ShouldLog(s, m) {
 		return
 	}
 

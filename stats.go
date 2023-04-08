@@ -88,13 +88,7 @@ func (QueueStats) Structured() bool { return true }
 
 // SetPriority  is part of the grip/message.Composer interface and
 // allows the caller to configure the piroity of the message.
-func (s *QueueStats) SetPriority(l level.Priority) error {
-	if !l.IsValid() {
-		return fmt.Errorf("%s (%d) is not a valid level", l, l)
-	}
-	s.priority = l
-	return nil
-}
+func (s *QueueStats) SetPriority(l level.Priority) { s.priority = l }
 
 // Annotate is part of the grip/message.Composer interface and allows
 // the logging infrastructure to inject content and context into log

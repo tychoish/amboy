@@ -60,7 +60,7 @@ func NewQueueBackedSender(ctx context.Context, sender send.Sender, workers, capa
 }
 
 func (s *queueSender) Send(m message.Composer) {
-	if !s.Level().Loggable(m.Priority()) {
+	if !send.ShouldLog(s, m) {
 		return
 	}
 
