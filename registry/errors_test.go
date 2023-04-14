@@ -19,8 +19,12 @@ func TestErrors(t *testing.T) {
 		})
 		t.Run("ErrorIfNoMatch", func(t *testing.T) {
 			for i := 0; i < 100; i++ {
-				require.Error(t, NewJobResolutionError(amboy.JobType{Version: i}, i+1))
-				require.Error(t, NewDependencyResolutionError(dependency.TypeInfo{Version: i}, i+1))
+				if err := NewJobResolutionError(amboy.JobType{Version: i}, i+1); err == nil {
+					t.Fatal("expected error")
+				}
+				if err := NewDependencyResolutionError(dependency.TypeInfo{Version: i}, i+1); err == nil {
+					t.Fatal("expected error")
+				}
 			}
 		})
 	})
@@ -34,12 +38,16 @@ func TestErrors(t *testing.T) {
 		})
 		t.Run("MatchingVersion", func(t *testing.T) {
 			err := &resolutionError{RegisteredVersion: 1, RecordVersion: 1}
-			require.Error(t, err)
+			if err == nil {
+				t.Fatal("expected error")
+			}
 			require.False(t, IsVersionResolutionError(err))
 		})
 		t.Run("MismatchedVersion", func(t *testing.T) {
 			err := &resolutionError{RegisteredVersion: 1, RecordVersion: 2}
-			require.Error(t, err)
+			if err == nil {
+				t.Fatal("expected error")
+			}
 			require.True(t, IsVersionResolutionError(err))
 		})
 		t.Run("RoundTrip", func(t *testing.T) {

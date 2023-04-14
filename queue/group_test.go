@@ -36,7 +36,9 @@ func TestQueueGroup(t *testing.T) {
 						require.NoError(t, err)
 					} else {
 						require.Nil(t, g)
-						require.Error(t, err)
+						if err == nil {
+							t.Fatal("expected error")
+						}
 					}
 				})
 			})

@@ -62,8 +62,7 @@ github.com/google/go-github v17.0.0+incompatible/go.mod h1:zLgOLi98H3fifZn+44m+u
 github.com/google/go-querystring v1.0.0/go.mod h1:odCYkC5MyYFN7vkCjXpyrEuKhc/BUO6wN/zVPAxq5ck=
 github.com/google/go-querystring v1.1.0/go.mod h1:Kcdr2DB4koayq7X8pmAG4sNG59So17icRSOU623lUBU=
 github.com/google/uuid v1.0.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/google/uuid v1.1.1 h1:Gkbcsh/GbpXz7lPftLA3P6TYMwjCLYm83jiFQZF/3gY=
-github.com/google/uuid v1.1.1/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
 github.com/gopherjs/gopherjs v0.0.0-20180825215210-0210a2f0f73c/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
 github.com/gopherjs/gopherwasm v1.1.0/go.mod h1:SkZ8z7CWBz5VXbhJel8TxCmAcsQqzgWGR/8nMhyhZSI=
 github.com/gorilla/mux v1.7.4 h1:VuZ8uybHlWmqV03+zRzdwKL4tUnIp1MAQtp1mIFE1bc=
@@ -138,11 +137,11 @@ github.com/tychoish/amboy v0.0.0-20221016162606-d408d958ac3b/go.mod h1:Sta6RE6dO
 github.com/tychoish/emt v0.0.0-20220306153139-74b97c67f209/go.mod h1:KMhVWIsL98Q8AoorphjsOQWabcNOoYqMSpODR/rtRb4=
 github.com/tychoish/emt v0.1.0 h1:OMJ/lKO17hxijZW2UdbZY4vOfTwVKZzTb8FB0g8fh74=
 github.com/tychoish/emt v0.1.0/go.mod h1:KMhVWIsL98Q8AoorphjsOQWabcNOoYqMSpODR/rtRb4=
+github.com/tychoish/fun v0.8.5 h1:8uTFk2fG8mxDyRmqMj6llKE8+vTuQRclUkl0/tyYwAU=
 github.com/tychoish/gimlet v0.0.0-20220430160104-9dbd313f23e7 h1:ODYpfaba/8V0hhlRmkzCizakPxG2f8CMPjAkY9OwLA0=
 github.com/tychoish/gimlet v0.0.0-20220430160104-9dbd313f23e7/go.mod h1:eM2pD524BXVelLl7n2RKKN9iDzoxo1X1pIUeQDmh2Ck=
 github.com/tychoish/grip v0.0.0-20220426125019-871b9a2e8544/go.mod h1:3tvVQ8VrpPHtvrIH+sP+voliM/JZNgu8XuZzVCBbEjs=
-github.com/tychoish/grip v0.1.0 h1:9sqCK8j4teuRQBYEf5oivmju4k2SxSJfrMhHaW7EVc0=
-github.com/tychoish/grip v0.1.0/go.mod h1:MQJx1mQV4rUBK2G/UxB+e6zxBI4zNOg2iiB191vwmvk=
+github.com/tychoish/grip v0.2.4 h1:u759iHGTvvCpFMBO4RxWywlvscB3O0esr22w5HntuUw=
 github.com/urfave/negroni v1.0.0 h1:kIimOitoypq34K7TG7DUaJ9kq/N4Ofuwi1sjz0KipXc=
 github.com/urfave/negroni v1.0.0/go.mod h1:Meg73S6kFm/4PpbYdq35yYWoCZ9mS/YSx+lKnmiohz4=
 github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c/go.mod h1:lB8K/P019DLNhemzwFU4jHLhdvlE6uDZjXFejJXr49I=
@@ -171,8 +170,8 @@ golang.org/x/net v0.0.0-20190311183353-d8887717615a/go.mod h1:t9HGtf8HONx5eT2rtn
 golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
 golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
 golang.org/x/net v0.0.0-20200822124328-c89045814202/go.mod h1:/O7V0waA8r7cgGh81Ro3o1hOxt32SMVPicZroKQ2sZA=
-golang.org/x/net v0.0.0-20201021035429-f5854403a974 h1:IX6qOQeG5uLjB/hjjwjedwfjND0hgjPMMyO1RoIXQNI=
 golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
+golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd h1:O7DYs+zxREGLKzKoMQrtrEacpb0ZVXA5rIwylE2Xchk=
 golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
 golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=

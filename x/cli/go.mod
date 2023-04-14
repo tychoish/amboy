@@ -14,7 +14,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
-	github.com/google/uuid v1.1.1 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/mux v1.7.4 // indirect
 	github.com/phyber/negroni-gzip v0.0.0-20180113114010-ef6356a5d029 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -23,8 +23,9 @@ require (
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/tychoish/emt v0.1.0 // indirect
+	github.com/tychoish/fun v0.8.5 // indirect
 	github.com/tychoish/gimlet v0.0.0-20220430160104-9dbd313f23e7 // indirect
-	github.com/tychoish/grip v0.1.0 // indirect
+	github.com/tychoish/grip v0.2.4 // indirect
 	github.com/urfave/negroni v1.0.0 // indirect
 	gonum.org/v1/gonum v0.7.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect

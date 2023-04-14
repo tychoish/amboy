@@ -164,7 +164,9 @@ func RunGroupIntegrationTest(bctx context.Context, t *testing.T, group GroupInte
 
 			q2, err := group.LocalConstructor(ctx)
 			require.NoError(t, err)
-			require.Error(t, g.Put(ctx, "one", q2), "cannot add queue to existing index")
+			if err := g.Put(ctx, "one", q2); err == nil {
+				t.Fatal("expected error")
+			}
 			if !q2.Info().Started {
 				require.NoError(t, q2.Start(ctx))
 			}

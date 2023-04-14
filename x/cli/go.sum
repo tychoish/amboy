@@ -66,8 +66,7 @@ github.com/google/go-github v17.0.0+incompatible/go.mod h1:zLgOLi98H3fifZn+44m+u
 github.com/google/go-querystring v1.0.0/go.mod h1:odCYkC5MyYFN7vkCjXpyrEuKhc/BUO6wN/zVPAxq5ck=
 github.com/google/go-querystring v1.1.0/go.mod h1:Kcdr2DB4koayq7X8pmAG4sNG59So17icRSOU623lUBU=
 github.com/google/uuid v1.0.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/google/uuid v1.1.1 h1:Gkbcsh/GbpXz7lPftLA3P6TYMwjCLYm83jiFQZF/3gY=
-github.com/google/uuid v1.1.1/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
 github.com/gopherjs/gopherjs v0.0.0-20180825215210-0210a2f0f73c/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
 github.com/gopherjs/gopherwasm v1.1.0/go.mod h1:SkZ8z7CWBz5VXbhJel8TxCmAcsQqzgWGR/8nMhyhZSI=
 github.com/gorilla/mux v1.7.4 h1:VuZ8uybHlWmqV03+zRzdwKL4tUnIp1MAQtp1mIFE1bc=
@@ -146,11 +145,11 @@ github.com/tychoish/amboy v0.0.0-20221016162606-d408d958ac3b/go.mod h1:Sta6RE6dO
 github.com/tychoish/emt v0.0.0-20220306153139-74b97c67f209/go.mod h1:KMhVWIsL98Q8AoorphjsOQWabcNOoYqMSpODR/rtRb4=
 github.com/tychoish/emt v0.1.0 h1:OMJ/lKO17hxijZW2UdbZY4vOfTwVKZzTb8FB0g8fh74=
 github.com/tychoish/emt v0.1.0/go.mod h1:KMhVWIsL98Q8AoorphjsOQWabcNOoYqMSpODR/rtRb4=
+github.com/tychoish/fun v0.8.5 h1:8uTFk2fG8mxDyRmqMj6llKE8+vTuQRclUkl0/tyYwAU=
 github.com/tychoish/gimlet v0.0.0-20220430160104-9dbd313f23e7 h1:ODYpfaba/8V0hhlRmkzCizakPxG2f8CMPjAkY9OwLA0=
 github.com/tychoish/gimlet v0.0.0-20220430160104-9dbd313f23e7/go.mod h1:eM2pD524BXVelLl7n2RKKN9iDzoxo1X1pIUeQDmh2Ck=
 github.com/tychoish/grip v0.0.0-20220426125019-871b9a2e8544/go.mod h1:3tvVQ8VrpPHtvrIH+sP+voliM/JZNgu8XuZzVCBbEjs=
-github.com/tychoish/grip v0.1.0 h1:9sqCK8j4teuRQBYEf5oivmju4k2SxSJfrMhHaW7EVc0=
-github.com/tychoish/grip v0.1.0/go.mod h1:MQJx1mQV4rUBK2G/UxB+e6zxBI4zNOg2iiB191vwmvk=
+github.com/tychoish/grip v0.2.4 h1:u759iHGTvvCpFMBO4RxWywlvscB3O0esr22w5HntuUw=
 github.com/urfave/cli v1.22.4 h1:u7tSpNPPswAFymm8IehJhy4uJMlUuU/GmqSkvJ1InXA=
 github.com/urfave/cli v1.22.4/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
 github.com/urfave/negroni v1.0.0 h1:kIimOitoypq34K7TG7DUaJ9kq/N4Ofuwi1sjz0KipXc=

@@ -30,12 +30,16 @@ func UnorderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 	q, closer, err := test.Constructor(ctx, RandomID(), size.Size)
 	require.NoError(t, err)
 	defer func() { cancel(); require.NoError(t, closer(bctx)) }()
-	require.NoError(t, runner.SetPool(q, size.Size))
+	if err := runner.SetPool(q, size.Size); err != nil {
+		t.Fatal(err)
+	}
 
 	if test.OrderedSupported && !test.OrderedStartsBefore {
 		// pass
 	} else {
-		require.NoError(t, q.Start(ctx))
+		if err := q.Start(ctx); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	testNames := []string{"test", "second", "workers", "forty-two", "true", "false", ""}
@@ -57,16 +61,20 @@ func UnorderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 			for _, name := range testNames {
 				cmd := fmt.Sprintf("echo %s.%d", name, num)
 				j := job.NewShellJob(cmd, "")
-				assert.NoError(t, q.Put(ctx, j),
-					fmt.Sprintf("with %d workers", num))
-				_, ok := q.Get(ctx, j.ID())
-				assert.NoError(t, ok)
+				if err := q.Put(ctx, j); err != nil {
+					t.Error(err)
+				}
+				if _, err := q.Get(ctx, j.ID()); err != nil {
+					t.Error(err)
+				}
 			}
 		}(i)
 	}
 	wg.Wait()
 	if test.OrderedSupported && !test.OrderedStartsBefore {
-		require.NoError(t, q.Start(ctx))
+		if err := q.Start(ctx); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	amboy.WaitInterval(ctx, q, 10*time.Millisecond)
@@ -106,7 +114,9 @@ func OrderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runner 
 	q, closer, err := test.Constructor(ctx, RandomID(), size.Size)
 	require.NoError(t, err)
 	defer func() { require.NoError(t, closer(ctx)) }()
-	require.NoError(t, runner.SetPool(q, size.Size))
+	if err := runner.SetPool(q, size.Size); err != nil {
+		t.Fatal(err)
+	}
 
 	var lastJobName string
 
@@ -120,7 +130,9 @@ func OrderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runner 
 	defer os.RemoveAll(tempDir)
 
 	if test.OrderedStartsBefore {
-		require.NoError(t, q.Start(ctx))
+		if err := q.Start(ctx); err != nil {
+			t.Fatal(err)
+		}
 	}
 	for i := 0; i < size.Size/2; i++ {
 		for _, name := range testNames {
@@ -128,16 +140,22 @@ func OrderedTest(bctx context.Context, t *testing.T, test QueueTestCase, runner 
 			cmd := fmt.Sprintf("echo %s", fn)
 			j := job.NewShellJob(cmd, fn)
 			if lastJobName != "" {
-				require.NoError(t, j.Dependency().AddEdge(lastJobName))
+				if err := j.Dependency().AddEdge(lastJobName); err != nil {
+					t.Fatal(err)
+				}
 			}
 			lastJobName = j.ID()
 
-			require.NoError(t, q.Put(ctx, j))
+			if err := q.Put(ctx, j); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 
 	if !test.OrderedStartsBefore {
-		require.NoError(t, q.Start(ctx))
+		if err := q.Start(ctx); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	require.Equal(t, numJobs, q.Stats(ctx).Total, fmt.Sprintf("with %d workers", size.Size))
@@ -162,9 +180,13 @@ func WaitUntilTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 	q, closer, err := test.Constructor(ctx, RandomID(), size.Size)
 	require.NoError(t, err)
 	defer func() { cancel(); require.NoError(t, closer(bctx)) }()
-	require.NoError(t, runner.SetPool(q, size.Size))
+	if err := runner.SetPool(q, size.Size); err != nil {
+		t.Fatal(err)
+	}
 
-	require.NoError(t, q.Start(ctx))
+	if err := q.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
 
 	testNames := []string{"test", "second", "workers", "forty-two", "true", "false"}
 
@@ -321,7 +343,9 @@ func OneExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, ru
 
 	for i := 0; i < count; i++ {
 		j := MakeMockJob(fmt.Sprintf("%d.%d.mock.single-exec", i, job.GetNumber()), testID)
-		assert.NoError(t, q.Put(ctx, j))
+		if err := q.Put(ctx, j); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	if test.OrderedSupported && !test.OrderedStartsBefore {
@@ -345,8 +369,12 @@ func MultiExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, 
 	require.NoError(t, runner.SetPool(qOne, size.Size))
 	require.NoError(t, runner.SetPool(qTwo, size.Size))
 
-	assert.NoError(t, qOne.Start(ctx))
-	assert.NoError(t, qTwo.Start(ctx))
+	if err := qOne.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := qTwo.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
 
 	num := 50
 	adderProcs := 2
@@ -361,9 +389,13 @@ func MultiExecutionTest(bctx context.Context, t *testing.T, test QueueTestCase, 
 				cmd := fmt.Sprintf("echo %d.%d", o, i)
 				j := job.NewShellJob(cmd, "")
 				if i%2 == 0 {
-					assert.NoError(t, qOne.Put(ctx, j))
+					if err := qOne.Put(ctx, j); err != nil {
+						t.Fatal(err)
+					}
 				} else {
-					assert.NoError(t, qTwo.Put(ctx, j))
+					if err := qTwo.Put(ctx, j); err != nil {
+						t.Fatal(err)
+					}
 				}
 
 			}
@@ -458,7 +490,9 @@ func ManyQueueTest(bctx context.Context, t *testing.T, test QueueTestCase, runne
 				defer wg.Done()
 				for iii := 0; iii < inside; iii++ {
 					j := MakeMockJob(fmt.Sprintf("%d-%d-%d-%d", f, s, iii, job.GetNumber()), driverID)
-					assert.NoError(t, queues[0].Put(ctx, j))
+					if err := queues[0].Put(ctx, j); err != nil {
+						t.Fatal(err)
+					}
 				}
 			}(i, ii)
 		}

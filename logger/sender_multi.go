@@ -25,7 +25,6 @@ func newMultiSender(ctx context.Context, q amboy.Queue, senders []send.Sender) *
 		senders: senders,
 		queue:   q,
 		ctx:     ctx,
-		Base:    *send.NewBase(""),
 	}
 }
 

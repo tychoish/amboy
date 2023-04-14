@@ -39,13 +39,17 @@ func TestWaitUntil(t *testing.T) {
 			err := scheduleOp(ctx, nil, func(_ context.Context, q Queue) error {
 				return NewDuplicateJobError("err")
 			}, QueueOperationConfig{})
-			assert.NoError(t, err)
+			if err != nil {
+				t.Fatal(err)
+			}
 		})
 		t.Run("WithReportingEnabled", func(t *testing.T) {
 			err := scheduleOp(ctx, nil, func(_ context.Context, q Queue) error {
 				return NewDuplicateJobError("err")
 			}, QueueOperationConfig{EnableDuplicateJobReporting: true})
-			assert.Error(t, err)
+			if err == nil {
+				t.Error("expected error")
+			}
 			assert.True(t, IsDuplicateJobError(err))
 		})
 	})

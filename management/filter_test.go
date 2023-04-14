@@ -25,9 +25,15 @@ func TestFilterValidation(t *testing.T) {
 
 	t.Run("InvalidValues", func(t *testing.T) {
 		for _, f := range []string{"", "foo", "bleh", "0"} {
-			assert.Error(t, StatusFilter(f).Validate())
-			assert.Error(t, RuntimeFilter(f).Validate())
-			assert.Error(t, ErrorFilter(f).Validate())
+			if err := StatusFilter(f).Validate(); err == nil {
+				t.Error("expected error")
+			}
+			if err := RuntimeFilter(f).Validate(); err == nil {
+				t.Error("expected error")
+			}
+			if err := ErrorFilter(f).Validate(); err == nil {
+				t.Error("expected error")
+			}
 		}
 
 	})

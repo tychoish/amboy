@@ -80,19 +80,29 @@ func TestRunnerImplementations(t *testing.T) {
 				defer cancel()
 
 				// it's an unconfigured runner without a queue, it should always error
-				assert.Error(t, pool.Start(ctx))
+				if err := pool.Start(ctx); err == nil {
+					t.Error("expected error")
+				}
 
 				// this should start the queue
-				assert.NoError(t, pool.SetQueue(queue))
+				if err := pool.SetQueue(queue); err != nil {
+					t.Fatal(err)
+				}
 
 				// it's cool to start the runner
-				assert.NoError(t, pool.Start(ctx))
+				if err := pool.Start(ctx); err != nil {
+					t.Fatal(err)
+				}
 
 				// once the runner starts you can't add pools
-				assert.Error(t, pool.SetQueue(queue))
+				if err := pool.SetQueue(queue); err == nil {
+					t.Error("expected error")
+				}
 
 				// subsequent calls to start should noop
-				assert.NoError(t, pool.Start(ctx))
+				if err := pool.Start(ctx); err != nil {
+					t.Fatal(err)
+				}
 			}
 		},
 		"CloseImpactsStateAsExpected": func(factory poolFactory) testCaseFunc {
@@ -105,8 +115,12 @@ func TestRunnerImplementations(t *testing.T) {
 				defer cancel()
 
 				assert.False(t, pool.Started())
-				assert.NoError(t, pool.SetQueue(queue))
-				assert.NoError(t, pool.Start(ctx))
+				if err := pool.SetQueue(queue); err != nil {
+					t.Fatal(err)
+				}
+				if err := pool.Start(ctx); err != nil {
+					t.Fatal(err)
+				}
 				assert.True(t, pool.Started())
 
 				assert.NotPanics(t, func() {

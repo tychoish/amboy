@@ -54,13 +54,17 @@ func TestGroupCache(t *testing.T) {
 				{
 					name: "SetNilCase",
 					test: func(t *testing.T, cache GroupCache) {
-						require.Error(t, cache.Set("foo", nil, 0))
+						if err := cache.Set("foo", nil, 0); err == nil {
+							t.Fatal("expected error")
+						}
 					},
 				},
 				{
 					name: "SetZero",
 					test: func(t *testing.T, cache GroupCache) {
-						require.NoError(t, cache.Set("foo", queue, 0))
+						if err := cache.Set("foo", queue, 0); err != nil {
+							t.Fatal(err)
+						}
 
 						require.Len(t, cache.Names(), 1)
 						require.Equal(t, 1, cache.Len())
@@ -69,29 +73,41 @@ func TestGroupCache(t *testing.T) {
 				{
 					name: "DoubleSet",
 					test: func(t *testing.T, cache GroupCache) {
-						require.NoError(t, cache.Set("foo", queue, 0))
-						require.Error(t, cache.Set("foo", queue, 0))
+						if err := cache.Set("foo", queue, 0); err != nil {
+							t.Fatal(err)
+						}
+						if err := cache.Set("foo", queue, 0); err == nil {
+							t.Fatal("expected error")
+						}
 					},
 				},
 				{
 					name: "RoundTrip",
 					test: func(t *testing.T, cache GroupCache) {
-						require.NoError(t, cache.Set("foo", queue, 0))
+						if err := cache.Set("foo", queue, 0); err != nil {
+							t.Fatal(err)
+						}
 						require.Equal(t, queue, cache.Get("foo"))
 					},
 				},
 				{
 					name: "RemoveNonExistantQueue",
 					test: func(t *testing.T, cache GroupCache) {
-						require.NoError(t, cache.Remove(ctx, "foo"))
+						if err := cache.Remove(ctx, "foo"); err != nil {
+							t.Fatal(err)
+						}
 					},
 				},
 				{
 					name: "RemoveSteadyQueue",
 					test: func(t *testing.T, cache GroupCache) {
-						require.NoError(t, cache.Set("foo", queue, 0))
+						if err := cache.Set("foo", queue, 0); err != nil {
+							t.Fatal(err)
+						}
 						require.Equal(t, 1, cache.Len())
-						require.NoError(t, cache.Remove(ctx, "foo"))
+						if err := cache.Remove(ctx, "foo"); err != nil {
+							t.Fatal(err)
+						}
 						require.Equal(t, 0, cache.Len())
 					},
 				},
@@ -99,27 +115,41 @@ func TestGroupCache(t *testing.T) {
 					name: "RemoveQueueWithWork",
 					test: func(t *testing.T, cache GroupCache) {
 						q := NewLocalLimitedSize(&FixedSizeQueueOptions{Workers: 1, Capacity: 128})
-						require.NoError(t, q.Start(ctx))
-						require.NoError(t, q.Put(ctx, testutil.NewSleepJob(time.Minute)))
+						if err := q.Start(ctx); err != nil {
+							t.Fatal(err)
+						}
+						if err := q.Put(ctx, testutil.NewSleepJob(time.Minute)); err != nil {
+							t.Fatal(err)
+						}
 
-						require.NoError(t, cache.Set("foo", q, 1))
+						if err := cache.Set("foo", q, 1); err != nil {
+							t.Fatal(err)
+						}
 						require.Equal(t, 1, cache.Len())
-						require.Error(t, cache.Remove(ctx, "foo"))
+						if err := cache.Remove(ctx, "foo"); err == nil {
+							t.Fatal("expected error")
+						}
 						require.Equal(t, 1, cache.Len())
 					},
 				},
 				{
 					name: "PruneNil",
 					test: func(t *testing.T, cache GroupCache) {
-						require.NoError(t, cache.Prune(ctx))
+						if err := cache.Prune(ctx); err != nil {
+							t.Fatal(err)
+						}
 					},
 				},
 				{
 					name: "PruneOne",
 					test: func(t *testing.T, cache GroupCache) {
-						require.NoError(t, cache.Set("foo", queue, time.Millisecond))
+						if err := cache.Set("foo", queue, time.Millisecond); err != nil {
+							t.Fatal(err)
+						}
 						time.Sleep(2 * time.Millisecond)
-						require.NoError(t, cache.Prune(ctx))
+						if err := cache.Prune(ctx); err != nil {
+							t.Fatal(err)
+						}
 						require.Zero(t, cache.Len())
 					},
 				},
@@ -129,25 +159,35 @@ func TestGroupCache(t *testing.T) {
 						tctx, cancel := context.WithCancel(ctx)
 						cancel()
 
-						require.NoError(t, cache.Set("foo", queue, time.Hour))
+						if err := cache.Set("foo", queue, time.Hour); err != nil {
+							t.Fatal(err)
+						}
 						require.Equal(t, 1, cache.Len())
-						require.Error(t, cache.Prune(tctx))
+						if err := cache.Prune(tctx); err == nil {
+							t.Fatal("expected error")
+						}
 						require.Equal(t, 1, cache.Len())
 					},
 				},
 				{
 					name: "PruneWithUnexpiredTTL",
 					test: func(t *testing.T, cache GroupCache) {
-						require.NoError(t, cache.Set("foo", queue, time.Hour))
+						if err := cache.Set("foo", queue, time.Hour); err != nil {
+							t.Fatal(err)
+						}
 						require.Equal(t, 1, cache.Len())
-						require.NoError(t, cache.Prune(ctx))
+						if err := cache.Prune(ctx); err != nil {
+							t.Fatal(err)
+						}
 						require.Equal(t, 1, cache.Len())
 					},
 				},
 				{
 					name: "CloseNoop",
 					test: func(t *testing.T, cache GroupCache) {
-						require.NoError(t, cache.Close(ctx))
+						if err := cache.Close(ctx); err != nil {
+							t.Fatal(err)
+						}
 					},
 				},
 				{
@@ -156,9 +196,13 @@ func TestGroupCache(t *testing.T) {
 						tctx, cancel := context.WithCancel(ctx)
 						cancel()
 
-						require.NoError(t, cache.Set("foo", queue, time.Hour))
+						if err := cache.Set("foo", queue, time.Hour); err != nil {
+							t.Fatal(err)
+						}
 						require.Equal(t, 1, cache.Len())
-						require.Error(t, cache.Close(tctx))
+						if err := cache.Close(tctx); err == nil {
+							t.Fatal("expected error")
+						}
 						require.Equal(t, 1, cache.Len())
 					},
 				},
@@ -168,15 +212,21 @@ func TestGroupCache(t *testing.T) {
 						tctx, cancel := context.WithCancel(ctx)
 						cancel()
 
-						require.Error(t, cache.Close(tctx))
+						if err := cache.Close(tctx); err == nil {
+							t.Fatal("expected error")
+						}
 					},
 				},
 				{
 					name: "ClosingClearsQueue",
 					test: func(t *testing.T, cache GroupCache) {
-						require.NoError(t, cache.Set("foo", queue, time.Hour))
+						if err := cache.Set("foo", queue, time.Hour); err != nil {
+							t.Fatal(err)
+						}
 						require.Equal(t, 1, cache.Len())
-						require.NoError(t, cache.Close(ctx))
+						if err := cache.Close(ctx); err != nil {
+							t.Fatal(err)
+						}
 						require.Equal(t, 0, cache.Len())
 
 					},

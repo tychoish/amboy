@@ -146,7 +146,9 @@ func RunSmokeTest(bctx context.Context, t *testing.T, test QueueTestCase) {
 								// but only real remote drivers check locks.
 								require.NoError(t, j.Lock(q.ID(), q.Info().LockTimeout))
 								require.NoError(t, j.Lock(q.ID(), q.Info().LockTimeout))
-								require.Error(t, q.Save(ctx, j))
+								if err := q.Save(ctx, j); err == nil {
+									t.Fatal("expected error")
+								}
 							}
 
 							for i := 0; i < 10; i++ {
