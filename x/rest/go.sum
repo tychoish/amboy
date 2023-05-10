@@ -137,11 +137,11 @@ github.com/tychoish/amboy v0.0.0-20221016162606-d408d958ac3b/go.mod h1:Sta6RE6dO
 github.com/tychoish/emt v0.0.0-20220306153139-74b97c67f209/go.mod h1:KMhVWIsL98Q8AoorphjsOQWabcNOoYqMSpODR/rtRb4=
 github.com/tychoish/emt v0.1.0 h1:OMJ/lKO17hxijZW2UdbZY4vOfTwVKZzTb8FB0g8fh74=
 github.com/tychoish/emt v0.1.0/go.mod h1:KMhVWIsL98Q8AoorphjsOQWabcNOoYqMSpODR/rtRb4=
-github.com/tychoish/fun v0.8.5 h1:8uTFk2fG8mxDyRmqMj6llKE8+vTuQRclUkl0/tyYwAU=
+github.com/tychoish/fun v0.9.2 h1:OUGA+jHThZ/IxWATw61EJJRGRpF00IMzqQ8EhKH9HtI=
 github.com/tychoish/gimlet v0.0.0-20220430160104-9dbd313f23e7 h1:ODYpfaba/8V0hhlRmkzCizakPxG2f8CMPjAkY9OwLA0=
 github.com/tychoish/gimlet v0.0.0-20220430160104-9dbd313f23e7/go.mod h1:eM2pD524BXVelLl7n2RKKN9iDzoxo1X1pIUeQDmh2Ck=
 github.com/tychoish/grip v0.0.0-20220426125019-871b9a2e8544/go.mod h1:3tvVQ8VrpPHtvrIH+sP+voliM/JZNgu8XuZzVCBbEjs=
-github.com/tychoish/grip v0.2.4 h1:u759iHGTvvCpFMBO4RxWywlvscB3O0esr22w5HntuUw=
+github.com/tychoish/grip v0.3.1 h1:+nfk1pjBFWOh27nfAcQI7mMh70dp0talc+i7D0mBy0E=
 github.com/urfave/negroni v1.0.0 h1:kIimOitoypq34K7TG7DUaJ9kq/N4Ofuwi1sjz0KipXc=
 github.com/urfave/negroni v1.0.0/go.mod h1:Meg73S6kFm/4PpbYdq35yYWoCZ9mS/YSx+lKnmiohz4=
 github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c/go.mod h1:lB8K/P019DLNhemzwFU4jHLhdvlE6uDZjXFejJXr49I=

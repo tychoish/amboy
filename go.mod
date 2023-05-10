@@ -6,8 +6,8 @@ require (
 	github.com/VividCortex/ewma v1.1.1
 	github.com/google/uuid v1.3.0
 	github.com/stretchr/testify v1.8.0
-	github.com/tychoish/fun v0.9.0
-	github.com/tychoish/grip v0.2.8
+	github.com/tychoish/fun v0.9.2
+	github.com/tychoish/grip v0.3.1
 	gonum.org/v1/gonum v0.7.0
 )
 

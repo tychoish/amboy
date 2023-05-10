@@ -8,8 +8,8 @@ require (
 	github.com/lib/pq v1.10.7
 	github.com/stretchr/testify v1.8.0
 	github.com/tychoish/amboy v0.0.0-20221016162606-d408d958ac3b
-	github.com/tychoish/fun v0.8.5
-	github.com/tychoish/grip v0.2.4
+	github.com/tychoish/fun v0.9.2
+	github.com/tychoish/grip v0.3.1
 )
 
 require (

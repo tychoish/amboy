@@ -23,9 +23,9 @@ require (
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/tychoish/emt v0.1.0 // indirect
-	github.com/tychoish/fun v0.8.5 // indirect
+	github.com/tychoish/fun v0.9.2 // indirect
 	github.com/tychoish/gimlet v0.0.0-20220430160104-9dbd313f23e7 // indirect
-	github.com/tychoish/grip v0.2.4 // indirect
+	github.com/tychoish/grip v0.3.1 // indirect
 	github.com/urfave/negroni v1.0.0 // indirect
 	gonum.org/v1/gonum v0.7.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect

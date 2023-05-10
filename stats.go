@@ -84,7 +84,11 @@ func (s QueueStats) Priority() level.Priority { return s.priority }
 
 // Structured indicates that the message type is structured and can be
 // handled using structured logging methods
-func (QueueStats) Structured() bool { return true }
+func (*QueueStats) Structured() bool { return true }
+
+// SetOption is a part of the grip/message.Composer interface but is a
+// noop for QueueStats.
+func (*QueueStats) SetOption(opts ...message.Option) {}
 
 // SetPriority  is part of the grip/message.Composer interface and
 // allows the caller to configure the piroity of the message.
@@ -93,20 +97,10 @@ func (s *QueueStats) SetPriority(l level.Priority) { s.priority = l }
 // Annotate is part of the grip/message.Composer interface and allows
 // the logging infrastructure to inject content and context into log
 // messages.
-func (s *QueueStats) Annotate(key string, value interface{}) error {
+func (s *QueueStats) Annotate(key string, value interface{}) {
 	if s.Context == nil {
-		s.Context = message.Fields{
-			key: value,
-		}
-
-		return nil
-	}
-
-	if _, ok := s.Context[key]; ok {
-		return fmt.Errorf("key '%s' already exists", key)
+		s.Context = message.Fields{}
 	}
 
 	s.Context[key] = value
-
-	return nil
 }
