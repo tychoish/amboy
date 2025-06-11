@@ -24,6 +24,7 @@ require (
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
+	github.com/tychoish/amboy/x/rest v0.0.0-20230510194436-098c36e98bc1 // indirect
 	github.com/tychoish/emt v0.1.0 // indirect
 	github.com/tychoish/fun v0.12.0 // indirect
 	github.com/tychoish/gimlet v0.0.0-20220430160104-9dbd313f23e7 // indirect

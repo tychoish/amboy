@@ -56,7 +56,7 @@ func MakeTestDatabase(bctx context.Context, name string) (*sqlx.DB, func() error
 		catcher.Add(db.Close())
 
 		_, err = tdb.Exec("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1;", dbName)
-		catcher.ErrorfWhen(err != nil, "problem killing connections: %w", err)
+		catcher.Wrap(err, "problem killing connections")
 
 		_, err = tdb.Exec("DROP DATABASE " + dbName)
 		if perr, ok := err.(*pq.Error); ok && perr.Code == "3D000" {

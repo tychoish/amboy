@@ -21,6 +21,7 @@ import (
 	"github.com/tychoish/amboy/queue"
 	"github.com/tychoish/amboy/registry"
 	"github.com/tychoish/fun/erc"
+	"github.com/tychoish/fun/ers"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
@@ -71,8 +72,8 @@ func (opts *Options) Validate() error {
 	}
 
 	catcher := &erc.Collector{}
-	erc.When(catcher, opts.Name == "", "must specify a name")
-	erc.When(catcher, opts.NumWorkers <= 0, "must specify > 1 workers")
+	catcher.When(opts.Name == "", ers.Error("must specify a name"))
+	catcher.When(opts.NumWorkers <= 0, ers.Error("must specify > 1 workers"))
 	return catcher.Resolve()
 }
 

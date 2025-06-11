@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/tychoish/amboy/management"
-	"github.com/tychoish/amboy/rest"
+	"github.com/tychoish/amboy/x/rest"
 	"github.com/urfave/cli"
 )
 

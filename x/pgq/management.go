@@ -11,6 +11,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/tychoish/amboy/management"
 	"github.com/tychoish/fun/erc"
+	"github.com/tychoish/fun/ers"
 	"github.com/tychoish/grip"
 )
 
@@ -31,7 +32,7 @@ type ManagerOptions struct {
 
 func (o *ManagerOptions) Validate() error {
 	catcher := &erc.Collector{}
-	erc.When(catcher, o.SingleGroup && o.ByGroups, "cannot specify conflicting group options")
+	catcher.When(o.SingleGroup && o.ByGroups, ers.Error("cannot specify conflicting group options"))
 	catcher.Add(o.Options.Validate())
 	return catcher.Resolve()
 }

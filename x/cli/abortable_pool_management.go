@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/cheynewallace/tabby"
-	"github.com/tychoish/amboy/rest"
+	"github.com/tychoish/amboy/x/rest"
 	"github.com/urfave/cli"
 )
 

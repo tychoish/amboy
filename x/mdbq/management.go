@@ -8,6 +8,7 @@ import (
 
 	"github.com/tychoish/amboy/management"
 	"github.com/tychoish/fun/erc"
+	"github.com/tychoish/fun/ers"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 	"go.mongodb.org/mongo-driver/bson"
@@ -47,8 +48,8 @@ func (o *DBQueueManagerOptions) collName() string {
 // invalid options.
 func (o *DBQueueManagerOptions) Validate() error {
 	catcher := &erc.Collector{}
-	erc.When(catcher, o.SingleGroup && o.ByGroups, "cannot specify conflicting group options")
-	erc.When(catcher, o.Name == "", "must specify queue name")
+	catcher.When(o.SingleGroup && o.ByGroups, ers.Error("cannot specify conflicting group options"))
+	catcher.When(o.Name == "", ers.Error("must specify queue name"))
 	catcher.Add(o.Options.Validate())
 
 	return catcher.Resolve()
@@ -123,7 +124,7 @@ func (db *dbQueueManager) aggregateCounters(ctx context.Context, stages ...bson.
 		out = append(out, val)
 	}
 	catcher.Add(cursor.Err())
-	if catcher.HasErrors() {
+	if !catcher.Ok() {
 		return nil, catcher.Resolve()
 	}
 
@@ -148,7 +149,7 @@ func (db *dbQueueManager) aggregateRuntimes(ctx context.Context, stages ...bson.
 		out = append(out, val)
 	}
 	catcher.Add(cursor.Err())
-	if catcher.HasErrors() {
+	if !catcher.Ok() {
 		return nil, catcher.Resolve()
 	}
 
@@ -173,7 +174,7 @@ func (db *dbQueueManager) aggregateErrors(ctx context.Context, stages ...bson.M)
 		out = append(out, val)
 	}
 	catcher.Add(cursor.Err())
-	if catcher.HasErrors() {
+	if !catcher.Ok() {
 		return nil, catcher.Resolve()
 	}
 

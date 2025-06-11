@@ -206,7 +206,7 @@ func isPgDuplicateError(err error) bool {
 	}
 
 	pgerr := &pq.Error{}
-	if errors.As(err, pgerr) && pgerr.Code == "23505" {
+	if errors.As(err, &pgerr) && pgerr.Code == "23505" {
 		return true
 	}
 

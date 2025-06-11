@@ -79,12 +79,12 @@ func (q *remoteSimpleOrdered) Next(ctx context.Context) (amboy.Job, error) {
 				q.addBlocked(job.ID())
 				continue
 			case dependency.Unresolved:
-				q.log.Warning(message.MakeAnnotated("detected a dependency error",
-					message.Fields{
-						"job":   id,
-						"edges": dep.Edges(),
-						"dep":   dep.Type(),
-					}))
+				q.log.Warning(message.Fields{
+					"msg":   "detected a dependency error",
+					"job":   id,
+					"edges": dep.Edges(),
+					"dep":   dep.Type(),
+				})
 				q.dispatcher.Release(ctx, job)
 				q.addBlocked(job.ID())
 				continue
@@ -119,8 +119,9 @@ func (q *remoteSimpleOrdered) Next(ctx context.Context) (amboy.Job, error) {
 				continue
 			default:
 				q.dispatcher.Release(ctx, job)
-				q.log.Warning(message.MakeAnnotated("detected invalid dependency",
+				q.log.Warning(
 					message.Fields{
+						"msg":   "detected invalid dependency",
 						"job":   id,
 						"edges": dep.Edges(),
 						"dep":   dep.Type(),
@@ -129,7 +130,7 @@ func (q *remoteSimpleOrdered) Next(ctx context.Context) (amboy.Job, error) {
 							"valid":  dependency.IsValidState(dep.State()),
 							"string": dep.State().String(),
 						},
-					}))
+					})
 			}
 		}
 	}

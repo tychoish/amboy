@@ -12,6 +12,7 @@ import (
 	"github.com/tychoish/amboy"
 	"github.com/tychoish/amboy/pool"
 	"github.com/tychoish/fun/erc"
+	"github.com/tychoish/fun/ers"
 	"github.com/tychoish/grip"
 	"github.com/tychoish/grip/message"
 	"github.com/tychoish/grip/recovery"
@@ -92,15 +93,13 @@ func (opts *MongoDBQueueGroupOptions) constructor(ctx context.Context, name stri
 
 func (opts MongoDBQueueGroupOptions) validate() error {
 	catcher := &erc.Collector{}
-	erc.When(catcher, opts.Prefix == "", "prefix must be set")
-	erc.When(catcher, opts.TTL < 0, "ttl must be greater than or equal to 0")
-	erc.When(catcher, opts.TTL > 0 && opts.TTL < time.Second, "ttl cannot be less than 1 second, unless it is 0")
-	erc.When(catcher, opts.PruneFrequency < 0, "prune frequency must be greater than or equal to 0")
-	erc.When(catcher, opts.PruneFrequency > 0 && opts.TTL < time.Second, "prune frequency cannot be less than 1 second, unless it is 0")
-	erc.When(catcher, (opts.TTL == 0 && opts.PruneFrequency != 0) || (opts.TTL != 0 && opts.PruneFrequency == 0),
-		"ttl and prune frequency must both be 0 or both be not 0")
-	erc.When(catcher, opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil,
-		"must specify either a default worker pool size or a WorkerPoolSize function")
+	catcher.When(opts.Prefix == "", ers.Error("prefix must be set"))
+	catcher.When(opts.TTL < 0, ers.Error("ttl must be greater than or equal to 0"))
+	catcher.When(opts.TTL > 0 && opts.TTL < time.Second, ers.Error("ttl cannot be less than 1 second, unless it is 0"))
+	catcher.When(opts.PruneFrequency < 0, ers.Error("prune frequency must be greater than or equal to 0"))
+	catcher.When(opts.PruneFrequency > 0 && opts.TTL < time.Second, ers.Error("prune frequency cannot be less than 1 second, unless it is 0"))
+	catcher.When((opts.TTL == 0 && opts.PruneFrequency != 0) || (opts.TTL != 0 && opts.PruneFrequency == 0), ers.Error("ttl and prune frequency must both be 0 or both be not 0"))
+	catcher.When(opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil, ers.Error("must specify either a default worker pool size or a WorkerPoolSize function"))
 
 	if opts.Logger.Sender() == nil {
 		opts.Logger = grip.NewLogger(grip.Sender())
