@@ -1,12 +1,14 @@
 module github.com/tychoish/amboy/x/rest
 
-go 1.19
+go 1.24
+
+toolchain go1.24.3
 
 require (
 	github.com/stretchr/testify v1.8.0
 	github.com/tychoish/amboy v0.0.0-20221016162606-d408d958ac3b
 	github.com/tychoish/gimlet v0.0.0-20220430160104-9dbd313f23e7
-	github.com/tychoish/grip v0.3.1
+	github.com/tychoish/grip v0.4.0
 )
 
 require (
@@ -20,7 +22,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/tychoish/emt v0.1.0 // indirect
-	github.com/tychoish/fun v0.9.2 // indirect
+	github.com/tychoish/fun v0.12.0 // indirect
 	github.com/urfave/negroni v1.0.0 // indirect
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
 	gonum.org/v1/gonum v0.7.0 // indirect

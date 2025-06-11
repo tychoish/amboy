@@ -1,14 +1,16 @@
 module github.com/tychoish/amboy/x/amzsqs
 
-go 1.19
+go 1.24
+
+toolchain go1.24.3
 
 require (
 	github.com/aws/aws-sdk-go v1.44.116
 	github.com/google/uuid v1.3.0
 	github.com/stretchr/testify v1.8.0
 	github.com/tychoish/amboy v0.0.0-20221016162606-d408d958ac3b
-	github.com/tychoish/fun v0.9.2
-	github.com/tychoish/grip v0.3.1
+	github.com/tychoish/fun v0.12.0
+	github.com/tychoish/grip v0.4.0
 )
 
 require (

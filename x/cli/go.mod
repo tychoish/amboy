@@ -1,6 +1,8 @@
 module github.com/tychoish/amboy/x/cli
 
-go 1.18
+go 1.24
+
+toolchain go1.24.3
 
 require (
 	github.com/cheynewallace/tabby v1.1.0
@@ -23,9 +25,9 @@ require (
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/tychoish/emt v0.1.0 // indirect
-	github.com/tychoish/fun v0.9.2 // indirect
+	github.com/tychoish/fun v0.12.0 // indirect
 	github.com/tychoish/gimlet v0.0.0-20220430160104-9dbd313f23e7 // indirect
-	github.com/tychoish/grip v0.3.1 // indirect
+	github.com/tychoish/grip v0.4.0 // indirect
 	github.com/urfave/negroni v1.0.0 // indirect
 	gonum.org/v1/gonum v0.7.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
