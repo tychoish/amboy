@@ -27,11 +27,11 @@ func ExtractErrors(ctx context.Context, catcher *erc.Collector, q Queue) {
 			continue
 		}
 		if err := ctx.Err(); err != nil {
-			catcher.Add(err)
+			catcher.Push(err)
 			break
 		}
 
-		catcher.Add(result.Error())
+		catcher.Push(result.Error())
 	}
 }
 
@@ -63,11 +63,11 @@ func PopulateQueue(ctx context.Context, q Queue, jobs <-chan Job) error {
 
 	for j := range jobs {
 		if err := ctx.Err(); err != nil {
-			catcher.Add(err)
+			catcher.Push(err)
 			break
 		}
 
-		catcher.Add(q.Put(ctx, j))
+		catcher.Push(q.Put(ctx, j))
 	}
 
 	return catcher.Resolve()

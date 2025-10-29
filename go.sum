@@ -23,8 +23,12 @@ github.com/stretchr/testify v1.8.0 h1:pSgiaMZlXftHpm5L7V1+rVB+AZJydKsMxsQBIJw4PK
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 github.com/tychoish/fun v0.12.0 h1:YxYyCTfKL+3Q4wtcPFZsRVOWF12llUCbqkkK53MdwNs=
 github.com/tychoish/fun v0.12.0/go.mod h1:ghjR/9EyWh8h8oBg2+WJhsEcF/W4JXMWpo6btMRNusE=
+github.com/tychoish/fun v0.13.0 h1:gH4QIeLJkYsNa1Zu/g4MgmUAhWoGN4PEMu4hj/GqkOU=
+github.com/tychoish/fun v0.13.0/go.mod h1:ghjR/9EyWh8h8oBg2+WJhsEcF/W4JXMWpo6btMRNusE=
 github.com/tychoish/grip v0.4.0 h1:5WL5H4raAqj+1eG0p7JsXABvqElPuE3+0G95V0MmrPQ=
 github.com/tychoish/grip v0.4.0/go.mod h1:/0IsKegfHVZ4R2E+3iOB2yarhLh4XL3yyhO2Brv98LA=
+github.com/tychoish/grip v0.4.1 h1:3f6+41qIUY8VxMeQfJdyR++5PEZDxiV6gePfjouoqq0=
+github.com/tychoish/grip v0.4.1/go.mod h1:xt8TlwbfmdkROe3cB/RMhrIfwyrP6enodZn6QrjGBqU=
 golang.org/x/exp v0.0.0-20180321215751-8460e604b9de/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20180807140117-3d87b88a115f/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190125153040-c74c464bbbf2 h1:y102fOLFqhV41b+4GPiJoa0k/x+pJcEi2/HB1Y5T6fU=

@@ -43,9 +43,9 @@ func NewMongoDBQueue(ctx context.Context, opts MongoDBQueueCreationOptions) (amb
 func (opts *MongoDBQueueCreationOptions) Validate() error {
 	catcher := &erc.Collector{}
 
-	catcher.When(opts.Name == "", ers.Error("must specify a name"))
+	catcher.If(opts.Name == "", ers.Error("must specify a name"))
 
-	catcher.When(opts.Client == nil && (opts.MDB.URI == "" && opts.MDB.DB == ""), ers.Error("must specify database options"))
+	catcher.If(opts.Client == nil && (opts.MDB.URI == "" && opts.MDB.DB == ""), ers.Error("must specify database options"))
 
 	return catcher.Resolve()
 }

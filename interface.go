@@ -154,9 +154,9 @@ func (j JobTimeInfo) IsDispatchable() bool {
 // Validate ensures that the structure has reasonable values set.
 func (j JobTimeInfo) Validate() error {
 	catcher := &erc.Collector{}
-	catcher.When(!j.DispatchBy.IsZero() && j.WaitUntil.After(j.DispatchBy), ers.Error("invalid for wait_until to be after dispatch_by"))
-	catcher.When(j.Created.IsZero(), ers.Error("must specify non-zero created timestamp"))
-	catcher.When(j.MaxTime < 0, ers.Error("must specify 0 or positive max_time"))
+	catcher.If(!j.DispatchBy.IsZero() && j.WaitUntil.After(j.DispatchBy), ers.Error("invalid for wait_until to be after dispatch_by"))
+	catcher.If(j.Created.IsZero(), ers.Error("must specify non-zero created timestamp"))
+	catcher.If(j.MaxTime < 0, ers.Error("must specify 0 or positive max_time"))
 
 	return catcher.Resolve()
 }

@@ -40,13 +40,13 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 				closer := func(ctx context.Context) error {
 					catcher := &erc.Collector{}
 
-					catcher.Add(q.Close(ctx))
+					catcher.Push(q.Close(ctx))
 
 					if d := rq.Driver(); d != nil {
 						d.Close()
 					}
 
-					catcher.Add(client.Database(opts.MDB.DB).Collection(addJobsSuffix(name)).Drop(ctx))
+					catcher.Push(client.Database(opts.MDB.DB).Collection(addJobsSuffix(name)).Drop(ctx))
 
 					return catcher.Resolve()
 				}
@@ -80,13 +80,13 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 				closer := func(ctx context.Context) error {
 					catcher := &erc.Collector{}
 
-					catcher.Add(q.Close(ctx))
+					catcher.Push(q.Close(ctx))
 
 					if d := rq.Driver(); d != nil {
 						d.Close()
 					}
 
-					catcher.Add(client.Database(opts.MDB.DB).Collection(addJobsSuffix(name)).Drop(ctx))
+					catcher.Push(client.Database(opts.MDB.DB).Collection(addJobsSuffix(name)).Drop(ctx))
 
 					return catcher.Resolve()
 				}
@@ -118,13 +118,13 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 				closer := func(ctx context.Context) error {
 					catcher := &erc.Collector{}
 
-					catcher.Add(q.Close(ctx))
+					catcher.Push(q.Close(ctx))
 
 					if d := rq.Driver(); d != nil {
 						d.Close()
 					}
 
-					catcher.Add(client.Database(opts.MDB.DB).Collection(addJobsSuffix(name)).Drop(ctx))
+					catcher.Push(client.Database(opts.MDB.DB).Collection(addJobsSuffix(name)).Drop(ctx))
 
 					return catcher.Resolve()
 				}
@@ -133,7 +133,6 @@ func MongoDBQueueTestCases(client *mongo.Client) []testutil.QueueTestCase {
 			},
 		},
 	}
-
 }
 
 func TestQueueSmoke(t *testing.T) {

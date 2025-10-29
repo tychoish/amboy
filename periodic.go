@@ -52,7 +52,7 @@ func ScheduleManyJobsFactory(op func() []Job) QueueOperation {
 	return func(ctx context.Context, q Queue) error {
 		catcher := &erc.Collector{}
 		for _, j := range op() {
-			catcher.Add(q.Put(ctx, j))
+			catcher.Push(q.Put(ctx, j))
 		}
 		return catcher.Resolve()
 	}
@@ -73,9 +73,9 @@ func ScheduleJobsFromGeneratorFactory(op func() <-chan Job) QueueOperation {
 		for {
 			select {
 			case j := <-jobs:
-				catcher.Add(q.Put(ctx, j))
+				catcher.Push(q.Put(ctx, j))
 			case <-ctx.Done():
-				catcher.Add(ctx.Err())
+				catcher.Push(ctx.Err())
 				break waitLoop
 			}
 		}
@@ -92,14 +92,14 @@ func GroupQueueOperationFactory(first QueueOperation, ops ...QueueOperation) Que
 	return func(ctx context.Context, q Queue) error {
 		catcher := &erc.Collector{}
 
-		catcher.Add(first(ctx, q))
+		catcher.Push(first(ctx, q))
 
 		for _, op := range ops {
 			if err := ctx.Err(); err != nil {
-				catcher.Add(err)
+				catcher.Push(err)
 				break
 			}
-			catcher.Add(op(ctx, q))
+			catcher.Push(op(ctx, q))
 		}
 		return catcher.Resolve()
 	}
@@ -119,7 +119,6 @@ func IntervalQueueOperation(ctx context.Context, q Queue, interval time.Duration
 
 		defer func() {
 			err = recovery.HandlePanicWithError(recover(), err, "interval background job scheduler")
-
 			if err != nil {
 				if !conf.ContinueOnError {
 					return

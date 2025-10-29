@@ -83,7 +83,7 @@ func (s *multiQueueSender) Flush(ctx context.Context) error {
 
 	catcher := &erc.Collector{}
 	for _, sender := range s.senders {
-		catcher.Add(sender.Flush(ctx))
+		catcher.Push(sender.Flush(ctx))
 	}
 
 	return catcher.Resolve()

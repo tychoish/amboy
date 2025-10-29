@@ -48,9 +48,9 @@ func (o *DBQueueManagerOptions) collName() string {
 // invalid options.
 func (o *DBQueueManagerOptions) Validate() error {
 	catcher := &erc.Collector{}
-	catcher.When(o.SingleGroup && o.ByGroups, ers.Error("cannot specify conflicting group options"))
-	catcher.When(o.Name == "", ers.Error("must specify queue name"))
-	catcher.Add(o.Options.Validate())
+	catcher.If(o.SingleGroup && o.ByGroups, ers.Error("cannot specify conflicting group options"))
+	catcher.If(o.Name == "", ers.Error("must specify queue name"))
+	catcher.Push(o.Options.Validate())
 
 	return catcher.Resolve()
 }
@@ -118,12 +118,12 @@ func (db *dbQueueManager) aggregateCounters(ctx context.Context, stages ...bson.
 		val := management.JobCounters{}
 		err = cursor.Decode(&val)
 		if err != nil {
-			catcher.Add(err)
+			catcher.Push(err)
 			continue
 		}
 		out = append(out, val)
 	}
-	catcher.Add(cursor.Err())
+	catcher.Push(cursor.Err())
 	if !catcher.Ok() {
 		return nil, catcher.Resolve()
 	}
@@ -143,12 +143,12 @@ func (db *dbQueueManager) aggregateRuntimes(ctx context.Context, stages ...bson.
 		val := management.JobRuntimes{}
 		err = cursor.Decode(&val)
 		if err != nil {
-			catcher.Add(err)
+			catcher.Push(err)
 			continue
 		}
 		out = append(out, val)
 	}
-	catcher.Add(cursor.Err())
+	catcher.Push(cursor.Err())
 	if !catcher.Ok() {
 		return nil, catcher.Resolve()
 	}
@@ -168,12 +168,12 @@ func (db *dbQueueManager) aggregateErrors(ctx context.Context, stages ...bson.M)
 		val := management.JobErrorsForType{}
 		err = cursor.Decode(&val)
 		if err != nil {
-			catcher.Add(err)
+			catcher.Push(err)
 			continue
 		}
 		out = append(out, val)
 	}
-	catcher.Add(cursor.Err())
+	catcher.Push(cursor.Err())
 	if !catcher.Ok() {
 		return nil, catcher.Resolve()
 	}
@@ -273,7 +273,6 @@ func (db *dbQueueManager) JobStatus(ctx context.Context, f management.StatusFilt
 	}
 
 	counters, err := db.aggregateCounters(ctx, stages...)
-
 	if err != nil {
 		return nil, err
 	}
@@ -305,11 +304,14 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 		group = bson.M{
 			"_id": "$type",
 			"duration": bson.M{"$avg": bson.M{
-				"$multiply": []interface{}{bson.M{
-					"$subtract": []string{"$time_info.end", "$time_info.start"}},
+				"$multiply": []interface{}{
+					bson.M{
+						"$subtract": []string{"$time_info.end", "$time_info.start"},
+					},
 					1000000, // convert to nanoseconds
 				},
-			}}}
+			}},
+		}
 	case management.Latency:
 		now := time.Now()
 		match = bson.M{
@@ -321,12 +323,17 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 		}
 		group = bson.M{
 			"_id": "$type",
-			"duration": bson.M{"$avg": bson.M{
-				"$multiply": []interface{}{bson.M{
-					"$subtract": []interface{}{"$time_info.start", "$time_info.created"}},
-					1000000, // convert to nanoseconds
-				}},
-			}}
+			"duration": bson.M{
+				"$avg": bson.M{
+					"$multiply": []interface{}{
+						bson.M{
+							"$subtract": []interface{}{"$time_info.start", "$time_info.created"},
+						},
+						1000000, // convert to nanoseconds
+					},
+				},
+			},
+		}
 	case management.Running:
 		now := time.Now()
 		match = bson.M{
@@ -335,12 +342,17 @@ func (db *dbQueueManager) RecentTiming(ctx context.Context, window time.Duration
 		}
 		group = bson.M{
 			"_id": "$type",
-			"duration": bson.M{"$avg": bson.M{
-				"$multiply": []interface{}{bson.M{
-					"$subtract": []interface{}{now, "$time_info.created"}},
-					1000000, // convert to nanoseconds
-				}},
-			}}
+			"duration": bson.M{
+				"$avg": bson.M{
+					"$multiply": []interface{}{
+						bson.M{
+							"$subtract": []interface{}{now, "$time_info.created"},
+						},
+						1000000, // convert to nanoseconds
+					},
+				},
+			},
+		}
 	default:
 		return nil, errors.New("invalid job runtime filter")
 	}
@@ -421,7 +433,6 @@ func (db *dbQueueManager) RecentErrors(ctx context.Context, window time.Duration
 
 	if err := f.Validate(); err != nil {
 		return nil, err
-
 	}
 	now := time.Now()
 

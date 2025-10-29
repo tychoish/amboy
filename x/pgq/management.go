@@ -32,8 +32,8 @@ type ManagerOptions struct {
 
 func (o *ManagerOptions) Validate() error {
 	catcher := &erc.Collector{}
-	catcher.When(o.SingleGroup && o.ByGroups, ers.Error("cannot specify conflicting group options"))
-	catcher.Add(o.Options.Validate())
+	catcher.If(o.SingleGroup && o.ByGroups, ers.Error("cannot specify conflicting group options"))
+	catcher.Push(o.Options.Validate())
 	return catcher.Resolve()
 }
 

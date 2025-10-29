@@ -119,7 +119,7 @@ func TestGroup(t *testing.T) {
 				g, err := NewGroup(ctx, db, opts, groupOpts)
 				if err != nil {
 					catcher := &erc.Collector{}
-					catcher.Add(err)
+					catcher.Push(err)
 					catcher.Check(closer)
 					return nil, nil, catcher.Resolve()
 				}
@@ -127,7 +127,5 @@ func TestGroup(t *testing.T) {
 				return g, func(ctx context.Context) error { return closer() }, nil
 			},
 		})
-
 	})
-
 }

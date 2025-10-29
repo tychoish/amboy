@@ -190,7 +190,7 @@ func (c *cacheImpl) Prune(ctx context.Context) error {
 							item.q.Runner().Close(ctx)
 							c.mu.Lock()
 							defer c.mu.Unlock()
-							catcher.Add(c.hook(ctx, item.name))
+							catcher.Push(c.hook(ctx, item.name))
 							delete(c.q, item.name)
 						}()
 						select {
@@ -205,7 +205,7 @@ func (c *cacheImpl) Prune(ctx context.Context) error {
 		}()
 	}
 	wg.Wait()
-	catcher.Add(ctx.Err())
+	catcher.Push(ctx.Err())
 	return catcher.Resolve()
 }
 

@@ -72,8 +72,8 @@ func (opts *Options) Validate() error {
 	}
 
 	catcher := &erc.Collector{}
-	catcher.When(opts.Name == "", ers.Error("must specify a name"))
-	catcher.When(opts.NumWorkers <= 0, ers.Error("must specify > 1 workers"))
+	catcher.If(opts.Name == "", ers.Error("must specify a name"))
+	catcher.If(opts.NumWorkers <= 0, ers.Error("must specify > 1 workers"))
 	return catcher.Resolve()
 }
 
@@ -139,7 +139,7 @@ func (q *sqsFIFOQueue) Put(ctx context.Context, j amboy.Job) error {
 		return amboy.NewDuplicateJobErrorf("cannot add %s because duplicate job already exists", name)
 	}
 
-	dedupID := strings.Replace(j.ID(), " ", "", -1) //remove all spaces
+	dedupID := strings.Replace(j.ID(), " ", "", -1) // remove all spaces
 	curStatus := j.Status()
 	curStatus.ID = dedupID
 	j.SetStatus(curStatus)
@@ -158,7 +158,6 @@ func (q *sqsFIFOQueue) Put(ctx context.Context, j amboy.Job) error {
 		MessageDeduplicationId: aws.String(dedupID),
 	}
 	_, err = q.sqsClient.SendMessageWithContext(ctx, input)
-
 	if err != nil {
 		return fmt.Errorf("Error sending message in Put: %w", err)
 	}
@@ -182,7 +181,6 @@ func (q *sqsFIFOQueue) Save(ctx context.Context, j amboy.Job) error {
 
 	q.tasks.all[name] = j
 	return nil
-
 }
 
 // Returns the next job in the queue. These calls are
@@ -332,8 +330,10 @@ func (q *sqsFIFOQueue) Stats(ctx context.Context) amboy.QueueStats {
 
 	output, err := q.sqsClient.GetQueueAttributesWithContext(ctx,
 		&sqs.GetQueueAttributesInput{
-			AttributeNames: []*string{aws.String("ApproximateNumberOfMessages"),
-				aws.String("ApproximateNumberOfMessagesNotVisible")},
+			AttributeNames: []*string{
+				aws.String("ApproximateNumberOfMessages"),
+				aws.String("ApproximateNumberOfMessagesNotVisible"),
+			},
 			QueueUrl: aws.String(q.sqsURL),
 		})
 	if err != nil {

@@ -93,13 +93,13 @@ func (opts *MongoDBQueueGroupOptions) constructor(ctx context.Context, name stri
 
 func (opts MongoDBQueueGroupOptions) validate() error {
 	catcher := &erc.Collector{}
-	catcher.When(opts.Prefix == "", ers.Error("prefix must be set"))
-	catcher.When(opts.TTL < 0, ers.Error("ttl must be greater than or equal to 0"))
-	catcher.When(opts.TTL > 0 && opts.TTL < time.Second, ers.Error("ttl cannot be less than 1 second, unless it is 0"))
-	catcher.When(opts.PruneFrequency < 0, ers.Error("prune frequency must be greater than or equal to 0"))
-	catcher.When(opts.PruneFrequency > 0 && opts.TTL < time.Second, ers.Error("prune frequency cannot be less than 1 second, unless it is 0"))
-	catcher.When((opts.TTL == 0 && opts.PruneFrequency != 0) || (opts.TTL != 0 && opts.PruneFrequency == 0), ers.Error("ttl and prune frequency must both be 0 or both be not 0"))
-	catcher.When(opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil, ers.Error("must specify either a default worker pool size or a WorkerPoolSize function"))
+	catcher.If(opts.Prefix == "", ers.Error("prefix must be set"))
+	catcher.If(opts.TTL < 0, ers.Error("ttl must be greater than or equal to 0"))
+	catcher.If(opts.TTL > 0 && opts.TTL < time.Second, ers.Error("ttl cannot be less than 1 second, unless it is 0"))
+	catcher.If(opts.PruneFrequency < 0, ers.Error("prune frequency must be greater than or equal to 0"))
+	catcher.If(opts.PruneFrequency > 0 && opts.TTL < time.Second, ers.Error("prune frequency cannot be less than 1 second, unless it is 0"))
+	catcher.If((opts.TTL == 0 && opts.PruneFrequency != 0) || (opts.TTL != 0 && opts.PruneFrequency == 0), ers.Error("ttl and prune frequency must both be 0 or both be not 0"))
+	catcher.If(opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil, ers.Error("must specify either a default worker pool size or a WorkerPoolSize function"))
 
 	if opts.Logger.Sender() == nil {
 		opts.Logger = grip.NewLogger(grip.Sender())
@@ -144,6 +144,7 @@ func NewMongoDBQueueGroup(ctx context.Context, opts MongoDBQueueGroupOptions, cl
 
 	return g, nil
 }
+
 func (g *remoteMongoQueueGroup) Start(ctx context.Context) error {
 	err := func() error {
 		g.mu.Lock()
@@ -192,7 +193,6 @@ func (g *remoteMongoQueueGroup) Start(ctx context.Context) error {
 		}
 		return nil
 	}()
-
 	if err != nil {
 		return err
 	}
@@ -216,7 +216,7 @@ func (g *remoteMongoQueueGroup) startQueues(ctx context.Context) error {
 	for _, coll := range colls {
 		q, err := g.startProcessingRemoteQueue(ctx, coll)
 		if err != nil {
-			catcher.Add(fmt.Errorf("problem starting queue: %w", err))
+			catcher.Push(fmt.Errorf("problem starting queue: %w", err))
 		} else {
 			g.queues[g.idFromCollection(coll)] = q
 			g.ttlMap[g.idFromCollection(coll)] = time.Now()
@@ -374,7 +374,7 @@ func (g *remoteMongoQueueGroup) Prune(ctx context.Context) error {
 					"status.mod_ts":    bson.M{"$gte": time.Now().Add(-g.opts.TTL)},
 				})
 				if err != nil {
-					catcher.Add(err)
+					catcher.Push(err)
 					return
 				}
 				if count > 0 {
@@ -382,7 +382,7 @@ func (g *remoteMongoQueueGroup) Prune(ctx context.Context) error {
 				}
 				count, err = c.CountDocuments(ctx, bson.M{"status.completed": false})
 				if err != nil {
-					catcher.Add(err)
+					catcher.Push(err)
 					return
 				}
 				if count > 0 {
@@ -398,7 +398,7 @@ func (g *remoteMongoQueueGroup) Prune(ctx context.Context) error {
 					}
 				}
 				if err := c.Drop(ctx); err != nil {
-					catcher.Add(err)
+					catcher.Push(err)
 				}
 			}
 		}(collsDeleteChan)

@@ -229,7 +229,6 @@ func (m *queueManager) RecentErrors(ctx context.Context, window time.Duration, f
 	var err error
 	if err = f.Validate(); err != nil {
 		return nil, err
-
 	}
 	if window <= time.Second {
 		return nil, errors.New("must specify windows greater than one second")
@@ -333,7 +332,6 @@ func (m *queueManager) RecentJobErrors(ctx context.Context, jobType string, wind
 	var err error
 	if err = f.Validate(); err != nil {
 		return nil, err
-
 	}
 	if window <= time.Second {
 		return nil, errors.New("must specify windows greater than one second")
@@ -440,7 +438,6 @@ func (m *queueManager) RecentJobErrors(ctx context.Context, jobType string, wind
 		FilteredByType: true,
 		Data:           reports,
 	}, nil
-
 }
 
 func (m *queueManager) CompleteJob(ctx context.Context, name string) error {
@@ -497,7 +494,7 @@ func (m *queueManager) CompleteJobsByType(ctx context.Context, f StatusFilter, j
 		status.ModificationCount += 2
 		status.Completed = true
 		job.SetStatus(status)
-		catcher.Add(m.queue.Complete(ctx, job))
+		catcher.Push(m.queue.Complete(ctx, job))
 	}
 
 	return catcher.Resolve()
@@ -542,14 +539,14 @@ func (m *queueManager) CompleteJobs(ctx context.Context, f StatusFilter) error {
 
 		job, err = m.queue.Get(ctx, job.ID())
 		if err != nil {
-			catcher.Add(fmt.Errorf("could not retrieve job %q: %w", job.ID(), err))
+			catcher.Push(fmt.Errorf("could not retrieve job %q: %w", job.ID(), err))
 			continue
 		}
 		status := job.Status()
 		status.ModificationCount += 2
 		status.Completed = true
 		job.SetStatus(status)
-		catcher.Add(m.queue.Complete(ctx, job))
+		catcher.Push(m.queue.Complete(ctx, job))
 	}
 
 	return catcher.Resolve()
@@ -588,35 +585,35 @@ func (m queueManager) PruneJobs(ctx context.Context, ts time.Time, limit int, f 
 			if stat.Completed && ti.End.Before(ts) {
 				count++
 				if err := dq.Delete(ctx, id); err != nil {
-					catcher.Add(fmt.Errorf("problem deleting stale job %q: %w", id, err))
+					catcher.Push(fmt.Errorf("problem deleting stale job %q: %w", id, err))
 				}
 			}
 		case Stale:
 			if stat.InProgress && time.Since(stat.ModificationTime) > m.queue.Info().LockTimeout && ti.Start.Before(ts) {
 				count++
 				if err := dq.Delete(ctx, id); err != nil {
-					catcher.Add(fmt.Errorf("problem deleting stale job %q: %w", id, err))
+					catcher.Push(fmt.Errorf("problem deleting stale job %q: %w", id, err))
 				}
 			}
 		case InProgress:
 			if stat.InProgress && ti.Start.Before(ts) {
 				count++
 				if err := dq.Delete(ctx, id); err != nil {
-					catcher.Add(fmt.Errorf("problem deleting in progress job %q: %w", id, err))
+					catcher.Push(fmt.Errorf("problem deleting in progress job %q: %w", id, err))
 				}
 			}
 		case Pending:
 			if !stat.Completed && !stat.InProgress && ti.Created.Before(ts) {
 				count++
 				if err := dq.Delete(ctx, id); err != nil {
-					catcher.Add(fmt.Errorf("problem deleting pending job %q: %w", id, err))
+					catcher.Push(fmt.Errorf("problem deleting pending job %q: %w", id, err))
 				}
 			}
 		case All:
 			if !stat.Completed && !stat.InProgress && ti.Created.Before(ts) {
 				count++
 				if err := dq.Delete(ctx, id); err != nil {
-					catcher.Add(fmt.Errorf("problem deleting pending job %q: %w", id, err))
+					catcher.Push(fmt.Errorf("problem deleting pending job %q: %w", id, err))
 				}
 			}
 		}

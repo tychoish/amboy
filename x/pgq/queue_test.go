@@ -53,7 +53,7 @@ func MakeTestDatabase(bctx context.Context, name string) (*sqlx.DB, func() error
 	closer := func() error {
 		cancel()
 		catcher := &erc.Collector{}
-		catcher.Add(db.Close())
+		catcher.Push(db.Close())
 
 		_, err = tdb.Exec("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1;", dbName)
 		catcher.Wrap(err, "problem killing connections")
@@ -62,16 +62,15 @@ func MakeTestDatabase(bctx context.Context, name string) (*sqlx.DB, func() error
 		if perr, ok := err.(*pq.Error); ok && perr.Code == "3D000" {
 			grip.Debug(fmt.Errorf("dropping database: %w", err))
 		} else {
-			catcher.Add(err)
+			catcher.Push(err)
 		}
 
-		catcher.Add(tdb.Close())
+		catcher.Push(tdb.Close())
 		grip.Critical(message.WrapError(catcher.Resolve(), "problem cleaning up test database"))
 		return nil
 	}
 
 	return db, closer, nil
-
 }
 
 func TestQueue(t *testing.T) {
@@ -127,14 +126,12 @@ func TestQueueSmoke(t *testing.T) {
 				return q, func(ctx context.Context) error {
 					catcher := &erc.Collector{}
 					go func() {
-
 						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 						defer cancel()
 
-						catcher.Add(q.Close(cctx))
+						catcher.Push(q.Close(cctx))
 						grip.Warning(CleanDatabase(cctx, db, "amboy"))
-						catcher.Add(closer())
-
+						catcher.Push(closer())
 					}()
 					return catcher.Resolve()
 				}, nil
@@ -165,14 +162,12 @@ func TestQueueSmoke(t *testing.T) {
 				return q, func(ctx context.Context) error {
 					catcher := &erc.Collector{}
 					go func() {
-
 						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 						defer cancel()
 
-						catcher.Add(q.Close(cctx))
+						catcher.Push(q.Close(cctx))
 						grip.Warning(CleanDatabase(cctx, db, "amboy"))
-						catcher.Add(closer())
-
+						catcher.Push(closer())
 					}()
 					return catcher.Resolve()
 				}, nil
@@ -208,14 +203,12 @@ func TestQueueSmoke(t *testing.T) {
 				return q, func(ctx context.Context) error {
 					catcher := &erc.Collector{}
 					go func() {
-
 						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 						defer cancel()
 
-						catcher.Add(q.Close(cctx))
+						catcher.Push(q.Close(cctx))
 						grip.Warning(CleanDatabase(cctx, db, "amboy"))
-						catcher.Add(closer())
-
+						catcher.Push(closer())
 					}()
 					return catcher.Resolve()
 				}, nil
@@ -251,14 +244,12 @@ func TestQueueSmoke(t *testing.T) {
 				return q, func(ctx context.Context) error {
 					catcher := &erc.Collector{}
 					go func() {
-
 						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 						defer cancel()
 
-						catcher.Add(q.Close(cctx))
+						catcher.Push(q.Close(cctx))
 						grip.Warning(CleanDatabase(cctx, db, "amboy"))
-						catcher.Add(closer())
-
+						catcher.Push(closer())
 					}()
 					return catcher.Resolve()
 				}, nil

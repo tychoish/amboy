@@ -63,12 +63,12 @@ type GroupOptions struct {
 
 func (opts *GroupOptions) validate() error {
 	catcher := &erc.Collector{}
-	catcher.When(opts.TTL < 0, ers.Error("ttl must be greater than or equal to 0"))
-	catcher.When(opts.TTL > 0 && opts.TTL < time.Second, ers.Error("ttl cannot be less than 1 second, unless it is 0"))
-	catcher.When(opts.PruneFrequency < 0, ers.Error("prune frequency must be greater than or equal to 0"))
-	catcher.When(opts.PruneFrequency > 0 && opts.TTL < time.Second, ers.Error("prune frequency cannot be less than 1 second, unless it is 0"))
-	catcher.When((opts.TTL == 0 && opts.PruneFrequency != 0) || (opts.TTL != 0 && opts.PruneFrequency == 0), ers.Error("ttl and prune frequency must both be 0 or both be not 0"))
-	catcher.When(opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil, ers.Error("must specify either a default worker pool size or a WorkerPoolSize function"))
+	catcher.If(opts.TTL < 0, ers.Error("ttl must be greater than or equal to 0"))
+	catcher.If(opts.TTL > 0 && opts.TTL < time.Second, ers.Error("ttl cannot be less than 1 second, unless it is 0"))
+	catcher.If(opts.PruneFrequency < 0, ers.Error("prune frequency must be greater than or equal to 0"))
+	catcher.If(opts.PruneFrequency > 0 && opts.TTL < time.Second, ers.Error("prune frequency cannot be less than 1 second, unless it is 0"))
+	catcher.If((opts.TTL == 0 && opts.PruneFrequency != 0) || (opts.TTL != 0 && opts.PruneFrequency == 0), ers.Error("ttl and prune frequency must both be 0 or both be not 0"))
+	catcher.If(opts.DefaultWorkers == 0 && opts.WorkerPoolSize == nil, ers.Error("must specify either a default worker pool size or a WorkerPoolSize function"))
 
 	if opts.BackgroundOperationErrorLogLevel == 0 {
 		opts.BackgroundOperationErrorLogLevel = level.Warning
@@ -200,7 +200,7 @@ func (g *sqlGroup) startQueues(ctx context.Context) error {
 	catcher := &erc.Collector{}
 	for _, id := range queues {
 		_, err := g.Get(ctx, id)
-		catcher.Add(err)
+		catcher.Push(err)
 	}
 
 	return catcher.Resolve()

@@ -88,11 +88,11 @@ func DefaultMongoDBOptions() MongoDBOptions {
 // are unspecified and have a default value.
 func (opts *MongoDBOptions) Validate() error {
 	catcher := &erc.Collector{}
-	catcher.When(opts.URI == "", ers.Error("must specify connection URI"))
-	catcher.When(opts.DB == "", ers.Error("must specify database"))
-	catcher.When(opts.LockTimeout < 0, ers.Error("cannot have negative lock timeout"))
-	catcher.When(opts.Marshler == nil, ers.Error("must specify a bson marshaler"))
-	catcher.When(opts.Unmarshaler == nil, ers.Error("must specify a bson unmashlser"))
+	catcher.If(opts.URI == "", ers.Error("must specify connection URI"))
+	catcher.If(opts.DB == "", ers.Error("must specify database"))
+	catcher.If(opts.LockTimeout < 0, ers.Error("cannot have negative lock timeout"))
+	catcher.If(opts.Marshler == nil, ers.Error("must specify a bson marshaler"))
+	catcher.If(opts.Unmarshaler == nil, ers.Error("must specify a bson unmashlser"))
 
 	if opts.LockTimeout == 0 {
 		opts.LockTimeout = amboy.LockTimeout

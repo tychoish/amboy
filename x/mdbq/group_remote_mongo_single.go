@@ -118,7 +118,6 @@ func (g *remoteMongoQueueGroupSingle) getQueues(ctx context.Context) ([]string, 
 				},
 			},
 			{
-
 				"$group": bson.M{
 					"_id": nil,
 					"groups": bson.M{
@@ -139,13 +138,13 @@ func (g *remoteMongoQueueGroupSingle) getQueues(ctx context.Context) ([]string, 
 	catcher := &erc.Collector{}
 	for cursor.Next(ctx) {
 		if err = cursor.Decode(&out); err != nil {
-			catcher.Add(err)
+			catcher.Push(err)
 		} else {
 			break
 		}
 	}
-	catcher.Add(cursor.Err())
-	catcher.Add(cursor.Close(ctx))
+	catcher.Push(cursor.Err())
+	catcher.Push(cursor.Close(ctx))
 
 	return out.Groups, catcher.Resolve()
 }
@@ -159,7 +158,7 @@ func (g *remoteMongoQueueGroupSingle) startQueues(ctx context.Context) error {
 	catcher := &erc.Collector{}
 	for _, id := range queues {
 		_, err := g.Get(ctx, id)
-		catcher.Add(err)
+		catcher.Push(err)
 	}
 
 	return catcher.Resolve()
